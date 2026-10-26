@@ -106,7 +106,7 @@ async def main():
         await add('Darshana', 'subadmin', 'darshana', 'darshana1', '9000000001')
         await add('Nishant', 'store', 'nishant', 'nishant1', '9000000002', raipur)
         msg = await add('Duplicate', 'store', 'dup', 'dup12345', '9000000009', raipur, expect_ok=False)
-        assert 'पहले से Nishant' in msg, msg
+        assert 'already has Nishant' in msg, msg
         await pg.fill('#u-name', ''); await pg.fill('#u-lid', ''); await pg.fill('#u-pw', '')
         await add('Ravi', 'store', 'ravi', 'ravi1234', '9000000005', bilaspur)
         await add('Factory Raju', 'factory', 'factory', 'factory1', '9000000003')
@@ -156,11 +156,11 @@ async def main():
         await pg.wait_for_selector('#gem1-detail:not([hidden])')
         await chip('spec.gem1Color', 'Red'); await chip('spec.gem1Shape', 'Round'); await pg.fill('#f-spec-gem1Ct', '0.20'); await pg.fill('#f-spec-gem1Size', '2 mm'); await pg.fill('#f-spec-gem1Pcs', '4')
         assert (await pg.inner_text('#ctg-gem1')) == '= 0.040 g (40 mg)', await pg.inner_text('#ctg-gem1')
-        await pg.fill('#f-spec-stoneNote', 'Center stone thoda uncha')
-        await pg.fill('#f-spec-design', 'Design ref image jaisa hi, par drop nahi lagana')
+        await pg.fill('#f-spec-stoneNote', 'Centre stone set slightly higher')
+        await pg.fill('#f-spec-design', 'Same as the reference image, but without the drop')
         await pg.set_input_files('#f-media input[data-pick="image"]', str(TMP / 'ref.png'))
         await pg.wait_for_function("document.querySelector('#f-media').innerText.includes('✓ Upload')")
-        await pg.fill('#f-media .mitem input[data-desc]', 'Client ka reference — drop nahi')
+        await pg.fill('#f-media .mitem input[data-desc]', 'Client reference — no drop')
         await pg.click('#f-media [data-act="rec-item"]')
         await pg.wait_for_timeout(1600)
         await pg.click('#f-media [data-act="rec-item"]')
@@ -227,7 +227,7 @@ async def main():
 
         # ---- 4. other store's manager sees nothing
         await login('ravi', 'ravi1234')
-        await pg.wait_for_function("document.body.innerText.includes('अभी कोई चालू order नहीं')")
+        await pg.wait_for_function("document.body.innerText.includes('No active orders')")
         print('ok  Bilaspur manager does not see Raipur orders')
         await logout()
 
@@ -252,9 +252,9 @@ async def main():
         await pg.click('.alertbox [data-act="reply-open"]')
         await pg.fill('#rp-text', 'VVS2 final')
         await pg.click('[data-act="reply-do"]')
-        await pg.wait_for_function("document.querySelector('.dhead').innerText.includes('Approval बाकी')")
+        await pg.wait_for_function("document.querySelector('.dhead').innerText.includes('Awaiting approval')")
         t = await text(); assert 'Diamond 1 clarity: VVS1 → VVS2' in t, t
-        assert 'Estimate का हिसाब बदला' not in t
+        assert 'Estimate calculation changed' not in t
         await logout()
         await login('darshana', 'darshana1')
         await pg.click('.ocard')
@@ -273,13 +273,13 @@ async def main():
         t = await text()
         for secret in ['Nitu', '9777365551', '52,000', '26,000', 'Clarity VVS1 ya', 'receipt']:
             assert secret not in t, 'factory can see ' + secret
-        for need in ['VVS2', 'Round — Portuguese cut', 'Diamond 1 · Solitaire', 'Diamond 2 · Side', 'Ruby', 'Center stone thoda uncha', 'Client ka reference', 'Light weight chain', '🏬']:
+        for need in ['VVS2', 'Round — Portuguese cut', 'Diamond 1 · Solitaire', 'Diamond 2 · Side', 'Ruby', 'Centre stone set slightly higher', 'Client reference', 'Light weight chain', '🏬']:
             assert need in t, need
         assert await pg.eval_on_selector_all('.gal audio', 'l => l.length') >= 1
         await shot('05-order-factory-new')
         print('ok  factory sees 4Cs, gemstone, photo + its voice note; no client / price / receipt')
         await pg.click('.alertbox.ok [data-act="stage-quick"]')
-        await pg.wait_for_function("document.querySelector('#stickbar').innerText.includes('आगे')")
+        await pg.wait_for_function("document.querySelector('#stickbar').innerText.includes('Next')")
         await pg.click('#stickbar [data-act="stage-quick"]')
         await pg.wait_for_timeout(200)
         await pg.click('#stickbar [data-act="stage-open"]')
@@ -287,7 +287,7 @@ async def main():
         await pg.set_input_files('#st-media input[data-pick="image"]', str(TMP / 'ref.png'))
         await pg.wait_for_function("document.querySelector('#st-media').innerText.includes('✓ Upload')")
         await pg.click('[data-act="stage-do"]')
-        await pg.wait_for_function("document.body.innerText.includes('CAD approval का इंतज़ार')")
+        await pg.wait_for_function("document.body.innerText.includes('Awaiting CAD approval')")
         await logout()
 
         # ---- 7. store: CAD OK, then priority + date change
@@ -298,7 +298,7 @@ async def main():
         await pg.click('[data-act="sched-open"]')
         await pg.click('#sc-pri [data-v="urgent"]')
         await pg.fill('#sc-day', await pg.evaluate("(() => { const d = new Date(Date.now() + 10*864e5); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); })()"))
-        await pg.fill('#sc-why', 'Client ko jaldi chahiye')
+        await pg.fill('#sc-why', 'The client needs it earlier')
         await pg.click('[data-act="sched-do"]')
         await pg.wait_for_function("document.querySelector('.dhead').innerText.includes('Urgent')")
         st = await order_doc(); assert st['priority'] == 'urgent' and st['factoryAck'] is False, st
@@ -319,7 +319,7 @@ async def main():
         await pg.wait_for_selector('#dp-gross')
         assert await pg.input_value('#dp-d1-ct') == '0.40' and await pg.input_value('#dp-touch') == '58.5'
         await pg.click('[data-act="dispatch-do"]')
-        await pg.wait_for_function("document.querySelector('#toasts').innerText.includes('भरना बाकी')")
+        await pg.wait_for_function("document.querySelector('#toasts').innerText.includes('Still required')")
         await pg.fill('#dp-gross', '3.62')
         await pg.fill('#dp-d1-ct', '0.42'); await pg.click('#dp-d1-cert [data-v="yes"]'); await pg.fill('#dp-d1-certno', 'IGI123'); await pg.fill('#dp-d1-rate', '21000')
         await pg.fill('#dp-d2-pcs', '12'); await pg.click('#dp-d2-cert [data-v="no"]'); await pg.fill('#dp-d2-amt', '1400')
@@ -342,21 +342,21 @@ async def main():
         assert bill['goldMode'] == 'fine' and abs(bill['fine'] - 2.051) < 1e-9 and bill['total'] == 14848.4, bill
         st = await order_doc(); a = st['dispatch']['actual']
         assert a['netWt'] == 3.476 and a['dias'][0]['ct'] == 0.42 and a['dias'][0]['cert'] == 'yes' and a['hallmark'] == 'yes', a
-        t = await text(); assert 'Dispatch पर्ची' in t and 'Factory total' in t
+        t = await text(); assert 'Dispatch Slip' in t and 'Factory total' in t
         await shot('06-factory-slip')
         print('ok  factory dispatch slip: actual ct / pcs / certified / hallmark, net auto, fine 59% = 2.051 g, factory total ₹14,848.4')
         await logout()
         await login('owner@gmail.com', 'owner123')
         await pg.click('.ocard')
         await pg.wait_for_function("document.body.innerText.includes('Factory total')")
-        t = await text(); assert '0.42 ct / 1 pc' in t and '✓ हाँ · IGI123' in t and '✓ हाँ · AB1234' in t, t
+        t = await text(); assert '0.42 ct / 1 pc' in t and '✓ Yes · IGI123' in t and '✓ Yes · AB1234' in t, t
         print('ok  admin sees ordered vs actual + factory bill')
         await logout()
 
         # ---- 9. store: received, final bill, payment + receipt, PDF, delivered
         await login('nishant', 'nishant1')
         await pg.click('.ocard')
-        await pg.wait_for_function("document.body.innerText.includes('Dispatch पर्ची')")
+        await pg.wait_for_function("document.body.innerText.includes('Dispatch Slip')")
         t = await text()
         assert '0.42 ct / 1 pc' in t and 'Factory total' not in t and '14,848' not in t and 'Fine gold' not in t, 'store must not see factory money'
         print('ok  store sees actual weights / carats / hallmark but not the factory bill')
@@ -380,7 +380,7 @@ async def main():
         await pg.wait_for_function("document.querySelector('#py-media').innerText.includes('✓ Upload')")
         await pg.click('[data-act="pay-do"]')
         await pg.wait_for_function("!document.querySelector('#sheet .sheet') && document.body.innerText.includes('Cash')")
-        t = await text(); assert 'बाकी\n₹0' in t and 'कुल मिला\n₹51,000' in t, t
+        t = await text(); assert 'Balance due\n₹0' in t and 'Total received\n₹51,000' in t, t
         assert '🧾 receipt' in t
         # receipt PDF (libraries stubbed: the sandbox has no CDN)
         await pg.evaluate("""(libs) => {
@@ -433,7 +433,7 @@ async def main():
         await pg.wait_for_function("document.querySelector('.kpi.hero b').innerText === '₹0'")
         print('ok  dashboard: KPIs, 3 line charts, store-wise table, store filter')
         await pg.evaluate("location.hash='#/activity'")
-        await pg.wait_for_function("document.body.innerText.includes('सारी Activity') && document.querySelectorAll('#view .ocard').length > 10")
+        await pg.wait_for_function("document.body.innerText.includes('All Activity') && document.querySelectorAll('#view .ocard').length > 10")
         t = await text()
         for need in ['Nishant · Raipur (Store)', 'Factory Raju (Factory)', 'Darshana (Sub Admin)', 'Diamond 1 clarity: VVS1 → VVS2', 'Payment ₹25,000 (Cash)', 'Nitu Pansari']:
             assert need in t, need

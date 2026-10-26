@@ -3,7 +3,9 @@
 Made-to-order jewellery order system for **Deeva Diamonds** (lab-grown diamond store, VIP Road, Raipur). Owner: Mayuresh
 Sisodiya (always "Sisodiya"; brand always "Deeva", never "Diva"). He talks in Hindi/Hinglish and is not a developer: he says
 *what* should change, Claude does code, test and deploy, then explains in plain Hindi what changed and what he must do himself.
-UI text is Hindi (Devanagari) mixed with common English words (Order, Approve, Factory, Stage, Dispatch, Payment).
+**All UI text is formal English** (owner's decision, 27 Oct 2026) — the app, notifications, WhatsApp messages, receipts,
+Android strings. British spelling (colour, jewellery, centre, cancelled), sentence case, polite and plain ("Please enter…",
+"Awaiting approval"). Dates as "27 Oct". Dictation defaults to English (India); Hindi stays selectable under My Account.
 
 **Completely separate from Team Kaam** (his task app): own GitHub repo, own Firebase project, own logins. Never share code
 paths, Firebase projects or users between the two.
@@ -137,6 +139,6 @@ Storage: `orders/{orderId}/{mediaId}.{ext}` (any active user reads; image/video/
 
 1. Attach the repo (`add_repo deevadiamonds/deeva-orders`, push), clone, read this file.
 2. Edit `web/index.html` (+ rules if data/permissions change; `android/` only for shell changes). Keep UI and rules in sync,
-   Hindi copy short, phone width 400 px without sideways scroll, light + dark tokens.
+   UI copy in formal English, phone width 400 px without sideways scroll, light + dark tokens.
 3. Run `python3 tools/test_flow.py` — extend it for new behaviour. Must print `PASS`.
 4. Commit, push to `main`, watch the Actions run. Tell the owner in Hindi what changed (the app updates itself on reopen).

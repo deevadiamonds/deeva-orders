@@ -70,7 +70,7 @@ window.__demoPdfPreview = true;
   let rnd = 7; const rr = () => { rnd = (rnd * 9301 + 49297) % 233280; return rnd / 233280; };
   function makeOrder(id, createdAt, st, store, item, client, extra){
     const nn = nextNo(createdAt);
-    const spec = Object.assign({}, baseSpec, {jtype: item[0], metalColor: item[1], purity: item[2], size: item[3], dia1Type: 'Solitaire', dia1Ct: item[4], dia1Pcs: '1', dia1Shape: item[5], dia1Color: item[6], dia1Clarity: item[7], dia1Cut: item[5].startsWith('Round') ? 'Excellent' : '', dia1Cert: 'IGI', design: 'Client ke reference jaisa design.'}, extra.spec || {});
+    const spec = Object.assign({}, baseSpec, {jtype: item[0], metalColor: item[1], purity: item[2], size: item[3], dia1Type: 'Solitaire', dia1Ct: item[4], dia1Pcs: '1', dia1Shape: item[5], dia1Color: item[6], dia1Clarity: item[7], dia1Cut: item[5].startsWith('Round') ? 'Excellent' : '', dia1Cert: 'IGI', design: 'Design as per the client’s reference.'}, extra.spec || {});
     const rate = {'14KT': 8544, '18KT': 10950, '22KT': 13400}[item[2]] || 8544;
     const calc = calcOf({grossWt: String(item[8]), goldRate: String(rate), making: '2000', d1Rate: '22000', d2Rate: '15000', d3Rate: '', d4Rate: '', gemAmt: spec.gem1Type ? '1500' : '', other: '', gst: '3'}, spec);
     const est = Math.round(calc.final / 100) * 100;
@@ -96,7 +96,7 @@ window.__demoPdfPreview = true;
       F.store['orders/' + id + '/factory/bill'] = {orderNo: nn.no, goldMode: 'fine', purity: item[2], netWt: net, touch, fine: Math.round(net * touch / 100 * 1000) / 1000, goldRate: 0, goldAmt: 0, lines, labourRate: 850, labour, other: 250, total, at: o.dispatch.at, by: 'u_factory', byName: 'Factory (Raju)'};
     }
     if (st === 'delivered') o.delivered = {at: o.dispatch.at + 2 * D, by: 'Nishant'};
-    o.log[k()] = L(createdAt, o.createdBy, o.createdByName, 'store', 'created', 'Order बना — ' + item[0]);
+    o.log[k()] = L(createdAt, o.createdBy, o.createdByName, 'store', 'created', 'Order created — ' + item[0]);
     F.store['orders/' + id] = o;
     const paid = st === 'delivered' ? est : Math.round(est * (0.3 + rr() * 0.3) / 100) * 100;
     const pays = {pa: {amount: paid, mode: rr() < 0.5 ? 'UPI' : 'Card', day: dayAt(createdAt), note: st === 'delivered' ? 'Full' : 'Advance', by: o.createdBy, name: o.createdByName, at: createdAt}};
@@ -113,25 +113,25 @@ window.__demoPdfPreview = true;
   }
   /* live orders */
   makeOrder('o1', now - 4 * D, 'factory', 's_rpr', ITEMS[0], 'Ananya Jain', {
-    spec: {engraving: 'R ♥ A', dia2Type: 'Side', dia2Ct: '0.10', dia2Pcs: '12', dia2Shape: 'Round', dia2Color: 'F-G', dia2Clarity: 'VS', design: 'Solitaire oval, band patla (2 mm).', stoneNote: 'Center stone thoda uncha set karna'},
+    spec: {engraving: 'R ♥ A', dia2Type: 'Side', dia2Ct: '0.10', dia2Pcs: '12', dia2Shape: 'Round', dia2Color: 'F-G', dia2Clarity: 'VS', design: 'Oval solitaire on a slim 2 mm band.', stoneNote: 'Set the centre stone slightly higher'},
     o: {stage: 'cad_approval', stageAt: {new: now - 3 * D, received: now - 3 * D + 2 * H, cad: now - 2 * D, cad_approval: now - 3 * H}, approvedAt: now - 3 * D, factoryDue: day(9), deliveryDay: day(12), cad: {}, priority: 'normal',
-      media: {m1: {kind: 'image', url: ring, path: 'demo', desc: 'Client ka reference — band patla chahiye', by: 'u_nishant', byName: 'Nishant', at: now - 4 * D}, m2: {kind: 'image', url: cad, path: 'demo', desc: 'CAD v1', by: 'u_factory', byName: 'Factory (Raju)', at: now - 3 * H, stage: 'cad_approval'}},
-      log: {k90: L(now - 3 * D, 'u_darshana', 'Darshana', 'admin', 'approved', 'Approve करके factory को भेजा · CAD approval ज़रूरी'), k91: L(now - 3 * H, 'u_factory', 'Factory (Raju)', 'factory', 'stage', 'CAD approval के लिए भेजा\n📎 1 photo')}}
+      media: {m1: {kind: 'image', url: ring, path: 'demo', desc: 'Client reference — slimmer band', by: 'u_nishant', byName: 'Nishant', at: now - 4 * D}, m2: {kind: 'image', url: cad, path: 'demo', desc: 'CAD v1', by: 'u_factory', byName: 'Factory (Raju)', at: now - 3 * H, stage: 'cad_approval'}},
+      log: {k90: L(now - 3 * D, 'u_darshana', 'Darshana', 'admin', 'approved', 'Approved and sent to the factory · CAD approval required'), k91: L(now - 3 * H, 'u_factory', 'Factory (Raju)', 'factory', 'stage', 'Sent for CAD approval\n📎 1 photo')}}
   });
   makeOrder('o2', now - 2 * H, 'review', 's_rpr', ITEMS[1], 'Riya Agrawal', {
-    spec: {gem1Type: 'Ruby', gem1Color: 'Red', gem1Shape: 'Round', gem1Ct: '0.20', gem1Size: '2 mm', gem1Pcs: '4', design: 'Design customer ki ref image jaisa hi, par neeche ka drop nahi lagana.'},
-    o: {factoryVisible: false, approvedAt: null, factoryDue: '', cad: {}, deliveryDay: day(15), media: {m3: {kind: 'image', url: pendant, path: 'demo', desc: 'Reference — drop nahi chahiye', by: 'u_nishant', byName: 'Nishant', at: now - 2 * H}}}
+    spec: {gem1Type: 'Ruby', gem1Color: 'Red', gem1Shape: 'Round', gem1Ct: '0.20', gem1Size: '2 mm', gem1Pcs: '4', design: 'Same as the client’s reference image, but without the drop at the bottom.'},
+    o: {factoryVisible: false, approvedAt: null, factoryDue: '', cad: {}, deliveryDay: day(15), media: {m3: {kind: 'image', url: pendant, path: 'demo', desc: 'Reference — no drop', by: 'u_nishant', byName: 'Nishant', at: now - 2 * H}}}
   });
   makeOrder('o3', now - 14 * D, 'dispatched', 's_rpr', ITEMS[2], 'Pooja Sharma', {
     o: {priority: 'urgent', deliveryDay: day(1), factoryDue: day(-1), approvedAt: now - 13 * D, dispatch: {at: now - 20 * H, by: 'u_factory', byName: 'Factory (Raju)', mode: 'Courier', ref: 'DTDC 7731', note: 'Screw back'}, stage: 'dispatched', stageAt: {dispatched: now - 20 * H},
-      media: {m4: {kind: 'image', url: earr, path: 'demo', desc: 'Bana hua piece', by: 'u_factory', byName: 'Factory (Raju)', at: now - 20 * H, stage: 'dispatched'}}}
+      media: {m4: {kind: 'image', url: earr, path: 'demo', desc: 'Finished piece', by: 'u_factory', byName: 'Factory (Raju)', at: now - 20 * H, stage: 'dispatched'}}}
   });
   makeOrder('o4', now - 6 * D, 'factory', 's_bsp', ITEMS[3], 'Kavita Soni', {o: {stage: 'setting', stageAt: {setting: now - D}, approvedAt: now - 5 * D, factoryDue: day(-1), deliveryDay: day(3)}});
   F.preLogin('nishant-x2@demo');
 })();
 </script>"""
 
-DEMO_BAR = """<div class="demo-bar" id="demo-bar"><div class="demo-in"><span class="demo-tag">DEMO</span><span class="demo-txt">नकली data · इस रूप में देखें:</span>
+DEMO_BAR = """<div class="demo-bar" id="demo-bar"><div class="demo-in"><span class="demo-tag">DEMO</span><span class="demo-txt">Sample data · view as:</span>
 <span class="demo-btns"><button type="button" data-demo="nishant-x2@demo" class="on">Nishant · Store</button><button type="button" data-demo="darshana-x1@demo">Darshana · Sub Admin</button><button type="button" data-demo="factory-x3@demo">Factory</button><button type="button" data-demo="ravi-x5@demo">Ravi · Bilaspur</button><button type="button" data-demo="mayuresh@demo">Mayuresh · Admin</button></span></div></div>"""
 DEMO_CSS = """<style>
 .demo-bar{background:var(--gold-soft);border-bottom:1px solid var(--gold);padding-block:7px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}

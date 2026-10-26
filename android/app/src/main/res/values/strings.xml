@@ -2,11 +2,11 @@
 <resources>
     <string name="app_name">Deeva Orders</string>
     <string name="channel_name">Orders</string>
-    <string name="channel_desc">नए order, approval और factory updates</string>
-    <string name="link_failed">ये link नहीं खुल सका</string>
-    <string name="pick_file">Photo / Video चुनें</string>
-    <string name="speak_now">बोलिए…</string>
-    <string name="no_speech">इस phone में बोलकर लिखने वाला Google app नहीं है</string>
-    <string name="pdf_saved">PDF save हुआ:</string>
-    <string name="pdf_failed">PDF save नहीं हो सका</string>
+    <string name="channel_desc">New orders, approvals and factory updates</string>
+    <string name="link_failed">This link could not be opened</string>
+    <string name="pick_file">Choose a photo or video</string>
+    <string name="speak_now">Please speak…</string>
+    <string name="no_speech">Voice typing is not available on this phone</string>
+    <string name="pdf_saved">PDF saved:</string>
+    <string name="pdf_failed">The PDF could not be saved</string>
 </resources>

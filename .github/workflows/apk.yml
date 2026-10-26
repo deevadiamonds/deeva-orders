@@ -65,5 +65,5 @@ jobs:
           cp android/app/build/outputs/apk/release/app-release.apk DeevaOrders.apk
           gh release create "apk-${{ github.run_number }}" DeevaOrders.apk \
             --title "Deeva Orders APK (${{ github.run_number }})" \
-            --notes "ये APK WhatsApp पर भेजें। Install करते समय phone 'unknown apps' की permission माँगे तो Allow करें। App खुलने पर Admin का दिया Login ID और password डालें।" \
+            --notes "Share this APK on WhatsApp. If the phone asks for permission to install unknown apps, tap Allow. When the app opens, sign in with the Login ID and password provided by the Admin." \
             --latest
