@@ -370,34 +370,72 @@ public class MainActivity extends Activity {
         }
     }
 
-    /* ---------- receipt PDF: save to Downloads and open the share sheet (WhatsApp) ---------- */
+    /* ---------- receipt PDF: save to Downloads, then open WhatsApp (client's chat) or the share sheet ---------- */
+    private Uri savePdf(String b64, String name) throws Exception {
+        byte[] data = Base64.decode(b64, Base64.DEFAULT);
+        String safe = name.replaceAll("[^A-Za-z0-9._-]", "_");
+        if (Build.VERSION.SDK_INT >= 29) {
+            ContentValues cv = new ContentValues();
+            cv.put(MediaStore.Downloads.DISPLAY_NAME, safe);
+            cv.put(MediaStore.Downloads.MIME_TYPE, "application/pdf");
+            cv.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Deeva Orders");
+            Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+            if (uri == null) throw new Exception("no uri");
+            try (OutputStream os = getContentResolver().openOutputStream(uri)) {
+                if (os == null) throw new Exception("no stream");
+                os.write(data);
+            }
+            return uri;
+        }
+        File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        File f = new File(dir, safe);
+        try (FileOutputStream fo = new FileOutputStream(f)) { fo.write(data); }
+        Toast.makeText(this, getString(R.string.pdf_saved) + " " + f.getAbsolutePath(), Toast.LENGTH_LONG).show();
+        return null;
+    }
+
+    private Intent pdfIntent(Uri uri, String text) {
+        Intent send = new Intent(Intent.ACTION_SEND);
+        send.setType("application/pdf");
+        send.putExtra(Intent.EXTRA_STREAM, uri);
+        if (text != null && !text.isEmpty()) send.putExtra(Intent.EXTRA_TEXT, text);
+        send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        return send;
+    }
+
+    private boolean installed(String pkg) {
+        try { getPackageManager().getPackageInfo(pkg, 0); return true; } catch (Exception e) { return false; }
+    }
+
     private void savePdfAndShare(String b64, String name, String text) {
         try {
-            byte[] data = Base64.decode(b64, Base64.DEFAULT);
-            String safe = name.replaceAll("[^A-Za-z0-9._-]", "_");
-            if (Build.VERSION.SDK_INT >= 29) {
-                ContentValues cv = new ContentValues();
-                cv.put(MediaStore.Downloads.DISPLAY_NAME, safe);
-                cv.put(MediaStore.Downloads.MIME_TYPE, "application/pdf");
-                cv.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Deeva Orders");
-                Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
-                if (uri == null) throw new Exception("no uri");
-                try (OutputStream os = getContentResolver().openOutputStream(uri)) {
-                    if (os == null) throw new Exception("no stream");
-                    os.write(data);
+            Uri uri = savePdf(b64, name);
+            if (uri != null) startActivity(Intent.createChooser(pdfIntent(uri, text), name));
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.pdf_failed, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /** Opens the client's chat in WhatsApp Business (or WhatsApp) with the PDF attached; falls back to the share sheet. */
+    private void savePdfAndWhatsApp(String b64, String name, String text, String phone) {
+        try {
+            Uri uri = savePdf(b64, name);
+            if (uri == null) return;
+            String pkg = installed("com.whatsapp.w4b") ? "com.whatsapp.w4b" : (installed("com.whatsapp") ? "com.whatsapp" : null);
+            if (pkg != null) {
+                Intent send = pdfIntent(uri, text);
+                send.setPackage(pkg);
+                String digits = phone == null ? "" : phone.replaceAll("[^0-9]", "");
+                if (digits.length() == 10) digits = "91" + digits;
+                if (digits.length() >= 11) send.putExtra("jid", digits + "@s.whatsapp.net");
+                try {
+                    startActivity(send);
+                    return;
+                } catch (ActivityNotFoundException ignored) {
+                    // fall through to the share sheet
                 }
-                Intent send = new Intent(Intent.ACTION_SEND);
-                send.setType("application/pdf");
-                send.putExtra(Intent.EXTRA_STREAM, uri);
-                if (text != null && !text.isEmpty()) send.putExtra(Intent.EXTRA_TEXT, text);
-                send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                startActivity(Intent.createChooser(send, safe));
-            } else {
-                File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-                File f = new File(dir, safe);
-                try (FileOutputStream fo = new FileOutputStream(f)) { fo.write(data); }
-                Toast.makeText(this, getString(R.string.pdf_saved) + " " + f.getAbsolutePath(), Toast.LENGTH_LONG).show();
             }
+            startActivity(Intent.createChooser(pdfIntent(uri, text), name));
         } catch (Exception e) {
             Toast.makeText(this, R.string.pdf_failed, Toast.LENGTH_LONG).show();
         }
@@ -437,6 +475,11 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void sharePdf(final String b64, final String name, final String text) {
             runOnUiThread(() -> savePdfAndShare(b64, name, text));
+        }
+
+        @JavascriptInterface
+        public void sharePdfWhatsApp(final String b64, final String name, final String text, final String phone) {
+            runOnUiThread(() -> savePdfAndWhatsApp(b64, name, text, phone));
         }
 
         /** Asks Firebase for this phone's notification address and hands it to the page (window.__doPushToken). */

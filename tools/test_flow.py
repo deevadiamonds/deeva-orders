@@ -110,6 +110,10 @@ async def main():
         await pg.fill('#u-name', ''); await pg.fill('#u-lid', ''); await pg.fill('#u-pw', '')
         await add('Ravi', 'store', 'ravi', 'ravi1234', '9000000005', bilaspur)
         await add('Factory Raju', 'factory', 'factory', 'factory1', '9000000003')
+        await pg.click('.card [data-act="rates-open"]')
+        await pg.fill('#rt-14KT', '8544'); await pg.fill('#rt-18KT', '10950'); await pg.fill('#rt-making', '2000')
+        await pg.click('[data-act="rates-save"]')
+        await pg.wait_for_function("!document.querySelector('#sheet .sheet')")
         await pg.click('[data-act="brand-sign"]')
         box = await pg.query_selector('#bsig'); bb = await box.bounding_box()
         await pg.mouse.move(bb['x'] + 30, bb['y'] + 90); await pg.mouse.down()
@@ -118,7 +122,7 @@ async def main():
         await pg.click('[data-act="brand-save"]')
         await pg.wait_for_function("!document.querySelector('#sheet .sheet')")
         await shot('01-team')
-        print('ok  default store Raipur + Bilaspur, one manager per store enforced, sub admin, logins, Deeva signature')
+        print('ok  default store Raipur + Bilaspur, one manager per store enforced, sub admin, logins, today\'s rate, Deeva signature')
         await logout()
 
         # ---- 3. store creates an order
@@ -135,12 +139,19 @@ async def main():
         await pg.fill('#f-client-name', 'Nitu Pansari'); await pg.fill('#f-client-phone', '9777365551'); await pg.fill('#f-client-city', 'Raipur')
         await chip('spec.jtype', 'Pendant with chain'); await chip('spec.metalColor', 'Yellow Gold'); await chip('spec.purity', '14KT')
         await pg.fill('#f-spec-size', '16 inch')
+        await pg.click('#diab-1 [data-act="fill"][data-v="Solitaire"]')
         await pg.fill('#f-spec-dia1Ct', '0.40')
         await pg.wait_for_selector('#dia1-detail:not([hidden])')
         await chip('spec.dia1Shape', 'Round — Portuguese cut'); await chip('spec.dia1Color', 'E-F'); await chip('spec.dia1Clarity', 'VVS1')
         await chip('spec.dia1Cut', 'Excellent'); await chip('spec.dia1Cert', 'IGI')
+        await pg.click('[data-act="dia-add"]')
+        await pg.wait_for_selector('#diab-2:not([hidden])')
+        await pg.click('#diab-2 [data-act="fill"][data-v="Side"]')
         await pg.fill('#f-spec-dia2Ct', '0.10'); await pg.fill('#f-spec-dia2Pcs', '10')
         await chip('spec.dia2Shape', 'Round'); await chip('spec.dia2Color', 'F-G'); await chip('spec.dia2Clarity', 'VS')
+        await pg.click('[data-act="dia-add"]'); await pg.wait_for_selector('#diab-3:not([hidden])')
+        await pg.click('#diab-3 [data-act="dia-del"]'); await pg.wait_for_selector('#diab-3', state='hidden')
+        assert await pg.input_value('#f-spec-dia2Ct') == '0.10', 'removing diamond 3 must keep diamond 2'
         await chip('spec.gem1Type', 'Ruby')
         await pg.wait_for_selector('#gem1-detail:not([hidden])')
         await chip('spec.gem1Color', 'Red'); await chip('spec.gem1Shape', 'Round'); await pg.fill('#f-spec-gem1Ct', '2 mm'); await pg.fill('#f-spec-gem1Pcs', '4')
@@ -161,16 +172,20 @@ async def main():
         print('ok  photo with its own voice note + video, together')
         await chip('price.goldRateBooked', 'yes')
         lbl = await pg.inner_text('#w-f-price-calc-goldRate label'); assert 'Booked' in lbl, lbl
-        for k, v in [('goldRate', '8544'), ('goldWt', '3.75'), ('diaRate', '22000'), ('dia2Rate', '15000'), ('making', '2000'), ('gemAmt', '1500')]:
+        assert await pg.input_value('#f-price-calc-goldRate') == '8544', 'today\'s 14KT rate must fill in'
+        assert await pg.input_value('#f-price-calc-making') == '2000', 'default making must fill in'
+        assert 'Diamond 1 · Solitaire' in await pg.inner_text('#lbl-d1Rate') and 'Diamond 2 · Side' in await pg.inner_text('#lbl-d2Rate')
+        for k, v in [('grossWt', '3.75'), ('d1Rate', '22000'), ('d2Rate', '15000'), ('gemAmt', '1500')]:
             await pg.fill(f'#f-price-calc-{k}', v)
         calc_txt = await pg.inner_text('#calc-out')
-        # 32040 + 8800 + 1500 + 1500 + 7500 = 51340; GST 1540.2; total 52880.2
-        for x in ['₹32,040', '₹8,800', '₹1,500', '₹7,500', '₹51,340', '₹52,880.2', 'Making charges']:
+        # stones 0.50ct = 0.10g -> net gold 3.65g; 3.65*8544 = 31185.6; dia 8800 + 1500; gem 1500; making 3.65*2000 = 7300
+        # value 50285.6; GST 1508.57; total 51794.17
+        for x in ['net gold 3.65g', '₹31,185.6', 'Diamond 1 · Solitaire (0.4ct × ₹22,000)', '₹8,800', 'Diamond 2 · Side (0.1ct × ₹15,000)', '₹7,300', '₹50,285.6', '₹51,794.17']:
             assert x in calc_txt, (x, calc_txt)
         await pg.click('[data-act="calc-apply"]')
-        assert await pg.input_value('#f-price-est') == '52880'
+        assert await pg.input_value('#f-price-est') == '51794'
         await pg.fill('#f-price-est', '52000')
-        print('ok  estimate: gold + main dia + side dia + gemstone + making + GST = 52,880; deal 52,000')
+        print('ok  estimate: today\'s rate auto, net gold = gross − diamonds, 2 diamond rows × ₹/ct, making on net = 51,794; deal 52,000')
         await pg.fill('#f-advance-amount', '26000'); await chip('advance.mode', 'UPI')
         await pg.set_input_files('#f-imedia input[data-pick="image"]', str(TMP / 'ref.png'))
         await pg.wait_for_function("document.querySelector('#f-imedia').innerText.includes('✓ Upload')")
@@ -184,7 +199,7 @@ async def main():
         await pg.click('[data-act="f-review"]')
         await pg.wait_for_selector('#sheet [data-act="f-submit"]:not([disabled])', timeout=3000)
         rv = await pg.inner_text('#sheet')
-        assert 'Round — Portuguese cut' in rv and 'VVS1' in rv and 'Ruby' in rv and '₹52,000' in rv, rv
+        assert 'Round — Portuguese cut' in rv and 'VVS1' in rv and 'Ruby' in rv and '₹52,000' in rv and 'Diamond 2 · Side' in rv, rv
         await shot('03-review')
         await pg.click('#sheet [data-act="f-submit"]')
         await pg.wait_for_selector('.dhead .no', timeout=5000)
@@ -198,7 +213,8 @@ async def main():
         assert len(st['media']) == 2 and any(m.get('voiceUrl') for m in st['media'].values()), st['media']
         pv = await priv_doc()
         assert pv['storeId'] == raipur and pv['client']['name'] == 'Nitu Pansari' and pv['price']['est'] == 52000 and pv['price']['goldRate'] == 8544
-        assert pv['price']['calc']['final'] > 52880 and pv['ack']['signData'].startswith('data:image/png')
+        assert abs(pv['price']['calc']['final'] - 51794.168) < 0.01 and abs(pv['price']['calc']['net'] - 3.65) < 1e-9 and pv['ack']['signData'].startswith('data:image/png')
+        assert st['spec']['dia2Type'] == 'Side' and st['spec']['dia3Ct'] == '', st['spec']
         assert any(m.get('receipt') for m in pv['media'].values()), pv['media']
         print(f'ok  order {no} submitted (4Cs, gemstone, deal amount, booked rate, receipt, signature)')
         await shot('04-order-store')
@@ -232,7 +248,7 @@ async def main():
         await pg.fill('#rp-text', 'VVS2 final')
         await pg.click('[data-act="reply-do"]')
         await pg.wait_for_function("document.querySelector('.dhead').innerText.includes('Approval बाकी')")
-        t = await text(); assert 'Main diamond clarity: VVS1 → VVS2' in t, t
+        t = await text(); assert 'Diamond 1 clarity: VVS1 → VVS2' in t, t
         assert 'Estimate का हिसाब बदला' not in t
         await logout()
         await login('darshana', 'darshana1')
@@ -252,7 +268,7 @@ async def main():
         t = await text()
         for secret in ['Nitu', '9777365551', '52,000', '26,000', 'Clarity VVS1 ya', 'receipt']:
             assert secret not in t, 'factory can see ' + secret
-        for need in ['VVS2', 'Round — Portuguese cut', 'Ruby', 'Center stone thoda uncha', 'Client ka reference', 'Light weight chain', '🏬']:
+        for need in ['VVS2', 'Round — Portuguese cut', 'Diamond 1 · Solitaire', 'Diamond 2 · Side', 'Ruby', 'Center stone thoda uncha', 'Client ka reference', 'Light weight chain', '🏬']:
             assert need in t, need
         assert await pg.eval_on_selector_all('.gal audio', 'l => l.length') >= 1
         await shot('05-order-factory-new')
@@ -307,11 +323,11 @@ async def main():
         await pg.click('[data-act="recv"]')
         await pg.wait_for_selector('[data-act="deliv-open"]')
         await pg.click('#price-card [data-act="final-open"]')
-        assert await pg.input_value('#fb-goldWt') == '3.62'
+        assert await pg.input_value('#fb-grossWt') == '3.62'
         assert await pg.get_attribute('#fb-goldRate', 'readonly') is not None
         fb = await pg.input_value('#fb-final')
-        # 3.62*8544 + 8800 + 1500 + 1500 + 3.62*2000 = 30929.28 + 11800 + 7240 = 49969.28; +3% = 51468.36
-        assert fb == '51468', fb
+        # net 3.52g: 3.52*8544 = 30074.88; + 8800 + 1500 + 1500 + 3.52*2000 = 7040 -> 48914.88; +3% = 50382.33
+        assert fb == '50382', fb
         await pg.fill('#fb-final', '51000')
         await pg.click('[data-act="final-do"]')
         await pg.wait_for_function("document.body.innerText.includes('Final bill')")
@@ -327,28 +343,32 @@ async def main():
         await pg.evaluate("""(libs) => {
           libs.forEach(src => { const s = document.createElement('script'); s.dataset.lib = src; document.head.appendChild(s); });
           window.html2canvas = async (el) => { window.__receipt = el.outerHTML; const c = document.createElement('canvas'); c.width = 1588; c.height = 2400; return c; };
-          window.jspdf = {jsPDF: function(){ this.internal = {pageSize: {getWidth: () => 595.28, getHeight: () => 841.89}}; this.pages = 1; this.addPage = () => { this.pages++; }; this.addImage = () => {}; this.output = () => new Blob(['%PDF'], {type: 'application/pdf'}); window.__pdf = this; }};
+          window.jspdf = {jsPDF: function(o){ window.__pdfFormat = o && o.format; this.internal = {pageSize: {getWidth: () => 595.28, getHeight: () => 841.89}}; this.pages = 1; this.addPage = () => { this.pages++; }; this.addImage = () => {}; this.output = () => new Blob(['%PDF'], {type: 'application/pdf'}); window.__pdf = this; }};
         }""", LIBS)
         try:
             async with pg.expect_download(timeout=8000) as dl:
-                await pg.click('#price-card [data-act="pdf"]')
+                await pg.click('#price-card [data-act="pdf-wa"]')
             d = await dl.value
+            await pg.wait_for_selector('#sheet a.wa[href*="wa.me/919777365551"]', timeout=3000)
+            await close_sheet()
         except Exception:
             print('TOASTS', await pg.inner_text('#toasts')); print(errs[-5:]); raise
         assert d.suggested_filename == no.replace(' ', '') .join(['Deeva-', '.pdf']) or d.suggested_filename == 'Deeva-' + no + '.pdf', d.suggested_filename
         rc = await pg.evaluate('window.__receipt')
-        for need in ['Deeva Diamonds — Raipur', 'MADE TO ORDER', 'Nitu Pansari', 'Round — Portuguese cut', 'VVS2', 'Ruby', '₹51,000', 'Booked @ ₹8,544/g', 'Customer Signature', 'For Deeva Diamonds', 'data:image/png']:
+        for need in ['Deeva Diamonds — Raipur', 'MADE TO ORDER', 'Nitu Pansari', 'Diamond 1 · Solitaire', 'Round — Portuguese cut', 'VVS2', 'Ruby', 'Final bill', '₹51,000', 'Booked @ ₹8,544/g (14KT)', 'Balance', 'Customer signature', 'For Deeva Diamonds', 'data:image/png', 'Approx. weight: 3.62 g gross']:
             assert need in rc, need
+        assert 'Making' not in rc and '₹8,800' not in rc, 'client receipt is short: no internal price breakdown'
+        assert await pg.evaluate('window.__pdfFormat') == 'a5'
         assert rc.count('data:image/png') >= 3, 'seal + client signature + Deeva signature'
         if SHOTS:
             rp = await ctx.new_page()
-            await rp.set_viewport_size({'width': 794, 'height': 1123})
+            await rp.set_viewport_size({'width': 560, 'height': 794})
             await rp.goto('file://' + str(ROOT / 'web' / '_harness.html'))
             await rp.evaluate("(h) => { document.body.innerHTML = h; document.body.style.background = '#fff'; }", rc)
             await rp.wait_for_timeout(300)
             await rp.screenshot(path=str(SHOTS / '08-receipt.png'), full_page=True)
             await rp.close()
-        print('ok  final bill from factory weight, payment with receipt photo, receipt PDF (logo, 4Cs, signatures, seal)')
+        print('ok  final bill from factory gross weight (net gold), payment with receipt photo, short A5 receipt → client WhatsApp')
         await pg.click('[data-act="deliv-open"]')
         await pg.click('[data-act="deliv-do"]')
         await pg.wait_for_function("document.querySelector('.dhead').innerText.includes('Delivered')")
@@ -371,7 +391,7 @@ async def main():
         await pg.evaluate("location.hash='#/activity'")
         await pg.wait_for_function("document.body.innerText.includes('सारी Activity') && document.querySelectorAll('#view .ocard').length > 10")
         t = await text()
-        for need in ['Nishant · Raipur (Store)', 'Factory Raju (Factory)', 'Darshana (Sub Admin)', 'Main diamond clarity: VVS1 → VVS2', 'Payment ₹25,000 (Cash)', 'Nitu Pansari']:
+        for need in ['Nishant · Raipur (Store)', 'Factory Raju (Factory)', 'Darshana (Sub Admin)', 'Diamond 1 clarity: VVS1 → VVS2', 'Payment ₹25,000 (Cash)', 'Nitu Pansari']:
             assert need in t, need
         await pg.click('[data-act="act-who"][data-v="money"]')
         await pg.wait_for_function("document.querySelectorAll('#view .ocard').length >= 2 && !document.querySelector('#view').innerText.includes('Dispatched —')")

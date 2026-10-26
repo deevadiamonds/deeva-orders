@@ -44,6 +44,14 @@ sees a red "Order में बदलाव" box with the diff until it taps "�
 Order number: `DD-YYMM-NNN` (monthly counter `counters/{YYMM}`, incremented in the same Firestore transaction that creates
 the order and its private doc; rules check `seq` against the counter with `getAfter`).
 
+## Pricing (calcValues)
+
+net gold g = gross weight g − (all diamond ct + gemstone ct) × 0.2; gold = net × gold rate; each diamond line = ct × its ₹/ct;
+making = net × making ₹/g; value = gold + diamonds + gemstone ₹ + making + other; + GST %. "Client से तय amount" (price.est) is
+what balance is counted against. `config/rates` = `{day, gold{9KT,14KT,18KT,22KT,Silver,Platinum: ₹/g}, making, gst, by, byName}`
+set by admin / sub admin ("📈 आज का Rate"); picking purity or Gold-rate-booked fills gold rate + making unless typed by hand.
+Final bill (delivery) recomputes with the factory's final gross weight (`dispatch.grossWt`); booked rate stays, else today's rate.
+
 ## Data model (Firestore)
 
 | Path | Fields | Who |
@@ -55,8 +63,8 @@ the order and its private doc; rules check `seq` against the counter with `getAf
 | `stores/{sid}` | see Stores | active users read; admin writes |
 | `config/brand` | `signData` (PNG data URL of the authorised signature), `signName` | active users read; admin writes |
 | `pushTokens/{token}` | `uid, role, storeId, platform ('web'/'android'), at` | own create/delete; only the notification server reads |
-| `orders/{id}` | `no, ym, seq, orderDay, createdAt, createdBy, createdByName, storeId, storeName, status, factoryVisible, stage, stageAt{stage: ms}, priority, deliveryDay, factoryDue, cadRequired, cad{ok,by,at,note}, factoryNote, factoryAck, factoryAckAt, approvedAt, approvedBy, query{open,text,by,at,reply,replyAt}, dispatch{at,by,byName,mode,ref,note}, received{at,by}, delivered{at,by}, cancel{at,by,reason}, spec{jtype, jtypeOther, qty, metalColor, purity, size, engraving, design, dia1Ct (or 'NA'), dia1Pcs, dia1Shape, dia1Color, dia1Clarity, dia1Cut, dia1Cert, dia2Ct, dia2Pcs, dia2Shape, dia2Color, dia2Clarity, gem{1,2}{Type, Color, Shape, Ct, Pcs}, stoneNote}, media{id: {kind image/video/audio, url, path, desc, voiceUrl?/voicePath? (voice note recorded for THIS photo/video), by, byName, at, size, stage?, deleted?}}, dispatch also has goldWt, diaCt, edited{spec_size: ms…}, log{key: {at, by, name, role, type, text}}, updatedAt, updatedBy` | staff; factory only when `factoryVisible` |
-| `orders/{id}/private/info` | `storeId`, `client{name, phone, city}`, `price{est (= amount agreed with client), goldRateBooked yes/no, goldRate, calc{goldWt, goldRate, diaRate, dia2Rate, gemAmt, making (₹/g), other, gst + computed gold, dia, dia2, mk, gem, oth, value, gstAmt, final}, final (final bill), finalCalc}`, `payments{key: {amount, mode, day, note, receiptUrl?, by, name, at}}`, `internalNote`, `media{…}` (store-only media; receipts have `receipt: true`), `ack{accepted, remote, at, signData (PNG data URL), terms}`, `log{…}` (price/payment/client changes) | admin + that store's manager only |
+| `orders/{id}` | `no, ym, seq, orderDay, createdAt, createdBy, createdByName, storeId, storeName, status, factoryVisible, stage, stageAt{stage: ms}, priority, deliveryDay, factoryDue, cadRequired, cad{ok,by,at,note}, factoryNote, factoryAck, factoryAckAt, approvedAt, approvedBy, query{open,text,by,at,reply,replyAt}, dispatch{at,by,byName,mode,ref,note}, received{at,by}, delivered{at,by}, cancel{at,by,reason}, spec{jtype, jtypeOther, qty, metalColor, purity, size, engraving, design, dia{1..4}{Type (remark: Solitaire / Side / Cluster …), Ct (dia1Ct may be 'NA'), Pcs, Shape, Color, Clarity, Cut, Cert}, gem{1,2}{Type, Color, Shape, Ct, Pcs}, stoneNote}, media{id: {kind image/video/audio, url, path, desc, voiceUrl?/voicePath? (voice note recorded for THIS photo/video), by, byName, at, size, stage?, deleted?}}, dispatch also has goldWt, diaCt, edited{spec_size: ms…}, log{key: {at, by, name, role, type, text}}, updatedAt, updatedBy` | staff; factory only when `factoryVisible` |
+| `orders/{id}/private/info` | `storeId`, `client{name, phone, city}`, `price{est (= amount agreed with client), goldRateBooked yes/no, goldRate, calc{grossWt, goldRate, making (₹/g), d1Rate..d4Rate (₹/ct per diamond line), gemWt (ct), gemAmt, other, gst + computed gross, diaCt, stoneCt, stoneG, net, gold, dias[{n,type,ct,rate,amt}], diaTotal, mk, gem, oth, value, gstAmt, final}, final (final bill), finalCalc}`, `payments{key: {amount, mode, day, note, receiptUrl?, by, name, at}}`, `internalNote`, `media{…}` (store-only media; receipts have `receipt: true`), `ack{accepted, remote, at, signData (PNG data URL), terms}`, `log{…}` (price/payment/client changes) | admin + that store's manager only |
 
 Maps (not arrays) for media/payments/log so concurrent writers never overwrite each other; the adapter flattens nested
 objects into dot paths on `update`. Media are soft-deleted (`deleted: true`).
@@ -77,9 +85,12 @@ Storage: `orders/{orderId}/{mediaId}.{ext}` (any active user reads; image/video/
 - `web/config.js` — `self.DO_CONFIG` (Firebase web config + `vapidKey`), shared by the page and `sw.js`.
 - `web/sw.js` (app-shell cache, never touches Firebase traffic; imports `config.js` + firebase-messaging for closed-app
   notifications), `web/manifest.webmanifest`, `web/icons/*` (from the official Deeva logo: gold mark on Deeva green).
-- Receipt PDF: `receiptHtml()` builds an A4 page (logo, client, store, product rows, estimate/final bill, payments, terms,
-  client signature, drawn Deeva seal + authorised signature) → html2canvas 1.4.1 + jsPDF 2.5.1 (cdnjs, loaded on demand) →
-  `sharePdf()`: APK `DeevaApp.sharePdf(base64)` (Downloads + share sheet), else Web Share with file, else download.
+- Receipt PDF: `receiptHtml()` builds a SHORT A5 client receipt (logo, order no, client, delivery date, item + diamond /
+  gemstone lines, approx weight, amount / final bill, booked gold rate, payments, balance, 7 terms in small print, client
+  signature, drawn Deeva seal + authorised signature; no internal price breakdown) → html2canvas 1.4.1 + jsPDF 2.5.1 (cdnjs,
+  on demand) → `sharePdf(blob, name, text, phone, toWhatsApp)`: APK `DeevaApp.sharePdfWhatsApp` opens the client's chat in
+  WhatsApp Business / WhatsApp with the PDF attached (jid extra), `DeevaApp.sharePdf` = share sheet; browser: Web Share with
+  file, else download + "open client's chat" link.
 - Activity (`#/activity`, admin + sub admin): every log entry of every order (main + private logs) newest first,
   filters store / who (Store, Admin/Sub Admin, Factory, Payments) / search; uses the dashboard load + live open orders.
   Store managers are shown as "Name · Store" (`personName()`), also inside log entries.

@@ -47,12 +47,14 @@ window.__demoPdfPreview = true;
     if (!lid.includes('@')) F.store['logins/' + lid] = {email, uid};
   });
   F.store['config/admin'] = {uid: 'u_mayuresh', at: now - 300 * D};
+  F.store['config/rates'] = {day: day(0), gold: {'9KT': 5500, '14KT': 8544, '18KT': 10950, '22KT': 13400}, making: 2000, gst: 3, at: now, by: 'u_darshana', byName: 'Darshana'};
   const L = (at, by, name, role, type, text) => ({at, by, name, role, type, text});
   let kn = 0; const k = () => 'k' + (++kn);
   const counters = {};
   const nextNo = ms => { const ym = ymAt(ms); counters[ym] = (counters[ym] || 0) + 1; F.store['counters/' + ym] = {n: counters[ym]}; return {ym, seq: counters[ym], no: 'DD-' + ym + '-' + pad(counters[ym]).padStart(3, '0')}; };
-  const baseSpec = {jtype: '', jtypeOther: '', qty: '1', metalColor: '', purity: '', size: '', engraving: '', design: '', dia1Ct: '', dia1Pcs: '1', dia1Shape: '', dia1Color: '', dia1Clarity: '', dia1Cut: '', dia1Cert: '', dia2Ct: '', dia2Pcs: '', dia2Shape: '', dia2Color: '', dia2Clarity: '', gem1Type: '', gem1Color: '', gem1Shape: '', gem1Ct: '', gem1Pcs: '', gem2Type: '', gem2Color: '', gem2Shape: '', gem2Ct: '', gem2Pcs: '', stoneNote: ''};
-  const calcOf = (c, spec) => { const n = v => parseFloat(v) || 0; const wt = n(c.goldWt), d1 = n(spec.dia1Ct), d2 = n(spec.dia2Ct); const gold = wt * n(c.goldRate), dia = d1 * n(c.diaRate), dia2 = d2 * n(c.dia2Rate), mk = wt * n(c.making); const value = gold + dia + dia2 + mk + n(c.gemAmt) + n(c.other); const gstAmt = value * n(c.gst) / 100; return Object.assign({}, c, {wt, d1, d2, gold, dia, dia2, mk, gem: n(c.gemAmt), oth: n(c.other), value, gstPct: n(c.gst), gstAmt, final: value + gstAmt}); };
+  const baseSpec = {jtype: '', jtypeOther: '', qty: '1', metalColor: '', purity: '', size: '', engraving: '', design: '', gem1Type: '', gem1Color: '', gem1Shape: '', gem1Ct: '', gem1Pcs: '', gem2Type: '', gem2Color: '', gem2Shape: '', gem2Ct: '', gem2Pcs: '', stoneNote: ''};
+  [1, 2, 3, 4].forEach(i => ['Type', 'Ct', 'Pcs', 'Shape', 'Color', 'Clarity', 'Cut', 'Cert'].forEach(k => { baseSpec['dia' + i + k] = ''; }));
+  const calcOf = (c, spec) => { const n = v => parseFloat(v) || 0; const gross = n(c.grossWt); const dias = [1, 2, 3, 4].filter(i => n(spec['dia' + i + 'Ct']) > 0).map(i => ({n: i, type: spec['dia' + i + 'Type'] || '', ct: n(spec['dia' + i + 'Ct']), rate: n(c['d' + i + 'Rate']), amt: n(spec['dia' + i + 'Ct']) * n(c['d' + i + 'Rate'])})); const diaCt = dias.reduce((a, d) => a + d.ct, 0); const stoneCt = diaCt + n(c.gemWt), stoneG = stoneCt * 0.2, net = Math.max(0, gross - stoneG); const gold = net * n(c.goldRate), mk = net * n(c.making), diaTotal = dias.reduce((a, d) => a + d.amt, 0); const value = gold + diaTotal + mk + n(c.gemAmt) + n(c.other); const gstAmt = value * n(c.gst) / 100; return Object.assign({}, c, {gross, diaCt, stoneCt, stoneG, net, gold, dias, diaTotal, mk, gem: n(c.gemAmt), oth: n(c.other), value, gstPct: n(c.gst), gstAmt, final: value + gstAmt}); };
   const ITEMS = [
     ['Ring', 'Rose Gold', '18KT', 'Ring 12', '0.50', 'Oval', 'E-F', 'VVS1', 3.1],
     ['Pendant with chain', 'Yellow Gold', '14KT', '18 inch', '0.40', 'Round — Portuguese cut', 'F-G', 'VS1', 3.75],
@@ -67,8 +69,9 @@ window.__demoPdfPreview = true;
   let rnd = 7; const rr = () => { rnd = (rnd * 9301 + 49297) % 233280; return rnd / 233280; };
   function makeOrder(id, createdAt, st, store, item, client, extra){
     const nn = nextNo(createdAt);
-    const spec = Object.assign({}, baseSpec, {jtype: item[0], metalColor: item[1], purity: item[2], size: item[3], dia1Ct: item[4], dia1Shape: item[5], dia1Color: item[6], dia1Clarity: item[7], dia1Cut: item[5].startsWith('Round') ? 'Excellent' : '', dia1Cert: 'IGI', design: 'Client ke reference jaisa design.'}, extra.spec || {});
-    const calc = calcOf({goldWt: String(item[8]), goldRate: '8544', diaRate: '22000', dia2Rate: '15000', gemAmt: '', making: '2000', other: '', gst: '3'}, spec);
+    const spec = Object.assign({}, baseSpec, {jtype: item[0], metalColor: item[1], purity: item[2], size: item[3], dia1Type: 'Solitaire', dia1Ct: item[4], dia1Pcs: '1', dia1Shape: item[5], dia1Color: item[6], dia1Clarity: item[7], dia1Cut: item[5].startsWith('Round') ? 'Excellent' : '', dia1Cert: 'IGI', design: 'Client ke reference jaisa design.'}, extra.spec || {});
+    const rate = {'14KT': 8544, '18KT': 10950, '22KT': 13400}[item[2]] || 8544;
+    const calc = calcOf({grossWt: String(item[8]), goldRate: String(rate), making: '2000', d1Rate: '22000', d2Rate: '15000', d3Rate: '', d4Rate: '', gemWt: '', gemAmt: spec.gem1Type ? '1500' : '', other: '', gst: '3'}, spec);
     const est = Math.round(calc.final / 100) * 100;
     const approvedAt = createdAt + (0.4 + rr()) * D;
     const makeDays = 7 + Math.round(rr() * 9);
@@ -76,7 +79,7 @@ window.__demoPdfPreview = true;
       status: st, factoryVisible: st !== 'review' && st !== 'query', stage: '', priority: rr() < 0.2 ? 'urgent' : 'normal', deliveryDay: dayAt(createdAt + (makeDays + 4) * D), factoryDue: dayAt(approvedAt + (makeDays + (rr() < 0.25 ? -2 : 1)) * D),
       cadRequired: true, cad: {ok: true, by: 'Nishant', at: approvedAt + 2 * D}, factoryAck: true, approvedAt, approvedBy: 'Darshana',
       spec, media: {}, edited: {}, query: {open: false}, updatedAt: createdAt, updatedBy: 'u_factory', log: {}}, extra.o || {});
-    if (['dispatched', 'received', 'delivered'].includes(st) && !o.dispatch) { const at = approvedAt + makeDays * D; o.dispatch = {at, by: 'u_factory', byName: 'Factory (Raju)', mode: 'Courier', ref: 'DTDC ' + Math.round(1000 + rr() * 8000), goldWt: String(item[8]), note: 'Hallmark done'}; o.stage = 'dispatched'; o.stageAt = {dispatched: at}; o.updatedAt = at; }
+    if (['dispatched', 'received', 'delivered'].includes(st) && !o.dispatch) { const at = approvedAt + makeDays * D; o.dispatch = {at, by: 'u_factory', byName: 'Factory (Raju)', mode: 'Courier', ref: 'DTDC ' + Math.round(1000 + rr() * 8000), grossWt: String(item[8]), note: 'Hallmark done'}; o.stage = 'dispatched'; o.stageAt = {dispatched: at}; o.updatedAt = at; }
     if (st === 'delivered') o.delivered = {at: o.dispatch.at + 2 * D, by: 'Nishant'};
     o.log[k()] = L(createdAt, o.createdBy, o.createdByName, 'store', 'created', 'Order बना — ' + item[0]);
     F.store['orders/' + id] = o;
@@ -95,7 +98,7 @@ window.__demoPdfPreview = true;
   }
   /* live orders */
   makeOrder('o1', now - 4 * D, 'factory', 's_rpr', ITEMS[0], 'Ananya Jain', {
-    spec: {engraving: 'R ♥ A', dia2Ct: '0.10', dia2Pcs: '12', dia2Shape: 'Round', dia2Color: 'F-G', dia2Clarity: 'VS', design: 'Solitaire oval, band patla (2 mm).', stoneNote: 'Center stone thoda uncha set karna'},
+    spec: {engraving: 'R ♥ A', dia2Type: 'Side', dia2Ct: '0.10', dia2Pcs: '12', dia2Shape: 'Round', dia2Color: 'F-G', dia2Clarity: 'VS', design: 'Solitaire oval, band patla (2 mm).', stoneNote: 'Center stone thoda uncha set karna'},
     o: {stage: 'cad_approval', stageAt: {new: now - 3 * D, received: now - 3 * D + 2 * H, cad: now - 2 * D, cad_approval: now - 3 * H}, approvedAt: now - 3 * D, factoryDue: day(9), deliveryDay: day(12), cad: {}, priority: 'normal',
       media: {m1: {kind: 'image', url: ring, path: 'demo', desc: 'Client ka reference — band patla chahiye', by: 'u_nishant', byName: 'Nishant', at: now - 4 * D}, m2: {kind: 'image', url: cad, path: 'demo', desc: 'CAD v1', by: 'u_factory', byName: 'Factory (Raju)', at: now - 3 * H, stage: 'cad_approval'}},
       log: {k90: L(now - 3 * D, 'u_darshana', 'Darshana', 'admin', 'approved', 'Approve करके factory को भेजा · CAD approval ज़रूरी'), k91: L(now - 3 * H, 'u_factory', 'Factory (Raju)', 'factory', 'stage', 'CAD approval के लिए भेजा\n📎 1 photo')}}
@@ -105,7 +108,7 @@ window.__demoPdfPreview = true;
     o: {factoryVisible: false, approvedAt: null, factoryDue: '', cad: {}, deliveryDay: day(15), media: {m3: {kind: 'image', url: pendant, path: 'demo', desc: 'Reference — drop nahi chahiye', by: 'u_nishant', byName: 'Nishant', at: now - 2 * H}}}
   });
   makeOrder('o3', now - 14 * D, 'dispatched', 's_rpr', ITEMS[2], 'Pooja Sharma', {
-    o: {priority: 'urgent', deliveryDay: day(1), factoryDue: day(-1), approvedAt: now - 13 * D, dispatch: {at: now - 20 * H, by: 'u_factory', byName: 'Factory (Raju)', mode: 'Courier', ref: 'DTDC 7731', goldWt: '4.1', note: 'Hallmark done'}, stage: 'dispatched', stageAt: {dispatched: now - 20 * H},
+    o: {priority: 'urgent', deliveryDay: day(1), factoryDue: day(-1), approvedAt: now - 13 * D, dispatch: {at: now - 20 * H, by: 'u_factory', byName: 'Factory (Raju)', mode: 'Courier', ref: 'DTDC 7731', grossWt: '4.1', note: 'Hallmark done'}, stage: 'dispatched', stageAt: {dispatched: now - 20 * H},
       media: {m4: {kind: 'image', url: earr, path: 'demo', desc: 'Bana hua piece', by: 'u_factory', byName: 'Factory (Raju)', at: now - 20 * H, stage: 'dispatched'}}}
   });
   makeOrder('o4', now - 6 * D, 'factory', 's_bsp', ITEMS[3], 'Kavita Soni', {o: {stage: 'setting', stageAt: {setting: now - D}, approvedAt: now - 5 * D, factoryDue: day(-1), deliveryDay: day(3)}});
