@@ -7,4 +7,6 @@
     <string name="pick_file">Photo / Video चुनें</string>
     <string name="speak_now">बोलिए…</string>
     <string name="no_speech">इस phone में बोलकर लिखने वाला Google app नहीं है</string>
+    <string name="pdf_saved">PDF save हुआ:</string>
+    <string name="pdf_failed">PDF save नहीं हो सका</string>
 </resources>

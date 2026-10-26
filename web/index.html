@@ -21,20 +21,20 @@
   --g7:#0f5330; --g8:#0d3b25; --g9:#0a271b; --gold:#e7b150; --gold-ink:#875810; --gold-soft:#fbf0d6; --cream:#f6eedc;
   --ok:#17663b; --ok-soft:#e1f1e6; --warn:#8a4e00; --warn-soft:#fdebc9; --bad:#ad261c; --bad-soft:#fbe3df; --mute:#5f6660; --mute-soft:#ebe7dc;
   --shadow:0 1px 2px rgba(10,39,27,.06),0 6px 18px rgba(10,39,27,.07);
-  --acc:#0f5330; --r:14px; --font:"Mukta","Montserrat",system-ui,sans-serif; --num:"Montserrat","Mukta",system-ui,sans-serif;
+  --acc:#0f5330; --chart:#1d7f4b; --chart-wash:rgba(29,127,75,.1); --r:14px; --font:"Mukta","Montserrat",system-ui,sans-serif; --num:"Montserrat","Mukta",system-ui,sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#0b1510; --card:#13211a; --card2:#182a21; --ink:#efe9dc; --ink2:#b4bdb5; --line:#26392e; --line2:#34503f;
     --gold-ink:#f0c46e; --gold-soft:#3a2e14; --ok:#86d8a7; --ok-soft:#173a26; --warn:#f3b863; --warn-soft:#3b2a10;
-    --bad:#ff9a8f; --bad-soft:#3d1a17; --mute:#aab2ab; --mute-soft:#1f2d25; --shadow:none; --acc:#e7b150; color-scheme:dark;
+    --bad:#ff9a8f; --bad-soft:#3d1a17; --mute:#aab2ab; --mute-soft:#1f2d25; --shadow:none; --acc:#e7b150; --chart:#bf8a2a; --chart-wash:rgba(191,138,42,.12); color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
     --bg:#0b1510; --card:#13211a; --card2:#182a21; --ink:#efe9dc; --ink2:#b4bdb5; --line:#26392e; --line2:#34503f;
     --gold-ink:#f0c46e; --gold-soft:#3a2e14; --ok:#86d8a7; --ok-soft:#173a26; --warn:#f3b863; --warn-soft:#3b2a10;
-    --bad:#ff9a8f; --bad-soft:#3d1a17; --mute:#aab2ab; --mute-soft:#1f2d25; --shadow:none; --acc:#e7b150; color-scheme:dark;
+    --bad:#ff9a8f; --bad-soft:#3d1a17; --mute:#aab2ab; --mute-soft:#1f2d25; --shadow:none; --acc:#e7b150; --chart:#bf8a2a; --chart-wash:rgba(191,138,42,.12); color-scheme:dark;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -186,6 +186,9 @@ main{max-width:680px;margin:0 auto;padding-block:14px 130px;padding-left:max(16p
 .mmeta label{display:flex;align-items:center;gap:5px;cursor:pointer}
 .mmeta input[type=checkbox]{width:18px;height:18px;accent-color:var(--g7)}
 .mdel{flex:none;border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink2);padding:2px 4px}
+.mvoice{display:flex;align-items:center;gap:4px;margin-top:6px}
+.mvoice audio{flex:1;min-width:0;height:36px;margin:0}
+.btn.rec-on{background:var(--bad);border-color:var(--bad);color:#fff}
 .gal{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .gi{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card2)}
 .gi.wide{grid-column:1/-1}
@@ -280,7 +283,31 @@ main{max-width:680px;margin:0 auto;padding-block:14px 130px;padding-left:max(16p
 .toast.out{opacity:0;transform:translateY(8px)}
 .banner{display:flex;gap:10px;align-items:center;background:var(--gold-soft);border:1px solid var(--gold);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14.5px}
 .banner .btn{flex:none}
-@media (min-width:560px){ .gal{grid-template-columns:repeat(3,1fr)} }
+/* ---------- dashboard ---------- */
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 13px;min-width:0}
+.kpi small{display:block;font-size:13px;color:var(--ink2);font-weight:500}
+.kpi b{display:block;font-family:var(--num);font-size:22px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi span{font-size:12.5px;color:var(--ink2)}
+.kpi.hero{grid-column:1/-1;background:linear-gradient(120deg,var(--g7),var(--g9));border-color:transparent;color:var(--cream)}
+.kpi.hero small,.kpi.hero span{color:rgba(246,238,220,.82)}
+.kpi.hero b{font-size:34px;color:var(--cream)}
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible;touch-action:pan-y}
+.chart .tip{position:absolute;top:0;pointer-events:none;background:var(--g9);color:var(--cream);font-size:13px;border-radius:9px;padding:5px 9px;white-space:nowrap;transform:translateX(-50%);box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.chart .tip b{font-family:var(--num)}
+.bars .br{display:grid;grid-template-columns:minmax(0,9.5em) 1fr 2.6em;gap:8px;align-items:center;padding:4px 0;font-size:14px}
+.bars .br span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bars .tr{height:10px;border-radius:0 4px 4px 0;background:var(--mute-soft);overflow:hidden}
+.bars .tr i{display:block;height:100%;background:var(--chart);border-radius:0 4px 4px 0}
+.bars .br b{font-family:var(--num);text-align:right;font-variant-numeric:tabular-nums}
+.tbl{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left;white-space:normal}
+.tbl th{font-size:12.5px;color:var(--ink2);font-weight:600}
+.scroll-x{overflow-x:auto}
+details.tv summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--acc);margin-top:6px}
+@media (min-width:560px){ .gal{grid-template-columns:repeat(3,1fr)} .kpis{grid-template-columns:repeat(4,minmax(0,1fr))} }
 @media (max-width:360px){ .two{grid-template-columns:1fr} .mbtns .btn{font-size:12.5px} }
 </style>
 </head>
@@ -304,21 +331,14 @@ main{max-width:680px;margin:0 auto;padding-block:14px 130px;padding-left:max(16p
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+<script src="config.js"></script>
 <!--/FIREBASE-SDK-->
 <script>
-/* Firebase web config of the "Deeva Orders" project (public, safe to commit). */
-window.DO_CONFIG = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
-};
 
 /* Firebase adapter: the app talks only to window.DO_BACKEND */
 (function(){
-  if (window.DO_BACKEND || !window.firebase || !window.DO_CONFIG.apiKey) return;
+  if (window.DO_BACKEND || !window.firebase || !window.DO_CONFIG || !window.DO_CONFIG.apiKey) return;
   const cfg = window.DO_CONFIG;
   firebase.initializeApp(cfg);
   const auth = firebase.auth();
@@ -405,7 +425,14 @@ window.DO_CONFIG = {
       watchQuery: (col, filters, cb, err, opts) => q(col, filters, opts).onSnapshot(snap => {
         cb(docs(snap), snap.docChanges().map(c => ({type: c.type, id: c.doc.id, pending: c.doc.metadata.hasPendingWrites})), {fromCache: snap.metadata.fromCache});
       }, err),
-      getQuery: (col, filters, opts) => q(col, filters, opts).get().then(docs)
+      getQuery: (col, filters, opts) => q(col, filters, opts).get().then(docs),
+      /* every orders/{id}/private/info doc (admin dashboard); id = the order id */
+      getGroup: name => fs.collectionGroup(name).get().then(snap => snap.docs.map(d => ({id: d.ref.parent.parent ? d.ref.parent.parent.id : d.id, data: d.data()}))),
+      del: path => fs.doc(path).delete()
+    },
+    push: {
+      supported: async () => { try { return !!(firebase.messaging && await Promise.resolve(firebase.messaging.isSupported())); } catch (e) { return false; } },
+      token: (vapidKey, registration) => firebase.messaging().getToken({vapidKey, serviceWorkerRegistration: registration})
     }
   };
 })();
@@ -444,7 +471,18 @@ const clone = o => JSON.parse(JSON.stringify(o == null ? null : o));
 const JTYPES = ['Ring','Pendant','Pendant with chain','Earrings','Necklace','Necklace set','Bracelet','Bangle / Kada','Mangalsutra','Nose pin','Chain','Other'];
 const COLORS = ['Yellow Gold','Rose Gold','White Gold','Two-tone','Tri-colour'];
 const PURITY = ['9KT','14KT','18KT','22KT','Silver','Platinum'];
-const SHAPES = ['Mix','Round','Oval','Pear','Princess','Marquise','Emerald','Cushion','Heart','Baguette'];
+/* diamond shapes (lab-grown trade names) */
+const SHAPES = ['Round','Round — Portuguese cut','Oval','Pear','Princess','Cushion','Long Cushion','Radiant','Long Radiant','Emerald','Asscher','Marquise','Heart',
+  'Baguette','Tapered Baguette','Trillion','Old Mine','Old European','Rose cut','Kite','Hexagon','Half Moon','Shield','Mix'];
+const D_COLORS = ['D','E','F','G','H','I','J','D-E','E-F','F-G','G-H'];
+const D_CLARITY = ['FL','IF','VVS1','VVS2','VS1','VS2','SI1','SI2'];
+const D_CUT = ['Ideal','Excellent','Very Good','Good','NA'];
+const D_CERT = ['IGI','GIA','SGL','Certificate नहीं'];
+const SIDE_COLORS = ['D-E','E-F','F-G','G-H','H-I'];
+const SIDE_CLARITY = ['VVS','VVS-VS','VS','VS-SI','SI'];
+const GEM_TYPES = ['Ruby','Emerald','Blue Sapphire','Pink Sapphire','Yellow Sapphire','Tanzanite','Amethyst','Blue Topaz','Citrine','Garnet','Peridot','Aquamarine','Morganite','Opal','Pearl','Onyx','Turquoise','Coral','Moissanite','Other'];
+const GEM_COLORS = ['Red','Pink','Blue','Green','Yellow','Purple','Orange','White','Black','Multi-colour'];
+const GEM_SHAPES = ['Round','Oval','Pear','Cushion','Emerald','Princess','Heart','Marquise','Trillion','Baguette','Cabochon','Drop / Briolette','Bead','Other'];
 const PAYMODES = ['UPI','Cash','Card','Bank transfer','Cheque','Old gold'];
 const STAGES = [
   ['new','नया order (factory ने अभी नहीं देखा)'], ['received','Factory को मिला'], ['cad','CAD बन रहा'], ['cad_approval','CAD approval'],
@@ -473,19 +511,26 @@ const EDIT_FIELDS = [
   ['client.name','Client का नाम','priv'], ['client.phone','Contact No.','priv'], ['client.city','City / Area','priv'],
   ['spec.jtype','Jewellery type','main'], ['spec.jtypeOther','Type (Other)','main'], ['spec.qty','Qty','main'],
   ['spec.metalColor','Metal colour','main'], ['spec.purity','Purity','main'], ['spec.size','Size / Length','main'],
-  ['spec.dia1Ct','Dia Ct. 1','main'], ['spec.dia1Shape','Dia 1 shape','main'], ['spec.dia2Ct','Dia Ct. 2','main'], ['spec.dia2Shape','Dia 2 shape','main'],
-  ['spec.gem1','Gemstone 1','main'], ['spec.gem2','Gemstone 2','main'], ['spec.engraving','Engraving','main'], ['spec.design','Design details','main'],
+  ['spec.dia1Ct','Main diamond ct','main'], ['spec.dia1Pcs','Main diamond pieces','main'], ['spec.dia1Shape','Main diamond shape','main'],
+  ['spec.dia1Color','Main diamond colour','main'], ['spec.dia1Clarity','Main diamond clarity','main'], ['spec.dia1Cut','Main diamond cut','main'], ['spec.dia1Cert','Certificate','main'],
+  ['spec.dia2Ct','Side diamonds ct','main'], ['spec.dia2Pcs','Side diamond pieces','main'], ['spec.dia2Shape','Side diamond shape','main'],
+  ['spec.dia2Color','Side diamond colour','main'], ['spec.dia2Clarity','Side diamond clarity','main'],
+  ['spec.gem1Type','Gemstone 1','main'], ['spec.gem1Color','Gemstone 1 colour','main'], ['spec.gem1Shape','Gemstone 1 shape','main'], ['spec.gem1Ct','Gemstone 1 size/ct','main'], ['spec.gem1Pcs','Gemstone 1 pieces','main'],
+  ['spec.gem2Type','Gemstone 2','main'], ['spec.gem2Color','Gemstone 2 colour','main'], ['spec.gem2Shape','Gemstone 2 shape','main'], ['spec.gem2Ct','Gemstone 2 size/ct','main'], ['spec.gem2Pcs','Gemstone 2 pieces','main'],
+  ['spec.stoneNote','Diamond / gemstone remark','main'], ['spec.engraving','Engraving','main'], ['spec.design','Design details','main'],
   ['deliveryDay','Client delivery date','main'], ['priority','Priority','main'],
-  ['price.est','Est. Amount','priv'], ['price.goldRateBooked','Gold rate booked','priv'], ['price.goldRate','Booked gold rate','priv'],
+  ['price.est','Client से तय amount','priv'], ['price.goldRateBooked','Gold rate booked','priv'], ['price.goldRate','Gold rate','priv'],
   ['internalNote','Internal note','priv']
 ];
+const CALC_IN = ['goldWt', 'goldRate', 'diaRate', 'dia2Rate', 'gemAmt', 'making', 'other', 'gst'];
 const LABEL = Object.fromEntries(EDIT_FIELDS.map(f => [f[0], f[1]]));
 
 /* ---------- state ---------- */
 const S = {
   authUser: null, me: null, users: {}, orders: {}, priv: {}, extra: {}, extraPriv: {}, history: null, histLoading: false,
   route: {v: 'loading'}, filter: 'all', q: '', firstOrders: true, unsubs: [], privUnsubs: {}, viewUnsubs: [], viewId: null,
-  needSetup: false, settingUp: false, booted: false, micFor: null
+  needSetup: false, settingUp: false, booted: false, micFor: null, stores: {}, storeFilter: 'all', brand: null,
+  pushToken: null, pushOn: false, dash: null, dashLoading: false, dashStore: 'all', dashRange: 12
 };
 const role = () => (S.me && S.me.role) || '';
 const isAdmin = () => role() === 'admin';
@@ -496,6 +541,9 @@ const myName = () => (S.me && S.me.name) || '';
 const getOrder = id => S.orders[id] || S.extra[id] || null;
 const getPriv = id => S.priv[id] || S.extraPriv[id] || null;
 const uname = uid => (S.users[uid] && S.users[uid].name) || '';
+const myStore = () => (S.me && S.me.storeId) || '';
+const storeList = () => Object.entries(S.stores).map(([id, s]) => Object.assign({id}, s)).filter(s => s.active !== false).sort((a, b) => (a.at || 0) - (b.at || 0));
+const storeName = id => (S.stores[id] && S.stores[id].name) || '';
 
 /* ---------- writes ---------- */
 async function commit(p){
@@ -552,8 +600,28 @@ function alertUser(title, body){
   let bg = document.hidden;
   try { if (NATIVE && NATIVE.isForeground && !NATIVE.isForeground()) bg = true; } catch (e) {}
   if (!bg) return;
+  if (S.pushOn) return; /* the notification server already sends this to the phone */
   if (NATIVE && NATIVE.notifyUser) { try { NATIVE.notifyUser(title, body); } catch (e) {} }
   else systemNotify(title, body);
+}
+/* closed-app notifications: register this phone / browser with the notification server */
+async function setupPush(){
+  if (!S.authUser || !S.me) return;
+  try {
+    if (NATIVE && NATIVE.requestPushToken) { window.__doPushToken = tok => savePushToken(tok, 'android'); NATIVE.requestPushToken(); return; }
+    const key = (window.DO_CONFIG || {}).vapidKey;
+    if (!B.push || !key || !('Notification' in window) || Notification.permission !== 'granted' || !navigator.serviceWorker) return;
+    if (!(await B.push.supported())) return;
+    const reg = await navigator.serviceWorker.ready;
+    const tok = await B.push.token(key, reg);
+    if (tok) savePushToken(tok, 'web');
+  } catch (e) { console.warn('push setup', e); }
+}
+async function savePushToken(tok, platform){
+  if (!tok || !S.authUser || !S.me) return;
+  S.pushToken = tok;
+  try { await B.db.set('pushTokens/' + tok, {uid: S.authUser.uid, role: role(), storeId: myStore(), platform, at: Date.now()}); S.pushOn = true; }
+  catch (e) { console.warn('push token save', e); S.pushOn = false; }
 }
 function toast(msg, kind){
   const el = document.createElement('div');
@@ -587,6 +655,7 @@ function parseRoute(){
   if (p[0] === 'new') return {v: 'form', mode: 'new'};
   if (p[0] === 'edit' && p[1]) return {v: 'form', mode: 'edit', id: p[1]};
   if (p[0] === 'team') return {v: 'team'};
+  if (p[0] === 'dash') return {v: 'dash'};
   if (p[0] === 'account') return {v: 'account'};
   return {v: 'home'};
 }
@@ -613,6 +682,7 @@ function doRender(){
   if (r.v === 'home') renderHome();
   else if (r.v === 'form') renderFormRoute(r);
   else if (r.v === 'team') { if (!isAdmin()) return go('#/'); renderTeam(); }
+  else if (r.v === 'dash') { if (!isAdmin()) return go('#/'); renderDash(); }
   else if (r.v === 'account') renderAccount();
   if (r.v !== 'order' && r.v !== 'form') $('#stickbar').innerHTML = '';
 }
@@ -633,6 +703,7 @@ function renderTop(){
   const v = S.route.v; const att = attentionCount();
   const tabs = [['#/', 'Orders' + (att ? `<i>${att}</i>` : ''), v === 'home' || v === 'order']];
   if (staff()) tabs.push(['#/new', '＋ नया Order', v === 'form' && S.route.mode === 'new']);
+  if (isAdmin()) tabs.push(['#/dash', 'Dashboard', v === 'dash']);
   if (isAdmin()) tabs.push(['#/team', 'Team', v === 'team']);
   patch($('#tabs'), tabs.map(t => `<a class="tab ${t[2] ? 'on' : ''}" href="${t[0]}">${t[1]}</a>`).join(''));
 }
@@ -684,6 +755,7 @@ async function doSetup(){
       {op: 'set', path: 'users/' + u.uid, data: {name, role: 'admin', loginId: email, phone: '', active: true, at: Date.now(), by: u.uid}},
       {op: 'set', path: 'config/admin', data: {uid: u.uid, at: Date.now()}}
     ]);
+    try { await B.db.set('stores/' + B.db.newId('stores'), {name: 'Deeva Diamonds — VIP Road', city: 'Raipur', address: '1st Floor, Currency Tower, VIP Road, Raipur', phone: '', active: true, at: Date.now()}); } catch (e) { console.error(e); }
     S.needSetup = false; S.settingUp = false; S.booted = true;
     if (!S.authUser) startSession(u);
     S.route = parseRoute(); render();
@@ -740,21 +812,27 @@ function startSession(u){
 }
 function startData(){
   S.unsubs.push(B.db.watchQuery('users', [], list => { S.users = Object.fromEntries(list.map(x => [x.id, x.data])); render(); }, e => console.error(e)));
+  S.unsubs.push(B.db.watchQuery('stores', [], list => { S.stores = Object.fromEntries(list.map(x => [x.id, x.data])); render(); }, e => console.error(e)));
+  if (staff()) S.unsubs.push(B.db.watchDoc('config/brand', s => { S.brand = s.exists ? s.data : null; }, () => {}));
   const onErr = e => { console.error(e); toast('Orders load नहीं हुए — ' + errText(e), 'bad'); };
+  /* two-field queries; while Firebase still builds an index, fall back to one field + filter here */
+  let cur = null;
+  const subscribe = (filters, fallback, keep) => {
+    cur = B.db.watchQuery('orders', filters, list => onOrders(keep ? list.filter(keep) : list), e => {
+      if (fallback && /failed-precondition/.test((e && e.code) || '')) subscribe(fallback[0], null, fallback[1]);
+      else onErr(e);
+    });
+  };
   if (isFactory()) {
-    /* two-field query; if Firebase still builds its index, fall back to one field + filter here */
-    let cur = null;
-    const subscribe = (filters, keep) => {
-      cur = B.db.watchQuery('orders', filters, list => onOrders(keep ? list.filter(keep) : list), e => {
-        if (filters.length > 1 && /failed-precondition/.test((e && e.code) || '')) subscribe([['factoryVisible', '==', true]], x => ['factory', 'dispatched'].includes(x.data.status));
-        else onErr(e);
-      });
-    };
-    subscribe([['factoryVisible', '==', true], ['status', 'in', ['factory', 'dispatched']]]);
-    S.unsubs.push(() => { try { if (cur) cur(); } catch (e) {} });
+    subscribe([['factoryVisible', '==', true], ['status', 'in', ['factory', 'dispatched']]], [[['factoryVisible', '==', true]], x => ['factory', 'dispatched'].includes(x.data.status)]);
+  } else if (isStore()) {
+    if (!myStore()) { S.firstOrders = false; toast('आपको किसी store से नहीं जोड़ा गया है. Admin से कहें.', 'bad'); }
+    else subscribe([['storeId', '==', myStore()], ['status', 'in', ACTIVE]], [[['storeId', '==', myStore()]], x => ACTIVE.includes(x.data.status)]);
   } else {
-    S.unsubs.push(B.db.watchQuery('orders', [['status', 'in', ACTIVE]], onOrders, onErr));
+    subscribe([['status', 'in', ACTIVE]], null);
   }
+  S.unsubs.push(() => { try { if (cur) cur(); } catch (e) {} });
+  setTimeout(setupPush, 1500);
 }
 function onOrders(list){
   const next = {}; list.forEach(x => { next[x.id] = x.data; });
@@ -783,6 +861,7 @@ function watchView(id){
 }
 async function logout(){
   closeSheet(); $('#toasts').innerHTML = '';
+  if (S.pushToken) { const t = S.pushToken; S.pushToken = null; S.pushOn = false; try { await Promise.race([B.db.del('pushTokens/' + t), sleep(1500)]); } catch (e) {} }
   try { localStorage.removeItem('do.lastRoute'); } catch (e) {}
   stopAll(); S.authUser = null;
   try { await B.auth.signOut(); } catch (e) {}
@@ -818,9 +897,29 @@ function jtypeOf(s){ s = s || {}; return s.jtype === 'Other' ? (s.jtypeOther || 
 function itemLine(o){
   const s = (o && o.spec) || {};
   const parts = [jtypeOf(s), [s.purity, s.metalColor].filter(Boolean).join(' ')];
-  if (s.dia1Ct && s.dia1Ct !== 'NA') parts.push('Dia ' + s.dia1Ct + 'ct' + (s.dia1Shape ? ' ' + s.dia1Shape : ''));
+  if (hasDia(s.dia1Ct)) parts.push('Dia ' + s.dia1Ct + 'ct' + [s.dia1Shape, [s.dia1Color, s.dia1Clarity].filter(Boolean).join(' ')].filter(Boolean).map(x => ' ' + x).join(''));
+  if (hasDia(s.dia2Ct)) parts.push('Side ' + s.dia2Ct + 'ct');
+  if (s.gem1Type) parts.push(s.gem1Type);
   if (s.size && s.size !== 'NA') parts.push(s.size);
   return parts.filter(Boolean).join(' · ');
+}
+/* product rows shared by the review sheet, the order page and the PDF: [label, value, edited-keys] */
+function specRows(s){
+  s = s || {};
+  const R = [];
+  const add = (l, v, keys) => { if (v != null && String(v).trim() !== '') R.push([l, String(v), keys || []]); };
+  add('Jewellery type', jtypeOf(s), ['spec.jtype', 'spec.jtypeOther']);
+  if (s.qty && s.qty !== '1') add('Qty', s.qty, ['spec.qty']);
+  add('Metal colour', s.metalColor, ['spec.metalColor']);
+  add('Purity', s.purity, ['spec.purity']);
+  add('Size / Length', s.size, ['spec.size']);
+  const dk = ['Ct', 'Pcs', 'Shape', 'Color', 'Clarity', 'Cut', 'Cert'];
+  if (hasDia(s.dia1Ct)) add('Main diamond', [s.dia1Ct + ' ct', num(s.dia1Pcs) > 1 ? s.dia1Pcs + ' pcs' : '', s.dia1Shape, s.dia1Color ? 'Colour ' + s.dia1Color : '', s.dia1Clarity ? 'Clarity ' + s.dia1Clarity : '', s.dia1Cut && s.dia1Cut !== 'NA' ? 'Cut ' + s.dia1Cut : '', s.dia1Cert].filter(Boolean).join(' · '), dk.map(k => 'spec.dia1' + k));
+  else if (s.dia1Ct) add('Main diamond', 'NA', ['spec.dia1Ct']);
+  if (hasDia(s.dia2Ct)) add('Side diamonds', [s.dia2Ct + ' ct total', s.dia2Pcs ? s.dia2Pcs + ' pcs' : '', s.dia2Shape, s.dia2Color ? 'Colour ' + s.dia2Color : '', s.dia2Clarity ? 'Clarity ' + s.dia2Clarity : ''].filter(Boolean).join(' · '), dk.map(k => 'spec.dia2' + k));
+  [1, 2].forEach(n => { if (s['gem' + n + 'Type']) add('Gemstone ' + n, [s['gem' + n + 'Type'], s['gem' + n + 'Color'], s['gem' + n + 'Shape'], s['gem' + n + 'Ct'], s['gem' + n + 'Pcs'] ? s['gem' + n + 'Pcs'] + ' pcs' : ''].filter(Boolean).join(' · '), ['Type', 'Color', 'Shape', 'Ct', 'Pcs'].map(k => 'spec.gem' + n + k)); });
+  add('Engraving', s.engraving, ['spec.engraving']);
+  return R;
 }
 function dueChip(day, doneAt){
   if (!day) return '';
@@ -900,14 +999,17 @@ function orderCard(id, o, p){
   return `<a class="ocard ${needsMe(o) ? 'hot' : ''}" href="#/o/${esc(id)}">
     <div class="oc-top"><span class="ono">${esc(o.no)}</span>${o.priority === 'urgent' ? '<span class="pill bad">Urgent</span>' : ''}${flag}${statusPill(o)}</div>
     ${name ? `<div class="oc-name">${esc(name)}</div>` : ''}
-    <div class="oc-item">${esc(itemLine(o))}</div>
+    <div class="oc-item">${esc(itemLine(o))}</div>${(isAdmin() || isFactory()) && storeList().length > 1 ? `<div class="small muted">🏬 ${esc(storeName(o.storeId) || o.storeName || '')}</div>` : ''}
     <div class="oc-foot">${stage}${day && o.status !== 'cancelled' ? `<span class="small muted">${label} ${esc(fmtDay(day))}</span>${o.status === 'delivered' ? '' : dueChip(day, done)}` : ''}</div>
   </a>`;
 }
 function renderHome(){
   const fl = homeFilters();
   if (!fl.some(f => f[0] === S.filter)) S.filter = 'all';
-  const all = Object.entries(S.orders);
+  const stores = storeList();
+  const multi = (isAdmin() || isFactory()) && stores.length > 1;
+  const inStore = o => !multi || S.storeFilter === 'all' || o.storeId === S.storeFilter;
+  const all = Object.entries(S.orders).filter(([, o]) => inStore(o));
   const q = S.q.trim().toLowerCase();
   const match = (id, o) => {
     if (!q) return true;
@@ -920,6 +1022,8 @@ function renderHome(){
     h += `<div class="banner"><span class="grow">🔔 नए order और updates की आवाज़/notification के लिए</span><button class="btn sm primary" data-act="notif-on">चालू करें</button><button class="btn sm ghost" data-act="notif-later">बाद में</button></div>`;
   }
   if (staff()) h += `<a class="btn big primary" href="#/new" style="margin-bottom:12px">＋ नया Order बनाएँ</a>`;
+  if (isStore() && myStore()) h += `<p class="small muted" style="margin:-4px 2px 10px">🏬 ${esc(storeName(myStore()))}</p>`;
+  if (multi) h += `<div class="filters">` + [['all', 'सभी stores']].concat(stores.map(s => [s.id, s.name])).map(x => `<button class="fchip ${S.storeFilter === x[0] ? 'on' : ''}" data-act="store-filter" data-v="${esc(x[0])}">🏬 ${esc(x[1])}</button>`).join('') + `</div>`;
   h += `<div class="filters">` + fl.map(f => {
     const c = all.filter(([, o]) => f[2](o)).length;
     const alert = (f[0] === 'late' || f[0] === 'query' || f[0] === 'review' || f[0] === 'new' || f[0] === 'cad') && c > 0;
@@ -934,7 +1038,7 @@ function renderHome(){
   h += `<div style="margin-top:18px">`;
   if (!S.history) h += `<button class="btn big" data-act="hist-load" ${S.histLoading ? 'disabled' : ''}>${S.histLoading ? 'Load हो रहा है…' : 'पुराने Orders देखें (' + (isFactory() ? 'Delivered' : 'Delivered / Cancelled') + ')'}</button>`;
   else {
-    const hl = S.history.filter(x => match(x.id, x.data));
+    const hl = S.history.filter(x => match(x.id, x.data) && inStore(x.data));
     h += `<div class="view-title" style="font-size:18px">पुराने Orders (${hl.length})</div>` + (hl.length ? hl.map(x => orderCard(x.id, x.data, getPriv(x.id) || x.priv)).join('') : '<div class="empty">कोई पुराना order नहीं.</div>');
   }
   h += `</div>`;
@@ -945,10 +1049,12 @@ async function loadHistory(){
   try {
     const filters = isFactory() ? [['factoryVisible', '==', true], ['status', 'in', ['received', 'delivered', 'cancelled']]] : [['status', 'in', ['delivered', 'cancelled']]];
     let list;
-    try { list = await B.db.getQuery('orders', filters); }
+    const done = isFactory() ? ['received', 'delivered', 'cancelled'] : ['delivered', 'cancelled'];
+    const one = isFactory() ? [['factoryVisible', '==', true]] : isStore() ? [['storeId', '==', myStore()]] : null;
+    try { list = await B.db.getQuery('orders', one ? one.concat([['status', 'in', done]]) : filters); }
     catch (e) {
-      if (!isFactory() || !/failed-precondition/.test((e && e.code) || '')) throw e;
-      list = (await B.db.getQuery('orders', [['factoryVisible', '==', true]])).filter(x => ['received', 'delivered', 'cancelled'].includes(x.data.status));
+      if (!one || !/failed-precondition/.test((e && e.code) || '')) throw e;
+      list = (await B.db.getQuery('orders', one)).filter(x => done.includes(x.data.status));
     }
     list.sort((a, b) => (b.data.updatedAt || 0) - (a.data.updatedAt || 0));
     if (staff()) {
@@ -968,28 +1074,20 @@ function kvRow(label, val, editedKey, o){
 }
 function specBlock(o){
   const s = o.spec || {};
-  const dia = (ct, sh) => ct ? (ct === 'NA' ? 'NA' : ct + ' ct' + (sh ? ' (' + sh + ')' : '')) : '';
-  let h = `<div class="kv">`;
-  h += kvRow('Jewellery type', jtypeOf(s), 'spec.jtype', o);
-  h += kvRow('Qty', s.qty && s.qty !== '1' ? s.qty : '', 'spec.qty', o);
-  h += kvRow('Metal colour', s.metalColor, 'spec.metalColor', o);
-  h += kvRow('Purity', s.purity, 'spec.purity', o);
-  h += kvRow('Size / Length', s.size, 'spec.size', o);
-  h += kvRow('Dia Ct. 1', dia(s.dia1Ct, s.dia1Shape), 'spec.dia1Ct', o);
-  h += kvRow('Dia Ct. 2', dia(s.dia2Ct, s.dia2Shape), 'spec.dia2Ct', o);
-  h += kvRow('Gemstone 1', s.gem1, 'spec.gem1', o);
-  h += kvRow('Gemstone 2', s.gem2, 'spec.gem2', o);
-  h += kvRow('Engraving', s.engraving, 'spec.engraving', o);
-  const dEd = o.edited && o.edited.spec_design && !(isFactory() && o.approvedAt && o.edited.spec_design < o.approvedAt);
-  if (s.design) h += `<div class="full"><span class="lbl" style="margin:0 0 3px">Design details ${dEd ? '<span class="edited">✏️ बदला</span>' : ''}</span>${esc(s.design)}</div>`;
+  const editedAt = keys => Math.max(0, ...keys.map(k => (o.edited && o.edited[k.replace(/\./g, '_')]) || 0));
+  const mark = keys => { const at = editedAt(keys); return at && !(isFactory() && o.approvedAt && at < o.approvedAt) ? '<span class="edited">✏️ बदला</span>' : ''; };
+  let h = `<div class="kv">` + specRows(s).map(r => `<div>${esc(r[0])}</div><div>${esc(r[1])}${mark(r[2])}</div>`).join('');
+  if (s.stoneNote) h += `<div class="full"><span class="lbl" style="margin:0 0 3px">Diamond / gemstone remark ${mark(['spec.stoneNote'])}</span>${esc(s.stoneNote)}</div>`;
+  if (s.design) h += `<div class="full"><span class="lbl" style="margin:0 0 3px">Design details ${mark(['spec.design'])}</span>${esc(s.design)}</div>`;
   if (o.factoryNote) h += `<div class="full"><span class="lbl" style="margin:0 0 3px">Factory के लिए note (Approve करते समय)</span>${esc(o.factoryNote)}</div>`;
   return h + `</div>`;
 }
 function galleryHtml(items, internal){
   if (!items.length) return '';
   return `<div class="gal">` + items.map(m => {
-    const cap = `<div class="cap">${internal ? '<span class="lock">🔒 सिर्फ store/admin</span><br>' : ''}${esc(m.desc || '')}<small>${esc(m.byName || '')} · ${esc(fmtWhen(m.at))}${m.stage ? ' · ' + esc(STAGE_SHORT[m.stage] || m.stage) : ''}</small></div>`;
-    if (m.kind === 'image') return `<div class="gi"><img src="${esc(m.url)}" alt="" loading="lazy" data-act="zoom" data-src="${esc(m.url)}" data-cap="${esc(m.desc || '')}">${cap}</div>`;
+    const voice = m.voiceUrl ? `<audio id="gv-${esc(m.id)}" src="${esc(m.voiceUrl)}" controls preload="none" style="display:block;width:100%;margin:6px 0 0"></audio>` : '';
+    const cap = `<div class="cap">${internal ? '<span class="lock">🔒 सिर्फ store/admin</span><br>' : ''}${m.voiceUrl ? '<span class="small" style="font-weight:600">🎙️ बदलाव — सुनें:</span>' + voice : ''}${esc(m.desc || '')}<small>${esc(m.byName || '')} · ${esc(fmtWhen(m.at))}${m.stage ? ' · ' + esc(STAGE_SHORT[m.stage] || m.stage) : ''}</small></div>`;
+    if (m.kind === 'image') return `<div class="gi ${m.voiceUrl ? 'wide' : ''}"><img src="${esc(m.url)}" alt="" loading="lazy" data-act="zoom" data-src="${esc(m.url)}" data-cap="${esc(m.desc || '')}" ${m.voiceUrl ? 'style="aspect-ratio:4/3"' : ''}>${cap}</div>`;
     if (m.kind === 'video') return `<div class="gi wide"><video id="v-${esc(m.id)}" src="${esc(m.url)}" controls playsinline preload="metadata"></video>${cap}</div>`;
     return `<div class="gi wide" style="padding:0 9px"><audio id="a-${esc(m.id)}" src="${esc(m.url)}" controls preload="none"></audio>${cap.replace('class="cap"', 'class="cap" style="padding:6px 0 8px"')}</div>`;
   }).join('') + `</div>`;
@@ -1002,7 +1100,7 @@ function stepsHtml(o){
     return `<li class="${cls}"><span class="d">${i < cur || (i === cur && s[0] === 'dispatched') ? '✓' : (i === cur ? '●' : '')}</span>${esc(s[1])}${at && i <= cur ? `<small>${esc(fmtWhen(at))}</small>` : ''}</li>`;
   }).join('') + `</ul>`;
 }
-const LOGICON = {created:'📝', edited:'✏️', query:'❓', reply:'💬', approved:'✅', stage:'🔧', note:'🗒️', cad_ok:'👍', cad_change:'↩️', factory_seen:'👀', dispatched:'🚚', received:'🏬', delivered:'🎁', cancelled:'✖️', reopened:'↺', payment:'💰', price:'₹', media:'📎'};
+const LOGICON = {schedule:'📅', created:'📝', edited:'✏️', query:'❓', reply:'💬', approved:'✅', stage:'🔧', note:'🗒️', cad_ok:'👍', cad_change:'↩️', factory_seen:'👀', dispatched:'🚚', received:'🏬', delivered:'🎁', cancelled:'✖️', reopened:'↺', payment:'💰', price:'₹', media:'📎'};
 function timelineHtml(o, p){
   let items = Object.values(o.log || {}).concat(Object.values((p && p.log) || {}).map(x => Object.assign({priv: true}, x)));
   if (isFactory()) items = items.filter(x => !['query','reply','created','price','payment'].includes(x.type) && (!o.approvedAt || x.at >= o.approvedAt));
@@ -1022,11 +1120,12 @@ function renderOrder(id){
   /* header */
   h += `<div class="dhead"><div class="row" style="margin:0"><span class="no">${esc(o.no)}</span><span class="grow"></span>${o.priority === 'urgent' ? '<span class="pill bad">Urgent</span>' : ''}${statusPill(o)}</div>
     <div class="sub">${esc(itemLine(o))}</div>
-    <div class="sub">Order ${esc(fmtDay(o.orderDay))} · ${esc(o.createdByName || '')}</div>`;
+    <div class="sub">Order ${esc(fmtDay(o.orderDay))} · ${esc(o.createdByName || '')}${o.storeName || storeName(o.storeId) ? ' · 🏬 ' + esc(storeName(o.storeId) || o.storeName) : ''}</div>`;
   const dues = [];
   if (!isFactory() && o.deliveryDay) dues.push(['Client delivery', o.deliveryDay, (o.delivered && o.delivered.at) || null]);
   if (o.factoryDue) dues.push(['Factory due (dispatch)', o.factoryDue, dispatchedAt(o) || null]);
   if (dues.length) h += `<div class="dues">` + dues.map(d => `<div class="due"><small>${esc(d[0])}</small><b>${esc(fmtDay(d[1]))}</b>${o.status === 'cancelled' ? '' : dueChip(d[1], d[2])}</div>`).join('') + `</div>`;
+  if (staff() && ['review', 'query', 'factory', 'dispatched', 'received'].includes(o.status)) h += `<button class="btn sm" data-act="sched-open" style="margin-top:10px;background:transparent;color:var(--cream);border-color:rgba(231,177,80,.55)">📅 Date / Priority बदलें</button>`;
   h += `</div>`;
 
   /* alert boxes */
@@ -1058,7 +1157,7 @@ function renderOrder(id){
     const c = p.client || {};
     h += `<div class="card"><h3>👤 Client</h3><div class="kv">${kvRow('नाम', c.name, 'client.name')}${kvRow('Contact No.', c.phone, 'client.phone')}${kvRow('City / Area', c.city, 'client.city')}</div>
       <div class="btns" style="margin-top:10px">${c.phone ? `<a class="btn sm" href="tel:+91${esc(phone10(c.phone))}">📞 Call</a><a class="btn sm wa" href="${esc(waLink(c.phone, clientMsg(o, p)))}" target="_blank" rel="noopener">WhatsApp पर order confirmation</a>` : ''}</div>
-      ${p.ack ? `<p class="small muted" style="margin:10px 0 0">${p.ack.remote ? 'Phone/WhatsApp order — शर्तें client को बताईं' : 'Client ने शर्तें मानीं'} · ${esc(fmtWhen(p.ack.at))}</p>${p.ack.signUrl ? `<img class="sigimg" src="${esc(p.ack.signUrl)}" alt="Client signature">` : ''}` : ''}</div>`;
+      ${p.ack ? `<p class="small muted" style="margin:10px 0 0">${p.ack.remote ? 'Phone/WhatsApp order — शर्तें client को बताईं' : 'Client ने शर्तें मानीं'} · ${esc(fmtWhen(p.ack.at))}</p>${p.ack.signData || p.ack.signUrl ? `<img class="sigimg" src="${esc(p.ack.signData || p.ack.signUrl)}" alt="Client signature">` : ''}` : ''}</div>`;
   }
   /* product */
   h += `<div class="card"><h3>💎 Product details</h3>${specBlock(o)}</div>`;
@@ -1086,20 +1185,19 @@ function priceBlock(o, p){
   const pays = Object.entries(p.payments || {}).map(([k, x]) => Object.assign({k}, x)).filter(x => !x.deleted).sort((a, b) => (a.at || 0) - (b.at || 0));
   const total = num(pr.final) || num(pr.est);
   const paid = paidTotal(p);
-  let h = `<div class="card"><h3>💰 Price & Payment <span class="tag muted small">🔒 factory को नहीं दिखता</span></h3><div class="kv">`;
-  h += kvRow('Est. Amount', pr.est ? money(pr.est) : '', 'price.est');
-  if (pr.final) h += kvRow('Final Amount', money(pr.final), 'price.final');
-  h += kvRow('Gold rate booked', pr.goldRateBooked === 'yes' ? 'Yes' + (pr.goldRate ? ' @ ' + money(pr.goldRate) + '/g' : '') : (pr.goldRateBooked === 'no' ? 'No' : ''), 'price.goldRateBooked');
+  let h = `<div class="card" id="price-card"><h3>💰 Estimate & Payment <span class="tag muted small">🔒 factory को नहीं दिखता</span></h3>`;
+  if (pr.calc && pr.calc.final) h += `<div class="calc-out" style="border-top:none;margin-top:0;padding-top:0">${calcLines(pr.calc, o.spec).map(l => `<div class="${l[2] || ''}"><span>${esc(l[0])}</span><span>${esc(l[1])}</span></div>`).join('')}</div>`;
+  h += `<div class="kv" style="margin-top:8px">`;
+  h += kvRow('Client से तय amount', pr.est ? money(pr.est) : '', 'price.est');
+  if (pr.final) h += kvRow('Final bill', money(pr.final), 'price.final');
+  h += kvRow('Gold rate booked', pr.goldRateBooked === 'yes' ? 'Yes @ ' + money(pr.goldRate || (pr.calc && pr.calc.goldRate) || 0) + '/g' : (pr.goldRateBooked === 'no' ? 'No — delivery के दिन का rate' : ''), 'price.goldRateBooked');
   h += `</div>`;
-  const c = pr.calc;
-  if (c && c.final) {
-    h += `<details style="margin-top:8px"><summary class="small" style="cursor:pointer;font-weight:600">हिसाब देखें</summary><div class="calc-out">${calcLines(c).map(l => `<div class="${l[2] || ''}"><span>${esc(l[0])}</span><span>${esc(l[1])}</span></div>`).join('')}</div></details>`;
-  }
-  h += `<div style="margin-top:10px">` + (pays.length ? pays.map(x => `<div class="pay"><span>${esc(fmtDay(x.day))} · ${esc(x.mode || '')}${x.note ? ' · ' + esc(x.note) : ''}<br><small class="muted">${esc(x.name || '')}</small></span><span class="money">${money(x.amount)}</span></div>`).join('') : '<p class="muted small">अभी कोई payment नहीं.</p>') + `</div>`;
+  h += `<div style="margin-top:10px">` + (pays.length ? pays.map(x => `<div class="pay"><span>${esc(fmtDay(x.day))} · ${esc(x.mode || '')}${x.note ? ' · ' + esc(x.note) : ''}${x.receiptUrl ? ` · <a href="#" data-act="zoom" data-src="${esc(x.receiptUrl)}" data-cap="Receipt">🧾 receipt</a>` : ''}<br><small class="muted">${esc(x.name || '')}</small></span><span class="money">${money(x.amount)}</span></div>`).join('') : '<p class="muted small">अभी कोई payment नहीं.</p>') + `</div>`;
   h += `<div class="tot"><span>कुल मिला</span><span class="money">${money(paid)}</span></div>`;
   if (total) h += `<div class="tot big"><span>बाकी</span><span class="money" style="color:${total - paid > 0 ? 'var(--bad)' : 'var(--ok)'}">${money(Math.max(0, total - paid))}</span></div>`;
   if (pr.goldRateBooked === 'yes' && num(pr.est) && paid < num(pr.est) * 0.5) h += `<p class="small" style="color:var(--warn);margin:4px 0 0">⚠️ Gold rate booked है, पर payment 50% से कम है.</p>`;
-  if (o.status !== 'cancelled') h += `<div class="btns" style="margin-top:10px"><button class="btn sm primary" data-act="pay-open">＋ Payment जोड़ें</button><button class="btn sm" data-act="final-open">Final amount</button></div>`;
+  const c = p.client || {};
+  h += `<div class="btns" style="margin-top:10px">${o.status !== 'cancelled' ? '<button class="btn sm primary" data-act="pay-open">＋ Payment</button><button class="btn sm" data-act="final-open">🧮 Final bill</button>' : ''}<button class="btn sm" data-act="pdf">🧾 Receipt PDF</button>${c.phone ? `<a class="btn sm wa" href="${esc(waLink(c.phone, clientMsg(o, p)))}" target="_blank" rel="noopener">WhatsApp client</a>` : ''}</div>`;
   return h + `</div>`;
 }
 function pingBtns(id, o, toRole){
@@ -1117,13 +1215,17 @@ function pingText(id, o, toRole){
 function clientMsg(o, p){
   const pr = (p && p.price) || {}, c = (p && p.client) || {};
   const paid = paidTotal(p), total = num(pr.final) || num(pr.est);
+  const st = (o.storeId && S.stores[o.storeId]) || {};
   return [
-    'Namaste ' + (c.name || '') + ' ji 🙏', 'Deeva Diamonds — आपका order confirm है.', '',
+    'Namaste ' + (c.name || '') + ' ji 🙏', 'Deeva Diamonds — आपका made-to-order order confirm है.', '',
     'Order No: ' + o.no, 'Item: ' + itemLine(o),
-    total ? 'Est. Amount: ' + money(total) : null, paid ? 'Advance/Paid: ' + money(paid) : null, total ? 'Balance: ' + money(Math.max(0, total - paid)) : null,
+    total ? 'Amount: ' + money(total) : null,
+    pr.goldRateBooked === 'yes' ? 'Gold rate booked: ' + money(pr.goldRate || 0) + '/g' : (pr.goldRateBooked === 'no' ? 'Gold rate: delivery के दिन का rate लगेगा' : null),
+    paid ? 'Paid: ' + money(paid) : null, total ? 'Balance: ' + money(Math.max(0, total - paid)) : null,
     o.deliveryDay ? 'Expected delivery: ' + fmtDay(o.deliveryDay) : null, '',
-    'Terms: Advance non-refundable; production शुरू होने के बाद cancel नहीं होगा; gold rate booked न हो तो billing delivery date के rate पर होगी.',
-    'Deeva Diamonds, 1st Floor, Currency Tower, VIP Road, Raipur'
+    'Receipt की PDF अलग से भेज रहे हैं.',
+    'Terms: Advance non-refundable; production शुरू होने के बाद cancel नहीं होगा.',
+    'Deeva Diamonds' + (st.address ? ', ' + st.address : ', VIP Road, Raipur')
   ].filter(x => x !== null).join('\n');
 }
 function renderOrderBar(id, o){
@@ -1302,21 +1404,47 @@ function sheetDispatch(id){
   openSheet('🚚 Dispatch करें', `
     <div class="lbl">कैसे भेजा?</div><div class="chips" id="dp-mode" style="margin-bottom:12px">${['Hand delivery','Courier','Staff ने लिया','Other'].map((m, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="dp-mode" data-v="${esc(m)}">${esc(m)}</button>`).join('')}</div>
     <div class="fld"><label for="dp-ref">Courier / Tracking no. / किसको दिया</label><input class="in" id="dp-ref"></div>
-    <div class="fld"><label for="dp-note">Final weight / note</label>${textArea('dp-note', 'जैसे: gold 3.62g, dia 0.40ct, hallmark done', '')}</div>
+    <div class="two"><div class="fld"><label for="dp-wt">Final gold weight (g)</label><input class="in" id="dp-wt" inputmode="decimal" placeholder="3.62"></div><div class="fld"><label for="dp-dia">Final diamond ct</label><input class="in" id="dp-dia" inputmode="decimal"></div></div>
+    <div class="fld"><label for="dp-note">Note</label>${textArea('dp-note', 'जैसे: hallmark done, screw back', '')}</div>
     <div class="lbl">बने हुए piece की photo/video</div><div id="dp-media"></div>
     <button class="btn gold big" data-act="dispatch-do">🚚 Dispatch — अभी का time punch होगा</button>`, {id, mode: 'Hand delivery'});
-  S.sheet.picker = makePicker('dp-media', id, {allowInternal: false, stage: () => 'dispatched'});
+  S.sheet.picker = makePicker('dp-media', id, {kinds: ['image', 'video'], stage: () => 'dispatched'});
   S.sheet.picker.render();
 }
 async function doDispatch(){
   const id = S.sheet.id, pk = S.sheet.picker;
   if (pk.busy()) return toast('Upload पूरा होने दें…');
   const items = pk.done(), now = Date.now();
-  const d = {at: now, by: S.authUser.uid, byName: myName(), mode: S.sheet.mode || '', ref: $('#dp-ref').value.trim(), note: $('#dp-note').value.trim()};
-  const upd = {status: 'dispatched', stage: 'dispatched', stageAt: {dispatched: now}, dispatch: d, log: {[logKey()]: logEntry('dispatched', 'Dispatched — ' + [d.mode, d.ref, d.note].filter(Boolean).join(' · ') + (items.length ? '\n📎 ' + items.length + ' photo/video' : ''))}};
-  if (items.length) { upd.media = {}; items.forEach(m => { upd.media[m.id] = m; }); }
+  const d = {at: now, by: S.authUser.uid, byName: myName(), mode: S.sheet.mode || '', ref: $('#dp-ref').value.trim(), goldWt: $('#dp-wt').value.trim(), diaCt: $('#dp-dia').value.trim(), note: $('#dp-note').value.trim()};
+  const upd = {status: 'dispatched', stage: 'dispatched', stageAt: {dispatched: now}, dispatch: d, log: {[logKey()]: logEntry('dispatched', 'Dispatched — ' + [d.mode, d.ref, d.goldWt ? 'Gold ' + d.goldWt + 'g' : '', d.diaCt ? 'Dia ' + d.diaCt + 'ct' : '', d.note].filter(Boolean).join(' · ') + (items.length ? '\n📎 ' + items.length + ' photo/video' : ''))}};
+  if (items.length) { upd.media = {}; items.forEach(m => { const x = Object.assign({}, m); delete x.id; upd.media[m.id] = x; }); }
   const ok = await write('orders/' + id, stamp(upd));
   if (ok) { closeSheet(); toast('Dispatch punch हो गया: ' + fmtWhen(now)); }
+}
+function sheetSchedule(id){
+  const o = getOrder(id);
+  openSheet('📅 Delivery date / Priority बदलें', `
+    <div class="fld"><label for="sc-day">Client delivery date</label><input class="in" type="date" id="sc-day" value="${esc(o.deliveryDay || '')}"></div>
+    ${isAdmin() && o.factoryVisible ? `<div class="fld"><label for="sc-fdue">Factory due (dispatch) date</label><input class="in" type="date" id="sc-fdue" value="${esc(o.factoryDue || '')}"></div>` : ''}
+    <div class="lbl">Priority</div><div class="chips" id="sc-pri" style="margin-bottom:12px">${[['normal','Normal'],['urgent','🔴 Urgent']].map(x => `<button class="chip ${(o.priority || 'normal') === x[0] ? 'on' : ''}" data-act="pick1" data-g="sc-pri" data-v="${x[0]}">${x[1]}</button>`).join('')}</div>
+    <div class="fld"><label for="sc-why">कारण</label>${textArea('sc-why', 'जैसे: client को 3 दिन पहले चाहिए — शादी है', '')}</div>
+    ${o.factoryVisible && o.status === 'factory' ? '<p class="small muted">Factory को "बदलाव हुआ" का alert जाएगा.</p>' : ''}
+    <button class="btn primary big" data-act="sched-do">Save करें</button>`, {id, mode: o.priority || 'normal'});
+}
+async function doSchedule(){
+  const id = S.sheet.id, o = getOrder(id);
+  const day = $('#sc-day').value, fdue = $('#sc-fdue') ? $('#sc-fdue').value : (o.factoryDue || ''), pri = S.sheet.mode || 'normal', why = $('#sc-why').value.trim();
+  const lines = [];
+  const upd = {};
+  if (day && day !== o.deliveryDay) { upd.deliveryDay = day; lines.push('Client delivery: ' + (fmtDay(o.deliveryDay) || '—') + ' → ' + fmtDay(day)); }
+  if (fdue && fdue !== (o.factoryDue || '')) { upd.factoryDue = fdue; lines.push('Factory due: ' + (fmtDay(o.factoryDue) || '—') + ' → ' + fmtDay(fdue)); }
+  if (pri !== (o.priority || 'normal')) { upd.priority = pri; lines.push('Priority: ' + (o.priority === 'urgent' ? 'Urgent' : 'Normal') + ' → ' + (pri === 'urgent' ? 'Urgent' : 'Normal')); }
+  if (!lines.length) return toast('कुछ नहीं बदला.');
+  const factoryCares = o.factoryVisible && o.status === 'factory' && (upd.priority || upd.factoryDue);
+  if (factoryCares) upd.factoryAck = false;
+  upd.log = {[logKey()]: logEntry(factoryCares ? 'edited' : 'schedule', 'बदलाव:\n' + lines.join('\n') + (why ? '\nकारण: ' + why : ''))};
+  const ok = await write('orders/' + id, stamp(upd));
+  if (ok) { closeSheet(); toast('Save हो गया.' + (factoryCares ? ' Factory को alert गया.' : '')); }
 }
 async function doReceived(){
   const id = S.route.id;
@@ -1324,10 +1452,13 @@ async function doReceived(){
   if (ok) toast('Store पर मिल गया — mark कर दिया.');
 }
 function sheetDelivered(id){
-  const p = getPriv(id) || {}; const pr = p.price || {};
+  const o = getOrder(id), p = getPriv(id) || {}; const pr = p.price || {};
   const total = num(pr.final) || num(pr.est), paid = paidTotal(p);
-  openSheet('🎁 Client को delivered', `<p>Total ${money(total)} · मिला ${money(paid)} · <b>बाकी ${money(Math.max(0, total - paid))}</b></p>
-    <p class="small muted">बाकी payment आया है तो पहले "＋ Payment" से जोड़ दें.</p>
+  openSheet('🎁 Client को delivered', `<div class="calc"><div class="calc-out" style="border-top:none;margin-top:0;padding-top:0">${pr.calc ? calcLines(pr.finalCalc || pr.calc, o.spec).map(l => `<div class="${l[2] || ''}"><span>${esc(l[0])}</span><span>${esc(l[1])}</span></div>`).join('') : ''}</div></div>
+    <div class="tot"><span>${pr.final ? 'Final bill' : 'Client से तय amount'}</span><span class="money">${money(total)}</span></div>
+    <div class="tot"><span>कुल मिला</span><span class="money">${money(paid)}</span></div>
+    <div class="tot big"><span>बाकी</span><span class="money" style="color:${total - paid > 0 ? 'var(--bad)' : 'var(--ok)'}">${money(Math.max(0, total - paid))}</span></div>
+    <p class="small muted">${pr.final ? '' : 'Final bill अभी नहीं बना — "🧮 Final bill" से बना लें. '}बाकी payment आया है तो पहले "＋ Payment" से जोड़ें.</p>
     <button class="btn primary big" data-act="deliv-do">🎁 हाँ, client को दे दिया</button>`, {id});
 }
 async function doDelivered(){
@@ -1340,26 +1471,52 @@ function sheetPay(id){
     <div class="fld"><label for="py-day">Date</label><input class="in" type="date" id="py-day" value="${today()}"></div></div>
     <div class="lbl">Mode</div><div class="chips" id="py-mode" style="margin-bottom:12px">${PAYMODES.map((m, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="py-mode" data-v="${esc(m)}">${esc(m)}</button>`).join('')}</div>
     <div class="fld"><label for="py-note">Note</label><input class="in" id="py-note" placeholder="जैसे: UPI ref, दूसरी किस्त"></div>
+    <div class="lbl">🧾 Receipt photo (optional)</div><div id="py-media"></div>
     <button class="btn primary big" data-act="pay-do">Save करें</button>`, {id, mode: PAYMODES[0]});
+  S.sheet.picker = makePicker('py-media', id, {kinds: ['image'], internalOnly: true, imageLabel: 'Receipt photo', descPh: 'Receipt'});
+  S.sheet.picker.render();
 }
 async function doPay(){
-  const id = S.sheet.id, amt = num($('#py-amt').value);
+  const id = S.sheet.id, amt = num($('#py-amt').value), pk = S.sheet.picker;
   if (!(amt > 0)) return toast('Amount डालें.', 'bad');
+  if (pk.busy()) return toast('Receipt upload पूरा होने दें…');
   const k = 'p' + rid();
+  const rc = pk.done()[0];
   const pay = {amount: amt, mode: S.sheet.mode, day: $('#py-day').value || today(), note: $('#py-note').value.trim(), by: S.authUser.uid, name: myName(), at: Date.now()};
-  const ok = await write('orders/' + id + '/private/info', {payments: {[k]: pay}, log: {[logKey()]: logEntry('payment', 'Payment ' + money(amt) + ' (' + pay.mode + ')' + (pay.note ? ' · ' + pay.note : ''))}});
+  const upd = {payments: {[k]: pay}, log: {[logKey()]: logEntry('payment', 'Payment ' + money(amt) + ' (' + pay.mode + ')' + (pay.note ? ' · ' + pay.note : '') + (rc ? ' · 🧾' : ''))}};
+  if (rc) { pay.receiptUrl = rc.url; pay.receiptPath = rc.path; upd.media = {}; pk.done().forEach(m => { const d = Object.assign({}, m, {receipt: true, desc: m.desc || ('Receipt ' + money(amt))}); delete d.id; delete d.factory; upd.media[m.id] = d; }); }
+  const ok = await write('orders/' + id + '/private/info', upd);
   if (ok) { closeSheet(); toast('Payment जुड़ गया.'); }
 }
 function sheetFinal(id){
-  const pr = (getPriv(id) || {}).price || {};
-  openSheet('Final amount', `<p class="small muted">Delivery के समय का final bill (gold rate, weight बदलने पर). खाली छोड़ें तो Est. Amount ही चलेगा.</p>
-    <div class="fld"><label for="fn-amt">Final Amount ₹</label><input class="in" id="fn-amt" inputmode="decimal" value="${esc(pr.final || '')}"></div>
-    <button class="btn primary big" data-act="final-do">Save करें</button>`, {id});
+  const o = getOrder(id), p = getPriv(id) || {}, pr = p.price || {};
+  const c = Object.assign({goldWt: '', goldRate: '', diaRate: '', dia2Rate: '', gemAmt: '', making: '', other: '', gst: '3'}, pr.finalCalc || pr.calc || {});
+  if (!pr.finalCalc && o.dispatch && o.dispatch.goldWt) c.goldWt = o.dispatch.goldWt;
+  const booked = pr.goldRateBooked === 'yes';
+  if (booked) c.goldRate = pr.goldRate || c.goldRate;
+  const f = (k, label, dis) => `<div class="fld" style="margin-bottom:8px"><label for="fb-${k}" class="small">${label}</label><input class="in" id="fb-${k}" data-fb="${k}" inputmode="decimal" value="${esc(c[k] == null ? '' : c[k])}" ${dis ? 'readonly' : ''}></div>`;
+  openSheet('🧮 Final bill (delivery के समय)', `<p class="small muted" style="margin-top:-6px">${o.dispatch && o.dispatch.goldWt ? 'Factory ने final gold weight ' + esc(o.dispatch.goldWt) + 'g बताया है. ' : ''}${booked ? 'Gold rate book है — वही rate लगेगा.' : 'Gold rate book नहीं है — आज का rate डालें.'}</p>
+    <div class="two">${f('goldWt', 'Final gold weight (g)')}${f('goldRate', booked ? 'Booked rate ₹/g' : 'आज का rate ₹/g', booked)}</div>
+    <div class="two">${f('diaRate', 'Main diamond ₹/ct')}${f('dia2Rate', 'Side diamonds ₹/ct')}</div>
+    <div class="two">${f('making', 'Making ₹/g')}${f('gemAmt', 'Gemstone ₹')}</div>
+    <div class="two">${f('other', 'Other ₹')}${f('gst', 'GST %')}</div>
+    <div class="calc"><div class="calc-out" id="fb-out" style="border-top:none;margin-top:0;padding-top:0"></div></div>
+    <div class="fld"><label for="fb-final">Final amount ₹ <span class="req">*</span></label><input class="in" id="fb-final" inputmode="decimal" value="${esc(pr.final || '')}"><div class="hint">ऊपर के हिसाब से भरा जाता है — discount हो तो बदल दें. Client से तय amount: ${money(pr.est || 0)}</div></div>
+    <button class="btn primary big" data-act="final-do">Final bill save करें</button>`, {id, calc: c, spec: o.spec});
+  updateFinalCalc(true);
+}
+function updateFinalCalc(first){
+  const sh = S.sheet; if (!sh || !sh.calc) return;
+  const v = calcValues(sh.calc, sh.spec);
+  const out = $('#fb-out'); if (out) out.innerHTML = calcLines(sh.calc, sh.spec).map(l => `<div class="${l[2] || ''}"><span>${esc(l[0])}</span><span>${esc(l[1])}</span></div>`).join('');
+  const fi = $('#fb-final'); if (fi && (!first || !fi.value) && v.final) fi.value = String(Math.round(v.final));
 }
 async function doFinal(){
-  const id = S.sheet.id, v = $('#fn-amt').value.trim(), amt = v ? num(v) : '';
-  const ok = await write('orders/' + id + '/private/info', {price: {final: amt}, log: {[logKey()]: logEntry('price', amt ? 'Final amount: ' + money(amt) : 'Final amount हटाया')}});
-  if (ok) { closeSheet(); toast('Save हो गया.'); }
+  const id = S.sheet.id, v = $('#fb-final').value.trim(), amt = v ? num(v) : '';
+  if (!amt) return toast('Final amount डालें.', 'bad');
+  const fc = calcSaved(S.sheet.calc, S.sheet.spec);
+  const ok = await write('orders/' + id + '/private/info', {price: {final: amt, finalCalc: fc}, log: {[logKey()]: logEntry('price', 'Final bill: ' + money(amt) + (fc ? ' (gold ' + fc.wt + 'g)' : ''))}});
+  if (ok) { closeSheet(); toast('Final bill save हो गया.'); }
 }
 function sheetCancel(id){
   openSheet('Order cancel करें', `<div class="fld"><label for="cn-why">कारण <span class="req">*</span></label>${textArea('cn-why', 'जैसे: client ने मना किया', '')}</div><button class="btn danger big" data-act="cancel-do">Order cancel करें</button>`, {id});
@@ -1380,6 +1537,140 @@ async function doSeen(){
   const id = S.route.id;
   const ok = await write('orders/' + id, stamp({factoryAck: true, factoryAckAt: Date.now(), log: {[logKey()]: logEntry('factory_seen', 'Factory ने बदलाव देख लिया')}}));
   if (ok) toast('ठीक है.');
+}
+
+/* ---------- receipt PDF (logo, details, estimate, payments, terms, client signature, Deeva seal) ---------- */
+const LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
+function loadScript(src){
+  return new Promise((res, rej) => {
+    if (document.querySelector('script[data-lib="' + src + '"]')) return res();
+    const s = document.createElement('script'); s.src = src; s.dataset.lib = src; s.onload = res; s.onerror = () => { s.remove(); rej(new Error('Internet नहीं है — PDF नहीं बन सका')); };
+    document.head.appendChild(s);
+  });
+}
+function sealData(city){
+  const c = document.createElement('canvas'); c.width = 400; c.height = 400;
+  const x = c.getContext('2d');
+  x.translate(200, 200); x.rotate(-0.12);
+  x.strokeStyle = '#0d3b25'; x.fillStyle = '#0d3b25';
+  x.lineWidth = 7; x.beginPath(); x.arc(0, 0, 186, 0, Math.PI * 2); x.stroke();
+  x.lineWidth = 2.5; x.beginPath(); x.arc(0, 0, 150, 0, Math.PI * 2); x.stroke();
+  x.beginPath(); x.arc(0, 0, 176, 0, Math.PI * 2); x.stroke();
+  const text = ' DEEVA DIAMONDS ✦ LAB GROWN DIAMOND JEWELLERY ✦';
+  x.font = '700 21px Montserrat, Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const step = Math.PI * 2 / text.length;
+  for (let i = 0; i < text.length; i++) { x.save(); x.rotate(i * step); x.translate(0, -163); x.fillText(text[i], 0, 0); x.restore(); }
+  /* brilliant-cut diamond, drawn (an <img> would block exporting the seal on some phones) */
+  x.save(); x.translate(0, -30); x.lineWidth = 4; x.lineJoin = 'round';
+  x.beginPath(); x.moveTo(-50, -22); x.lineTo(-28, -46); x.lineTo(28, -46); x.lineTo(50, -22); x.lineTo(0, 44); x.closePath(); x.stroke();
+  x.lineWidth = 2.5; x.beginPath();
+  x.moveTo(-50, -22); x.lineTo(50, -22);
+  x.moveTo(-28, -46); x.lineTo(-16, -22); x.lineTo(0, -46); x.lineTo(16, -22); x.lineTo(28, -46);
+  x.moveTo(-16, -22); x.lineTo(0, 44); x.lineTo(16, -22);
+  x.stroke(); x.restore();
+  x.font = '700 22px Montserrat, Arial, sans-serif'; x.fillText('MADE TO ORDER', 0, 58);
+  x.font = '600 17px Montserrat, Arial, sans-serif'; x.fillText((city || 'RAIPUR').toUpperCase(), 0, 90);
+  return c.toDataURL('image/png');
+}
+function receiptHtml(o, p, seal){
+  const pr = p.price || {}, c = p.client || {}, st = (o.storeId && S.stores[o.storeId]) || {};
+  const pays = Object.values(p.payments || {}).filter(x => !x.deleted).sort((a, b) => (a.at || 0) - (b.at || 0));
+  const paid = paidTotal(p), total = num(pr.final) || num(pr.est);
+  const b = S.brand || {};
+  const G = '#0d3b25', GOLD = '#b8862e', INK = '#1b2620', MUTE = '#5d655f', LINE = '#e3dccb';
+  const td = 'padding:6px 0;border-bottom:1px solid ' + LINE + ';vertical-align:top;';
+  const kv = rows => `<table style="width:100%;border-collapse:collapse;font-size:13.5px">${rows.filter(r => r && r[1] != null && String(r[1]) !== '').map(r => `<tr><td style="${td}color:${MUTE};width:36%">${esc(r[0])}</td><td style="${td}font-weight:600">${esc(r[1])}</td></tr>`).join('')}</table>`;
+  const h2 = t => `<div style="font:700 11.5px Montserrat,Arial,sans-serif;letter-spacing:2px;color:${GOLD};margin:18px 0 6px;text-transform:uppercase">${t}</div>`;
+  const calc = pr.finalCalc || pr.calc;
+  return `<div style="width:794px;background:#fff;color:${INK};font-family:Mukta,Montserrat,Arial,sans-serif;font-size:14px;line-height:1.45">
+  <div style="background:linear-gradient(120deg,#0f5330,#0a271b);padding:26px 40px;display:flex;align-items:center;justify-content:space-between;gap:20px">
+    <img src="icons/wordmark.png" style="height:46px" alt="Deeva">
+    <div style="text-align:right;color:#f6eedc"><div style="font:700 12px Montserrat,Arial,sans-serif;letter-spacing:3px;color:#e7b150">MADE TO ORDER</div>
+      <div style="font:700 26px 'Playfair Display',Georgia,serif;margin-top:2px">${esc(o.no)}</div><div style="font-size:13px;opacity:.85">Order Receipt · ${esc(fmtDayEn(o.orderDay))}</div></div>
+  </div>
+  <div style="padding:6px 40px 30px">
+    <div style="display:flex;gap:30px">
+      <div style="flex:1;min-width:0">${h2('Client')}${kv([['Name', c.name], ['Contact', c.phone], ['City', c.city]])}</div>
+      <div style="flex:1;min-width:0">${h2('Store')}${kv([['Store', st.name || o.storeName || 'Deeva Diamonds'], ['Address', st.address], ['Phone', st.phone], ['Order taken by', o.createdByName]])}</div>
+    </div>
+    ${h2('Product details')}${kv(specRows(o.spec).map(r => [r[0], r[1]]))}
+    ${o.spec && o.spec.stoneNote ? `<p style="margin:6px 0 0;font-size:13.5px"><b>Diamond / gemstone:</b> ${esc(o.spec.stoneNote)}</p>` : ''}
+    ${o.spec && o.spec.design ? `<p style="margin:6px 0 0;font-size:13.5px"><b>Design:</b> ${esc(o.spec.design)}</p>` : ''}
+    <div style="display:flex;gap:30px">
+      <div style="flex:1.1;min-width:0">${h2(pr.finalCalc ? 'Final bill' : 'Estimate')}
+        ${calc && calc.final ? `<table style="width:100%;border-collapse:collapse;font-size:13.5px">${calcLines(calc, o.spec, true).map(l => `<tr><td style="${td}${l[2] ? 'font-weight:700;color:' + G : 'color:' + MUTE}">${esc(l[0])}</td><td style="${td}text-align:right;font-weight:${l[2] ? 700 : 600}">${esc(l[1])}</td></tr>`).join('')}</table>` : ''}
+        ${kv([['Client amount (agreed)', pr.est ? money(pr.est) : ''], ['Final bill', pr.final ? money(pr.final) : ''], ['Gold rate', pr.goldRateBooked === 'yes' ? 'Booked @ ' + money(pr.goldRate || (calc && calc.goldRate) || 0) + '/g' : 'Not booked — market rate on delivery date']])}
+      </div>
+      <div style="flex:1;min-width:0">${h2('Payments')}
+        <table style="width:100%;border-collapse:collapse;font-size:13.5px">${pays.map(x => `<tr><td style="${td}color:${MUTE}">${esc(fmtDayEn(x.day))} · ${esc(x.mode || '')}${x.note ? ' · ' + esc(x.note) : ''}</td><td style="${td}text-align:right;font-weight:600">${money(x.amount)}</td></tr>`).join('') || `<tr><td style="${td}color:${MUTE}">No payment yet</td><td></td></tr>`}
+          <tr><td style="${td}font-weight:700">Total paid</td><td style="${td}text-align:right;font-weight:700">${money(paid)}</td></tr>
+          <tr><td style="padding:8px 0;font-weight:700;color:${G};font-size:15px">Balance</td><td style="padding:8px 0;text-align:right;font-weight:700;color:${G};font-size:15px">${money(Math.max(0, total - paid))}</td></tr></table>
+        ${kv([['Expected delivery', fmtDayEn(o.deliveryDay)], ['Priority', o.priority === 'urgent' ? 'Urgent' : '']])}
+      </div>
+    </div>
+    ${h2('Customer acknowledgement')}
+    <ol style="margin:0;padding-left:18px;font-size:12.5px;color:${MUTE}">${TERMS.map(t => `<li style="margin:2px 0">${esc(t)}</li>`).join('')}</ol>
+    <div style="display:flex;gap:30px;margin-top:22px;align-items:flex-end">
+      <div style="flex:1;text-align:center">${(p.ack && (p.ack.signData || p.ack.signUrl)) ? `<img src="${esc(p.ack.signData || p.ack.signUrl)}" style="height:80px;max-width:100%" alt="">` : `<div style="height:80px;display:flex;align-items:flex-end;justify-content:center;color:${MUTE};font-size:12px">${p.ack && p.ack.remote ? 'Phone / WhatsApp order' : ''}</div>`}
+        <div style="border-top:1px solid ${INK};padding-top:4px;font-size:12.5px">Customer Signature</div></div>
+      <div style="flex:1;text-align:center;position:relative">
+        <div style="height:110px;display:flex;align-items:flex-end;justify-content:center;gap:4px"><img src="${seal}" style="width:110px;height:110px;opacity:.88" alt="">${b.signData ? `<img src="${esc(b.signData)}" style="height:70px;max-width:60%" alt="">` : ''}</div>
+        <div style="border-top:1px solid ${INK};padding-top:4px;font-size:12.5px">For Deeva Diamonds${b.signName ? ' · ' + esc(b.signName) : ''}</div></div>
+    </div>
+    <div style="margin-top:22px;padding-top:10px;border-top:2px solid #e7b150;font-size:11.5px;color:${MUTE};text-align:center">Deeva Diamonds · Lab-grown diamond jewellery · IGI certified diamonds · BIS hallmarked gold${st.address ? ' · ' + esc(st.address) : ''}</div>
+  </div></div>`;
+}
+async function makeReceiptPdf(id){
+  const o = getOrder(id), p = getPriv(id);
+  if (!o || !p) return toast('Order अभी load हो रहा है.', 'bad');
+  if (S.pdfBusy) return; S.pdfBusy = true;
+  toast('Receipt PDF बन रहा है…');
+  try {
+    await Promise.all(LIBS.map(loadScript));
+    const st = (o.storeId && S.stores[o.storeId]) || {};
+    const seal = sealData(st.city);
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;left:-12000px;top:0;width:794px;background:#fff;z-index:-1';
+    wrap.innerHTML = receiptHtml(o, p, seal);
+    document.body.appendChild(wrap);
+    await Promise.all(Array.from(wrap.querySelectorAll('img')).map(i => i.complete ? null : new Promise(r => { i.onload = i.onerror = r; })));
+    try { await document.fonts.ready; } catch (e) {}
+    const canvas = await window.html2canvas(wrap.firstElementChild, {scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false});
+    wrap.remove();
+    const pdf = new window.jspdf.jsPDF({unit: 'pt', format: 'a4'});
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    const slice = Math.floor(canvas.width * ph / pw);
+    for (let y = 0, page = 0; y < canvas.height; y += slice, page++) {
+      const part = document.createElement('canvas'); part.width = canvas.width; part.height = Math.min(slice, canvas.height - y);
+      const px = part.getContext('2d'); px.fillStyle = '#fff'; px.fillRect(0, 0, part.width, part.height); px.drawImage(canvas, 0, -y);
+      if (page) pdf.addPage();
+      pdf.addImage(part.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, part.height * pw / part.width);
+    }
+    const name = 'Deeva-' + o.no + '.pdf';
+    if (window.__demoPdfPreview) {   /* demo page: the viewer cannot download, so show the receipt instead */
+      const lb = document.createElement('div'); lb.className = 'lightbox'; lb.style.overflow = 'auto'; lb.style.placeItems = 'start center';
+      lb.innerHTML = `<div style="max-width:794px;width:100%"><img src="${canvas.toDataURL('image/jpeg', 0.9)}" alt="Receipt" style="max-height:none;width:100%"><p>${esc(name)} — असली app में ये PDF बनकर WhatsApp पर भेजने के लिए खुलेगा</p></div><button aria-label="बंद करें">✕</button>`;
+      lb.addEventListener('click', () => lb.remove()); document.body.appendChild(lb);
+      S.pdfBusy = false; return;
+    }
+    await sharePdf(pdf.output('blob'), name, 'Deeva Diamonds — Order ' + o.no, (p.client || {}).phone);
+  } catch (e) { console.error(e); toast('PDF नहीं बना — ' + (e.message || errText(e)), 'bad'); }
+  S.pdfBusy = false;
+}
+async function sharePdf(blob, name, text, phone){
+  if (NATIVE && NATIVE.sharePdf) {
+    const b64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(',')[1]); fr.readAsDataURL(blob); });
+    NATIVE.sharePdf(b64, name, text);
+    return;
+  }
+  const file = new File([blob], name, {type: 'application/pdf'});
+  if (navigator.canShare && navigator.canShare({files: [file]})) {
+    try { await navigator.share({files: [file], title: name, text}); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  toast('PDF download हो गया — WhatsApp में client' + (phone ? ' (' + phone + ')' : '') + ' को attach करके भेजें.');
 }
 
 /* ---------- media picker (photo / video / voice note) ---------- */
@@ -1408,25 +1699,30 @@ const extOf = (type, name) => {
 };
 function makePicker(containerId, orderId, opts){
   opts = opts || {};
+  const kinds = opts.kinds || ['image', 'video', 'audio'];
   const items = {};
-  let rec = null, recTimer = null, recStart = 0;
+  let rec = null, recFor = null, recTimer = null, recStart = 0;
   const P = {items, opts};
   const el = () => document.getElementById(containerId);
-  P.busy = () => Object.values(items).some(m => m.status === 'up') || !!rec;
+  P.busy = () => Object.values(items).some(m => m.status === 'up' || m.vstatus === 'up') || !!rec;
   P.done = () => Object.values(items).filter(m => m.status === 'ok').map(m => {
     const d = {kind: m.kind, url: m.url, path: m.path, desc: (m.desc || '').trim(), by: m.by || S.authUser.uid, byName: m.byName || myName(), at: m.at, size: m.size || 0};
-    if (opts.stage && opts.stage()) d.stage = opts.stage();
+    if (m.voiceUrl) { d.voiceUrl = m.voiceUrl; d.voicePath = m.voicePath || ''; }
+    if (m.stage) d.stage = m.stage; else if (opts.stage && opts.stage()) d.stage = opts.stage();
     if (opts.allowInternal) d.factory = m.factory !== false;
     return Object.assign({id: m.id}, d);
   });
   P.load = list => { (list || []).forEach(m => { items[m.id] = Object.assign({status: 'ok', progress: 1, existing: true}, m); }); };
+  const recClock = () => { const s = Math.floor((Date.now() - recStart) / 1000); return Math.floor(s / 60) + ':' + pad(s % 60); };
   P.render = () => {
     const box = el(); if (!box) return;
     const list = Object.values(items).sort((a, b) => a.at - b.at);
-    let h = `<div class="mbtns">
-      <label class="btn"><span>📷</span>Photo<input type="file" accept="image/*" multiple hidden data-pick="image" data-p="${containerId}"></label>
-      <label class="btn"><span>🎥</span>Video<input type="file" accept="video/*" hidden data-pick="video" data-p="${containerId}"></label>
-      <button type="button" class="btn ${rec ? 'rec' : ''}" data-act="rec" data-p="${containerId}"><span>${rec ? '⏹' : '🎙️'}</span>${rec ? 'रोकें <b id="rt-' + containerId + '">' + recClock() + '</b>' : 'Voice note'}</button></div>`;
+    const cols = kinds.length;
+    let h = `<div class="mbtns" style="grid-template-columns:repeat(${cols},1fr)">`;
+    if (kinds.includes('image')) h += `<label class="btn"><span>📷</span>${esc(opts.imageLabel || 'Photo')}<input type="file" accept="image/*" multiple hidden data-pick="image" data-p="${containerId}"></label>`;
+    if (kinds.includes('video')) h += `<label class="btn"><span>🎥</span>Video<input type="file" accept="video/*" multiple hidden data-pick="video" data-p="${containerId}"></label>`;
+    if (kinds.includes('audio')) h += `<button type="button" class="btn ${rec && !recFor ? 'rec' : ''}" data-act="rec" data-p="${containerId}"><span>${rec && !recFor ? '⏹' : '🎙️'}</span>${rec && !recFor ? 'रोकें <b id="rt-' + containerId + '">' + recClock() + '</b>' : 'Voice note'}</button>`;
+    h += `</div>`;
     h += list.map(m => {
       let th = '';
       if (m.kind === 'image') th = m.preview || m.url ? `<img src="${esc(m.preview || m.url)}" alt="">` : '🖼️';
@@ -1434,20 +1730,29 @@ function makePicker(containerId, orderId, opts){
       else th = '🎙️';
       const pr = m.status === 'up' ? `<span class="pr"><i style="width:${Math.round((m.progress || 0) * 100)}%"></i></span>` : '';
       const state = m.status === 'up' ? `Upload ${Math.round((m.progress || 0) * 100)}%…` : m.status === 'err' ? '<span style="color:var(--bad)">Upload नहीं हुआ</span>' : '✓ Upload';
+      const isRef = m.kind !== 'audio' && kinds.includes('audio');
+      const recThis = rec && recFor === m.id;
+      let voice = '';
+      if (isRef) {
+        if (m.voiceUrl || m.voicePreview) voice = `<div class="mvoice"><audio id="pv-${esc(m.id)}" src="${esc(m.voicePreview || m.voiceUrl)}" controls preload="metadata"></audio><button type="button" class="mdel" data-act="mvoice-del" data-id="${esc(m.id)}" data-p="${containerId}" aria-label="Voice हटाएँ">✕</button></div>${m.vstatus === 'up' ? '<span class="small muted">Voice upload…</span>' : ''}`;
+        else voice = `<button type="button" class="btn sm ${recThis ? 'rec-on' : ''}" data-act="rec-item" data-id="${esc(m.id)}" data-p="${containerId}" style="margin-top:6px">${recThis ? '⏹ रोकें <b id="rt-' + containerId + '">' + recClock() + '</b>' : '🎙️ इस पर बोलकर बताएँ क्या बदलना है'}</button>`;
+      }
+      const ph = m.kind === 'audio' ? 'इसमें क्या है? जैसे: client ने design समझाया' : (opts.descPh || 'इस reference में क्या कम / ज़्यादा / बदलना है');
       return `<div class="mitem"><div class="mthumb">${th}${pr}</div><div class="mbody">
         ${m.kind === 'audio' && (m.preview || m.url) ? `<audio id="pa-${esc(m.id)}" src="${esc(m.preview || m.url)}" controls preload="metadata"></audio>` : ''}
-        <input id="md-${esc(m.id)}" data-desc="${esc(m.id)}" data-p="${containerId}" placeholder="${m.kind === 'audio' ? 'इसमें क्या है? जैसे: client ने design समझाया' : 'Description — जैसे: यही design, पर drop नहीं'}" value="${esc(m.desc || '')}">
+        <input id="md-${esc(m.id)}" data-desc="${esc(m.id)}" data-p="${containerId}" placeholder="${esc(ph)}" value="${esc(m.desc || '')}">
+        ${voice}
         <div class="mmeta"><span>${state}</span>${opts.allowInternal ? `<label><input type="checkbox" data-fact="${esc(m.id)}" data-p="${containerId}" ${m.factory !== false ? 'checked' : ''}>Factory को भी दिखे</label>` : ''}</div>
       </div><button type="button" class="mdel" data-act="mdel" data-id="${esc(m.id)}" data-p="${containerId}" aria-label="हटाएँ">✕</button></div>`;
     }).join('');
     patch(box, h);
   };
-  const recClock = () => { const s = Math.floor((Date.now() - recStart) / 1000); return Math.floor(s / 60) + ':' + pad(s % 60); };
+  const upload = async (blob, type, path, onProg) => B.storage.upload(path, blob, type, onProg);
   P.add = async (file, kind) => {
     if (kind === 'video' && file.size > MAX_VIDEO) { toast('Video बहुत बड़ा है (300 MB से ज़्यादा). छोटा video लें.', 'bad'); return; }
     if (kind === 'video' && file.size > 120 * 1024 * 1024) toast('Video बड़ा है — upload में समय लगेगा.');
     const id = 'm' + rid();
-    const m = items[id] = {id, kind, status: 'up', progress: 0, at: Date.now(), desc: '', factory: true, size: file.size};
+    const m = items[id] = {id, kind, status: 'up', progress: 0, at: Date.now(), desc: '', factory: !opts.internalOnly, size: file.size};
     if (kind !== 'video') m.preview = URL.createObjectURL(file);
     P.render();
     try {
@@ -1455,36 +1760,47 @@ function makePicker(containerId, orderId, opts){
       const type = blob.type || file.type || (kind === 'audio' ? 'audio/webm' : kind === 'video' ? 'video/mp4' : 'image/jpeg');
       const path = 'orders/' + orderId + '/' + id + '.' + extOf(type, kind === 'image' && blob !== file ? 'x.jpg' : file.name);
       let last = 0;
-      const res = await B.storage.upload(path, blob, type, f => { m.progress = f; if (Date.now() - last > 250) { last = Date.now(); P.render(); } });
+      const res = await upload(blob, type, path, f => { m.progress = f; if (Date.now() - last > 250) { last = Date.now(); P.render(); } });
       m.url = res.url; m.path = res.path; m.size = blob.size; m.status = 'ok';
     } catch (e) { console.error(e); m.status = 'err'; toast('Upload नहीं हुआ — ' + errText(e), 'bad'); }
     P.render();
     if (opts.onChange) opts.onChange();
   };
+  const addVoiceTo = async (m, blob, mt) => {
+    m.voicePreview = URL.createObjectURL(blob); m.vstatus = 'up'; P.render();
+    try {
+      const res = await upload(blob, mt, 'orders/' + orderId + '/' + m.id + '-voice-' + rid() + '.' + extOf(mt, ''), null);
+      m.voiceUrl = res.url; m.voicePath = res.path; m.vstatus = 'ok';
+    } catch (e) { console.error(e); m.vstatus = 'err'; m.voicePreview = ''; toast('Voice upload नहीं हुआ — ' + errText(e), 'bad'); }
+    P.render(); if (opts.onChange) opts.onChange();
+  };
   P.del = id => { delete items[id]; P.render(); if (opts.onChange) opts.onChange(); };
-  P.toggleRec = async () => {
-    if (rec) { try { rec.stop(); } catch (e) {} return; }
-    if (!navigator.mediaDevices || !window.MediaRecorder) { toast('इस phone/browser में voice note record नहीं होता. Phone के recorder से record करके "Video/Photo" की जगह file चुनें.', 'bad'); return; }
+  P.delVoice = id => { const m = items[id]; if (m) { m.voiceUrl = ''; m.voicePath = ''; m.voicePreview = ''; } P.render(); if (opts.onChange) opts.onChange(); };
+  P.toggleRec = async forId => {
+    if (rec) { const same = recFor === (forId || null); try { rec.stop(); } catch (e) {} if (same) return; await sleep(300); }
+    if (!navigator.mediaDevices || !window.MediaRecorder) { toast('इस phone/browser में voice record नहीं होता. APK या Chrome में खोलें.', 'bad'); return; }
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({audio: true}); }
     catch (e) { toast('Mic की permission दें (phone settings में).', 'bad'); return; }
     const types = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm'];
     const type = types.find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
     const chunks = [];
-    rec = type ? new MediaRecorder(stream, {mimeType: type}) : new MediaRecorder(stream);
-    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-    rec.onstop = () => {
+    const r = type ? new MediaRecorder(stream, {mimeType: type}) : new MediaRecorder(stream);
+    const target = forId || null;
+    rec = r; recFor = target;
+    r.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    r.onstop = () => {
       stream.getTracks().forEach(t => t.stop());
-      clearInterval(recTimer); rec = null;
+      clearInterval(recTimer); if (rec === r) { rec = null; recFor = null; }
       const mt = (type || 'audio/webm').split(';')[0];
       const blob = new Blob(chunks, {type: mt});
       if (blob.size < 800) { toast('Voice note बहुत छोटा था.', 'bad'); P.render(); return; }
-      const f = new File([blob], 'voice.' + extOf(mt, ''), {type: mt});
-      P.add(f, 'audio');
+      if (target && items[target]) addVoiceTo(items[target], blob, mt);
+      else P.add(new File([blob], 'voice.' + extOf(mt, ''), {type: mt}), 'audio');
     };
     recStart = Date.now();
-    rec.start(1000);
-    recTimer = setInterval(() => { const t = document.getElementById('rt-' + containerId); if (t) t.textContent = recClock(); if (Date.now() - recStart > 10 * 60 * 1000) P.toggleRec(); }, 500);
+    r.start(1000);
+    recTimer = setInterval(() => { const t = document.getElementById('rt-' + containerId); if (t) t.textContent = recClock(); if (Date.now() - recStart > 10 * 60 * 1000) P.toggleRec(target); }, 500);
     P.render();
   };
   P.stopRec = () => { if (rec) { try { rec.stop(); } catch (e) {} } };
@@ -1529,23 +1845,28 @@ window.__doSpeech = text => {
 
 /* ---------- new / edit order form ---------- */
 let F = null;          /* form values */
-let FP = null;         /* form media picker */
+let FP = null;         /* form media picker (references for factory) */
+let FIP = null;        /* form internal picker (receipts, store only) */
 let FORMKEY = null;
 const DRAFT = 'do.draft';
 function emptyForm(){
   return {
-    id: B.db.newId('orders'), startedAt: Date.now(),
+    id: B.db.newId('orders'), startedAt: Date.now(), storeId: isStore() ? myStore() : ((storeList()[0] || {}).id || ''),
     client: {name: '', phone: '', city: ''},
-    spec: {jtype: '', jtypeOther: '', qty: '1', metalColor: '', purity: '', size: '', dia1Ct: '', dia1Shape: '', dia2Ct: '', dia2Shape: '', gem1: '', gem2: '', engraving: '', design: ''},
-    deliveryDay: '', priority: 'normal',
-    price: {est: '', goldRateBooked: '', goldRate: '', calc: {goldWt: '', goldRate: '', diaRate: '', dia2Rate: '', gemAmt: '', making: '', other: '', gst: '3'}},
+    spec: {jtype: '', jtypeOther: '', qty: '1', metalColor: '', purity: '', size: '', engraving: '', design: '',
+      dia1Ct: '', dia1Pcs: '1', dia1Shape: '', dia1Color: '', dia1Clarity: '', dia1Cut: '', dia1Cert: '',
+      dia2Ct: '', dia2Pcs: '', dia2Shape: '', dia2Color: '', dia2Clarity: '',
+      gem1Type: '', gem1Color: '', gem1Shape: '', gem1Ct: '', gem1Pcs: '', gem2Type: '', gem2Color: '', gem2Shape: '', gem2Ct: '', gem2Pcs: '', stoneNote: ''},
+    deliveryDay: '', priority: 'normal', gem2On: false,
+    price: {est: '', goldRateBooked: '', calc: {goldWt: '', goldRate: '', diaRate: '', dia2Rate: '', gemAmt: '', making: '', other: '', gst: '3'}},
     advance: {amount: '', mode: ''},
-    internalNote: '', media: [], ack: {accepted: false, remote: false}
+    internalNote: '', media: [], imedia: [], ack: {accepted: false, remote: false}
   };
 }
+const hasDia = v => !!(v && String(v).trim() && String(v).trim().toUpperCase() !== 'NA');
 function saveDraft(){
   if (!F || F.mode !== 'new') return;
-  try { const d = clone(F); d.media = FP ? FP.done() : []; localStorage.setItem(DRAFT, JSON.stringify(d)); } catch (e) {}
+  try { const d = clone(F); d.media = FP ? FP.done() : []; d.imedia = FIP ? FIP.done() : []; localStorage.setItem(DRAFT, JSON.stringify(d)); } catch (e) {}
 }
 function loadDraft(){ try { const d = JSON.parse(localStorage.getItem(DRAFT) || 'null'); return d && d.id ? d : null; } catch (e) { return null; } }
 function clearDraft(){ try { localStorage.removeItem(DRAFT); } catch (e) {} }
@@ -1555,29 +1876,43 @@ function renderFormRoute(r){
   if (FORMKEY === key) { renderFormBar(); return; }
   if (r.mode === 'new') {
     if (!staff()) return go('#/');
+    if (isStore() && !myStore()) { toast('आपको किसी store से नहीं जोड़ा गया है. Admin से कहें.', 'bad'); return go('#/'); }
     const d = loadDraft();
-    F = d && (d.client.name || d.spec.jtype || (d.media || []).length) ? d : emptyForm();
+    const base = emptyForm();
+    if (d && (d.client.name || d.spec.jtype || (d.media || []).length)) {
+      F = Object.assign(base, d, {spec: Object.assign(base.spec, d.spec || {}), price: Object.assign(base.price, d.price || {})});
+      F.price.calc = Object.assign(emptyForm().price.calc, (d.price && d.price.calc) || {});
+      if (isStore()) F.storeId = myStore();
+      toast('पिछला अधूरा order खुल गया है. नया शुरू करना हो तो ऊपर "साफ़ करें" दबाएँ.');
+    } else F = base;
     F.mode = 'new';
-    if (d && F === d) toast('पिछला अधूरा order खुल गया है. नया शुरू करना हो तो नीचे "साफ़ करें" दबाएँ.');
   } else {
     const o = getOrder(r.id), p = getPriv(r.id);
     if (!o || !p) { patch($('#view'), '<div class="empty">Order load हो रहा है…</div>'); return; }
     if (!canEdit(o)) { toast('ये order अब edit नहीं हो सकता.', 'bad'); return go('#/o/' + r.id); }
-    F = emptyForm(); F.id = r.id; F.mode = 'edit';
+    F = emptyForm(); F.id = r.id; F.mode = 'edit'; F.storeId = o.storeId || '';
     F.client = Object.assign(F.client, clone(p.client || {}));
     F.spec = Object.assign(F.spec, clone(o.spec || {}));
+    F.gem2On = !!F.spec.gem2Type;
     F.deliveryDay = o.deliveryDay || ''; F.priority = o.priority || 'normal';
     F.price = Object.assign(F.price, clone(p.price || {}));
     F.price.calc = Object.assign(emptyForm().price.calc, clone((p.price && p.price.calc) || {}));
+    if (!F.price.calc.goldRate && p.price && p.price.goldRate) F.price.calc.goldRate = String(p.price.goldRate);
     F.internalNote = p.internalNote || '';
     F.orig = {o: clone(o), p: clone(p)};
   }
   FORMKEY = key;
   renderForm();
 }
-function chipsHtml(path, list, multiOther){
+function chipsHtml(path, list){
   const cur = get(F, path);
-  return `<div class="chips" data-chips="${path}">` + list.map(v => `<button type="button" class="chip ${cur === v ? 'on' : ''}" data-act="chip" data-f="${path}" data-v="${esc(v)}">${esc(v)}</button>`).join('') + `</div>`;
+  return `<div class="chips" data-chips="${path}">` + list.map(x => {
+    const v = Array.isArray(x) ? x[0] : x, l = Array.isArray(x) ? x[1] : x;
+    return `<button type="button" class="chip ${cur === v ? 'on' : ''}" data-act="chip" data-f="${path}" data-v="${esc(v)}">${esc(l)}</button>`;
+  }).join('') + `</div>`;
+}
+function chipFld(path, label, list, req, hint){
+  return `<div class="fld" id="w-f-${path.replace(/\./g, '-')}"><span class="lbl">${esc(label)}${req ? '<span class="req">*</span>' : ''}</span>${chipsHtml(path, list)}${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
 }
 function fld(path, label, opts){
   opts = opts || {};
@@ -1592,46 +1927,86 @@ function sec(n, title, sub, body){ return `<section class="sec" id="sec-${n}"><d
 function renderForm(){
   const isNew = F.mode === 'new';
   const o = isNew ? null : getOrder(F.id);
+  const s = F.spec;
   let h = `<div class="row" style="margin-bottom:6px"><a class="btn ghost sm" href="${isNew ? '#/' : '#/o/' + esc(F.id)}" style="margin-left:-6px">← वापस</a><span class="grow"></span>${isNew ? '<button class="btn ghost sm" data-act="f-clear">साफ़ करें</button>' : ''}</div>`;
   h += `<div class="view-title">${isNew ? 'नया Custom Order' : 'Order बदलें — ' + esc(o.no)}</div>`;
   if (!isNew && o.status === 'factory') h += `<div class="banner">⚠️ Order factory में है — बदलाव save करते ही factory को "बदलाव हुआ" का alert जाएगा.</div>`;
-  h += sec(1, 'Client', '🔒 नाम, phone factory को नहीं दिखेगा',
-    fld('client.name', 'नाम', {req: 1, ph: 'Client का पूरा नाम', attrs: 'autocomplete="off"'}) +
-    `<div class="two">${fld('client.phone', 'Contact No.', {req: 1, type: 'tel', mode: 'numeric', ph: '10 अंक', mic: false})}${fld('client.city', 'City / Area', {ph: 'Raipur'})}</div>`);
+  /* 1 client */
+  let c1 = '';
+  const stores = storeList();
+  if (isAdmin() && isNew && stores.length > 1) c1 += chipFld('storeId', 'Store', stores.map(x => [x.id, x.name]), 1);
+  else if (F.storeId && storeName(F.storeId)) c1 += `<p class="small muted" style="margin:-4px 0 10px">🏬 ${esc(storeName(F.storeId))}</p>`;
+  c1 += fld('client.name', 'नाम', {req: 1, ph: 'Client का पूरा नाम', attrs: 'autocomplete="off"'}) +
+    `<div class="two">${fld('client.phone', 'Contact No.', {req: 1, type: 'tel', mode: 'numeric', ph: '10 अंक', mic: false})}${fld('client.city', 'City / Area', {ph: 'Raipur'})}</div>`;
+  h += sec(1, 'Client', '🔒 नाम, phone factory को नहीं दिखेगा', c1);
+  /* 2 jewellery */
   h += sec(2, 'Jewellery', 'Factory को जाएगा',
-    `<div class="fld" id="w-f-spec-jtype"><span class="lbl">Jewellery Type<span class="req">*</span></span>${chipsHtml('spec.jtype', JTYPES)}</div>` +
-    fld('spec.jtypeOther', 'Type लिखें', {req: 1, hidden: F.spec.jtype !== 'Other', ph: 'जैसे: Anklet, Brooch'}) +
-    `<div class="fld" id="w-f-spec-metalColor"><span class="lbl">Metal Color<span class="req">*</span></span>${chipsHtml('spec.metalColor', COLORS)}</div>` +
-    `<div class="fld" id="w-f-spec-purity"><span class="lbl">Purity<span class="req">*</span></span>${chipsHtml('spec.purity', PURITY)}</div>` +
-    `<div class="two">${fld('spec.size', 'Size / Length', {req: 1, ph: 'जैसे: 16 inch / Ring 12 / 2.6', hint: 'ज़रूरत न हो तो NA लिखें'})}${fld('spec.qty', 'Qty', {mode: 'numeric', mic: false})}</div>`);
-  h += sec(3, 'Diamond & Gemstone', 'Factory को जाएगा',
-    `<div class="two">${fld('spec.dia1Ct', 'Dia Ct. 1', {req: 1, mode: 'decimal', ph: '0.40', mic: false, hint: 'Diamond नहीं है तो NA'})}${fld('spec.dia2Ct', 'Dia Ct. 2', {mode: 'decimal', ph: 'NA', mic: false})}</div>` +
-    `<div class="fld"><span class="lbl">Dia 1 shape</span>${chipsHtml('spec.dia1Shape', SHAPES)}</div>` +
-    `<div class="fld" id="w-dia2shape" ${F.spec.dia2Ct && F.spec.dia2Ct !== 'NA' ? '' : 'hidden'}><span class="lbl">Dia 2 shape</span>${chipsHtml('spec.dia2Shape', SHAPES)}</div>` +
-    `<div class="two">${fld('spec.gem1', 'Gemstone 1', {ph: 'NA'})}${fld('spec.gem2', 'Gemstone 2', {ph: 'NA'})}</div>` +
+    chipFld('spec.jtype', 'Jewellery Type', JTYPES, 1) +
+    fld('spec.jtypeOther', 'Type लिखें', {req: 1, hidden: s.jtype !== 'Other', ph: 'जैसे: Anklet, Brooch'}) +
+    chipFld('spec.metalColor', 'Metal Color', COLORS, 1) +
+    chipFld('spec.purity', 'Purity', PURITY, 1) +
+    `<div class="two">${fld('spec.size', 'Size / Length', {req: 1, ph: '16 inch / Ring 12 / 2.6', hint: 'ज़रूरत न हो तो NA'})}${fld('spec.qty', 'Qty', {mode: 'numeric', mic: false})}</div>` +
     fld('spec.engraving', 'Engraving (अगर है)', {ph: 'नाम / date'}));
-  h += sec(4, 'Design — photo, video, voice note', 'सब factory को जाएगा (जो न भेजना हो उसका tick हटा दें)',
+  /* 3 diamond */
+  h += sec(3, 'Diamond', 'Factory को जाएगा — 4Cs tick करें',
+    `<div class="lbl" style="font-size:15.5px">💎 Main diamond / Solitaire</div>
+     <div class="two">${fld('spec.dia1Ct', 'Carat (ct)', {req: 1, mode: 'decimal', ph: '0.40', mic: false})}${fld('spec.dia1Pcs', 'Pieces', {mode: 'numeric', mic: false, ph: '1'})}</div>
+     <div class="chips" style="margin:-6px 0 12px"><button type="button" class="chip" data-act="dia-na" data-for="f-spec-dia1Ct">Diamond नहीं है (NA)</button></div>
+     <div id="dia1-detail" ${hasDia(s.dia1Ct) ? '' : 'hidden'}>
+       ${chipFld('spec.dia1Shape', 'Shape', SHAPES, 1)}
+       ${chipFld('spec.dia1Color', 'Colour', D_COLORS, 1)}
+       ${chipFld('spec.dia1Clarity', 'Clarity', D_CLARITY, 1)}
+       ${chipFld('spec.dia1Cut', 'Cut', D_CUT, 0)}
+       ${chipFld('spec.dia1Cert', 'Certificate', D_CERT, 0)}
+     </div>
+     <div class="lbl" style="font-size:15.5px;margin-top:6px">✨ Side diamonds</div>
+     <div class="two">${fld('spec.dia2Ct', 'Total carat (ct)', {mode: 'decimal', ph: 'NA', mic: false})}${fld('spec.dia2Pcs', 'Pieces', {mode: 'numeric', mic: false})}</div>
+     <div id="dia2-detail" ${hasDia(s.dia2Ct) ? '' : 'hidden'}>
+       ${chipFld('spec.dia2Shape', 'Shape', SHAPES, 1)}
+       ${chipFld('spec.dia2Color', 'Colour', SIDE_COLORS, 0)}
+       ${chipFld('spec.dia2Clarity', 'Clarity', SIDE_CLARITY, 0)}
+     </div>`);
+  /* 4 gemstone */
+  const gemBlock = n => `${chipFld('spec.gem' + n + 'Type', 'Gemstone ' + n, GEM_TYPES, 0, n === 1 ? 'Gemstone नहीं है तो कुछ न चुनें' : '')}
+     <div id="gem${n}-detail" ${s['gem' + n + 'Type'] ? '' : 'hidden'}>
+       ${chipFld('spec.gem' + n + 'Color', 'Colour', GEM_COLORS, 1)}
+       ${chipFld('spec.gem' + n + 'Shape', 'Shape', GEM_SHAPES, 1)}
+       <div class="two">${fld('spec.gem' + n + 'Ct', 'Size / Carat', {ph: '4 mm / 0.50 ct', mic: false})}${fld('spec.gem' + n + 'Pcs', 'Pieces', {mode: 'numeric', mic: false})}</div>
+     </div>`;
+  h += sec(4, 'Gemstone', 'Factory को जाएगा',
+    gemBlock(1) +
+    `<div id="gem2-block" ${F.gem2On ? '' : 'hidden'}>${gemBlock(2)}</div>
+     <button type="button" class="btn sm" id="gem2-add" data-act="gem2-add" style="margin-bottom:12px" ${F.gem2On ? 'hidden' : ''}>＋ दूसरा gemstone</button>` +
+    fld('spec.stoneNote', 'Diamond / gemstone के लिए और कुछ (optional)', {area: 1, ph: 'जैसे: center stone थोड़ा ऊँचा, side stones prong setting'}));
+  /* 5 design */
+  h += sec(5, 'Design — photo, video, voice note', 'सब एक साथ जोड़ सकते हैं · हर photo/video पर अलग voice note',
     fld('spec.design', 'Design details / Remark', {req: 1, area: 1, ph: 'जैसे: Design ref image जैसा ही, पर drop नहीं लगाना. Chain light weight.'}) +
-    `<div class="lbl">Reference photo / video / client से बात का voice note</div><div id="f-media"></div>`);
+    `<div class="lbl">Reference photos, videos और voice notes</div><div id="f-media"></div>`);
+  /* 6 price */
   if (staff()) {
-    let pb = `<div class="fld" id="w-f-price-est"><label for="f-price-est">Est. Amount ₹<span class="req">*</span></label><div class="inp"><input id="f-price-est" data-f="price.est" inputmode="decimal" value="${esc(F.price.est)}" placeholder="49790"><button type="button" class="btn sm" data-act="calc-toggle" style="flex:none">🧮 हिसाब</button></div></div>`;
-    pb += `<div class="calc" id="calc" hidden>${calcHtml()}</div>`;
-    pb += `<div class="fld" id="w-f-price-goldRateBooked"><span class="lbl">Gold Rate Booked<span class="req">*</span></span><div class="chips" data-chips="price.goldRateBooked">${[['yes','Yes'],['no','No']].map(x => `<button type="button" class="chip ${F.price.goldRateBooked === x[0] ? 'on' : ''}" data-act="chip" data-f="price.goldRateBooked" data-v="${x[0]}">${x[1]}</button>`).join('')}</div></div>`;
-    pb += fld('price.goldRate', 'Booked gold rate (₹ / gram)', {mode: 'decimal', mic: false, hidden: F.price.goldRateBooked !== 'yes', hint: 'Rate book करने के लिए कम से कम 50% payment ज़रूरी (शर्त 6)'});
+    const booked = F.price.goldRateBooked === 'yes';
+    let pb = `<div class="fld" id="w-f-price-goldRateBooked"><span class="lbl">Gold Rate Booked<span class="req">*</span></span><div class="chips" data-chips="price.goldRateBooked">${[['yes','Yes — rate book है'],['no','No']].map(x => `<button type="button" class="chip ${F.price.goldRateBooked === x[0] ? 'on' : ''}" data-act="chip" data-f="price.goldRateBooked" data-v="${x[0]}">${x[1]}</button>`).join('')}</div></div>`;
+    pb += `<div class="two">${fld('price.calc.goldRate', booked ? 'Booked gold rate ₹/g' : 'आज का gold rate ₹/g', {req: 1, mode: 'decimal', mic: false, ph: '8544'})}${fld('price.calc.goldWt', 'Gold weight (g, approx)', {req: 1, mode: 'decimal', mic: false, ph: '3.75'})}</div>`;
+    pb += `<div class="two">${fld('price.calc.diaRate', 'Main diamond ₹/ct', {req: 1, mode: 'decimal', mic: false, ph: '22000', hidden: !hasDia(s.dia1Ct)})}${fld('price.calc.dia2Rate', 'Side diamonds ₹/ct', {req: 1, mode: 'decimal', mic: false, hidden: !hasDia(s.dia2Ct)})}</div>`;
+    pb += `<div class="two">${fld('price.calc.making', 'Making ₹/g', {req: 1, mode: 'decimal', mic: false, ph: '2000'})}${fld('price.calc.gemAmt', 'Gemstone ₹ (कुल)', {mode: 'decimal', mic: false, hidden: !(s.gem1Type || s.gem2Type)})}</div>`;
+    pb += `<div class="two">${fld('price.calc.other', 'Other ₹', {mode: 'decimal', mic: false})}${fld('price.calc.gst', 'GST %', {mode: 'decimal', mic: false})}</div>`;
+    pb += `<div class="calc"><div class="calc-out" id="calc-out" style="border-top:none;margin-top:0;padding-top:0"></div></div>`;
+    pb += `<div class="fld" id="w-f-price-est"><label for="f-price-est">Client से तय amount (Final deal) ₹<span class="req">*</span></label><div class="inp"><input id="f-price-est" data-f="price.est" inputmode="decimal" value="${esc(F.price.est)}" placeholder="49790"><button type="button" class="btn sm" data-act="calc-apply" style="flex:none">= Estimate</button></div><div class="hint">जितने में client से बात हुई — बाकी का हिसाब इसी से होगा</div></div>`;
     if (isNew) {
       pb += `<div class="two">${fld('advance.amount', 'Advance Paid ₹', {req: 1, mode: 'decimal', mic: false, ph: '0 भी लिख सकते हैं'})}<div></div></div>`;
-      pb += `<div class="fld" id="w-f-advance-mode"><span class="lbl">Advance का mode</span>${chipsHtml('advance.mode', PAYMODES)}</div>`;
+      pb += chipFld('advance.mode', 'Advance का mode', PAYMODES, 0);
     }
     pb += fld('internalNote', '🔒 Internal note (सिर्फ store/admin)', {area: 1, ph: 'जैसे: client purana customer है, discount दिया'});
-    h += sec(5, 'Price & Payment', '🔒 Factory को नहीं दिखेगा', pb);
+    pb += `<div class="lbl">🧾 Receipt / payment की photo (सिर्फ store/admin)</div><div id="f-imedia"></div>`;
+    h += sec(6, 'Price & Payment', '🔒 Factory को नहीं दिखेगा', pb);
   }
-  const minDay = isNew ? today() : '';
-  h += sec(6, 'Delivery', '',
-    `<div class="fld" id="w-f-deliveryDay"><label for="f-deliveryDay">Client को delivery की date<span class="req">*</span></label><input class="in" type="date" id="f-deliveryDay" data-f="deliveryDay" value="${esc(F.deliveryDay)}" ${minDay ? 'min="' + minDay + '"' : ''}>
+  /* 7 delivery */
+  h += sec(staff() ? 7 : 6, 'Delivery', 'अंदाज़ा — बाद में भी बदल सकते हैं',
+    `<div class="fld" id="w-f-deliveryDay"><label for="f-deliveryDay">Client को delivery की date<span class="req">*</span></label><input class="in" type="date" id="f-deliveryDay" data-f="deliveryDay" value="${esc(F.deliveryDay)}" ${isNew ? 'min="' + today() + '"' : ''}>
       <div class="chips" style="margin-top:7px">${[7, 10, 15, 20, 25].map(n => `<button type="button" class="chip" data-act="f-days" data-n="${n}">+${n} दिन</button>`).join('')}</div><div class="hint" id="f-days-left">${F.deliveryDay ? diffDays(F.deliveryDay, today()) + ' दिन बाद' : ''}</div></div>
      <div class="fld"><span class="lbl">Priority</span><div class="chips" data-chips="priority">${[['normal','Normal'],['urgent','🔴 Urgent']].map(x => `<button type="button" class="chip ${F.priority === x[0] ? 'on' : ''}" data-act="chip" data-f="priority" data-v="${x[0]}">${x[1]}</button>`).join('')}</div></div>`);
   if (isNew) {
-    h += sec(7, 'Customer Acknowledgement', 'Client को पढ़कर सुनाएँ / दिखाएँ',
+    h += sec(staff() ? 8 : 7, 'Customer Acknowledgement', 'Client को पढ़कर सुनाएँ / दिखाएँ',
       `<ol class="terms">${TERMS.map(t => `<li>${esc(t)}</li>`).join('')}</ol>
        <label class="check" id="w-f-ack"><input type="checkbox" id="f-ack" ${F.ack.accepted ? 'checked' : ''}><span><b>Client ने सभी शर्तें पढ़कर मान लीं</b><span class="req">*</span></span></label>
        <label class="check"><input type="checkbox" id="f-remote" ${F.ack.remote ? 'checked' : ''}><span>Client store में नहीं है (Phone / WhatsApp order) — signature नहीं होगा</span></label>
@@ -1639,49 +2014,59 @@ function renderForm(){
   }
   $('#view').innerHTML = h; $('#view')._h = null;
   FP = makePicker('f-media', F.id, {allowInternal: true, onChange: saveDraft});
+  FIP = staff() ? makePicker('f-imedia', F.id, {kinds: ['image'], internalOnly: true, imageLabel: 'Receipt photo', descPh: 'जैसे: UPI receipt ₹13,000', onChange: saveDraft}) : null;
   if (F.media && F.media.length) FP.load(F.media.map(m => Object.assign({}, m)));
-  if (!isNew) FP.load(mediaList(F.orig.o.media).map(m => Object.assign({}, m, {factory: true})).concat(mediaList(F.orig.p.media).map(m => Object.assign({}, m, {factory: false}))));
-  FP.render();
+  if (FIP && F.imedia && F.imedia.length) FIP.load(F.imedia.map(m => Object.assign({}, m)));
+  if (!isNew) {
+    FP.load(mediaList(F.orig.o.media).map(m => Object.assign({}, m, {factory: true})).concat(mediaList(F.orig.p.media).filter(m => m.kind !== 'image' || !m.receipt).map(m => Object.assign({}, m, {factory: false}))));
+  }
+  FP.render(); if (FIP) FIP.render();
   if (isNew) setupSig();
   updateCalc();
   renderFormBar();
   window.scrollTo(0, 0);
 }
-function calcHtml(){
-  const c = F.price.calc;
-  const f = (k, label, ph) => `<div class="fld" style="margin-bottom:8px"><label for="c-${k}" class="small">${label}</label><input class="in" id="c-${k}" data-f="price.calc.${k}" inputmode="decimal" value="${esc(c[k] || '')}" placeholder="${ph || ''}"></div>`;
-  return `<div class="two">${f('goldWt', 'Gold weight (g)', '3.75')}${f('goldRate', 'Gold rate ₹/g', '8544')}</div>
-    <div class="two">${f('diaRate', 'Dia 1 rate ₹/ct', '22000')}${f('dia2Rate', 'Dia 2 rate ₹/ct', '')}</div>
-    <div class="two">${f('making', 'Making ₹/g', '2000')}${f('gemAmt', 'Gemstone ₹', '')}</div>
-    <div class="two">${f('other', 'Other ₹', '')}${f('gst', 'GST %', '3')}</div>
-    <div class="calc-out" id="calc-out"></div>
-    <button type="button" class="btn sm primary" data-act="calc-apply" style="margin-top:8px;width:100%">ये Final Amount — Est. Amount में डालें</button>`;
+function syncFormVis(){
+  const s = F.spec;
+  const vis = (sel, on) => { const e = $(sel); if (e) e.hidden = !on; };
+  vis('#w-f-spec-jtypeOther', s.jtype === 'Other');
+  vis('#dia1-detail', hasDia(s.dia1Ct)); vis('#dia2-detail', hasDia(s.dia2Ct));
+  vis('#gem1-detail', !!s.gem1Type); vis('#gem2-detail', !!s.gem2Type);
+  vis('#gem2-block', F.gem2On); vis('#gem2-add', !F.gem2On);
+  vis('#w-f-price-calc-diaRate', hasDia(s.dia1Ct)); vis('#w-f-price-calc-dia2Rate', hasDia(s.dia2Ct));
+  vis('#w-f-price-calc-gemAmt', !!(s.gem1Type || s.gem2Type));
+  const gl = $('#w-f-price-calc-goldRate label');
+  if (gl) gl.innerHTML = (F.price.goldRateBooked === 'yes' ? 'Booked gold rate ₹/g' : 'आज का gold rate ₹/g') + '<span class="req">*</span>';
 }
+
 function calcValues(c, spec){
-  const wt = num(c.goldWt), d1 = spec && spec.dia1Ct !== 'NA' ? num(spec.dia1Ct) : 0, d2 = spec && spec.dia2Ct !== 'NA' ? num(spec.dia2Ct) : 0;
+  c = c || {}; spec = spec || {};
+  const wt = num(c.goldWt), d1 = hasDia(spec.dia1Ct) ? num(spec.dia1Ct) : 0, d2 = hasDia(spec.dia2Ct) ? num(spec.dia2Ct) : 0;
   const gold = wt * num(c.goldRate), dia = d1 * num(c.diaRate), dia2 = d2 * num(c.dia2Rate), mk = wt * num(c.making);
   const value = gold + dia + dia2 + mk + num(c.gemAmt) + num(c.other);
   const gstAmt = value * num(c.gst) / 100;
   return {wt, d1, d2, gold, dia, dia2, mk, gem: num(c.gemAmt), oth: num(c.other), value, gstPct: num(c.gst), gstAmt, final: value + gstAmt};
 }
-function calcLines(c){
-  const v = c.final != null && c.value != null ? c : calcValues(c, F && F.spec);
+const EMON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtDayEn = s => { if (!s) return ''; const d = parseDay(s); return d.getDate() + ' ' + EMON[d.getMonth()] + ' ' + d.getFullYear(); };
+function calcLines(c, spec, en){
+  const v = c && c.final != null && c.value != null && c.gold != null ? c : calcValues(c, spec || (F && F.spec));
   const L = [];
-  if (v.gold) L.push(['Gold ' + (v.wt || '') + 'g × ' + money(c.goldRate || 0), money2(v.gold)]);
-  if (v.dia) L.push(['Dia ' + (v.d1 || '') + 'ct × ' + money(c.diaRate || 0), money2(v.dia)]);
-  if (v.dia2) L.push(['Dia 2 ' + (v.d2 || '') + 'ct × ' + money(c.dia2Rate || 0), money2(v.dia2)]);
-  if (v.mk) L.push(['Making ' + (v.wt || '') + 'g × ' + money(c.making || 0), money2(v.mk)]);
+  L.push(['Gold amount' + (v.wt ? ' (' + v.wt + 'g × ' + money(c.goldRate || 0) + ')' : ''), money2(v.gold)]);
+  if (v.dia || v.d1) L.push(['Main diamond (' + (v.d1 || 0) + 'ct × ' + money(c.diaRate || 0) + ')', money2(v.dia)]);
+  if (v.dia2 || v.d2) L.push(['Side diamonds (' + (v.d2 || 0) + 'ct × ' + money(c.dia2Rate || 0) + ')', money2(v.dia2)]);
   if (v.gem) L.push(['Gemstone', money2(v.gem)]);
+  L.push(['Making charges' + (v.wt ? ' (' + v.wt + 'g × ' + money(c.making || 0) + ')' : ''), money2(v.mk)]);
   if (v.oth) L.push(['Other', money2(v.oth)]);
   L.push(['Value', money2(v.value)]);
   if (v.gstAmt) L.push(['GST ' + (v.gstPct || 0) + '%', money2(v.gstAmt)]);
-  L.push(['Final Amount', money2(v.final), 'fin']);
+  L.push([en ? 'Total estimate' : 'कुल estimate', money2(v.final), 'fin']);
   return L;
 }
 function updateCalc(){
   const out = $('#calc-out'); if (!out) return;
   const v = calcValues(F.price.calc, F.spec);
-  out.innerHTML = v.value ? calcLines(Object.assign({}, F.price.calc)).map(l => `<div class="${l[2] || ''}"><span>${esc(l[0])}</span><span>${esc(l[1])}</span></div>`).join('') : '<div><span class="muted">ऊपर weight और rate डालें</span></div>';
+  out.innerHTML = v.value ? calcLines(F.price.calc, F.spec).map(l => `<div class="${l[2] || ''}"><span>${esc(l[0])}</span><span>${esc(l[1])}</span></div>`).join('') : '<div><span class="muted">ऊपर rate और weight डालें — gold, diamond, making का हिसाब यहाँ दिखेगा</span></div>';
 }
 function setupSig(){
   const c = $('#sig'); if (!c) return;
@@ -1695,22 +2080,52 @@ function setupSig(){
   const end = () => { if (drawing) { drawing = false; const w = $('#w-sig'); if (w) w.classList.remove('miss'); renderFormBar(); } };
   c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end);
 }
+function attachSig(c){
+  if (!c) return null;
+  const ratio = Math.max(1, window.devicePixelRatio || 1);
+  const w = c.clientWidth || 320; c.width = w * ratio; c.height = 170 * ratio;
+  const x = c.getContext('2d'); x.scale(ratio, ratio); x.lineWidth = 2.4; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#0a271b';
+  let drawing = false, last = null, dirty = false;
+  const pos = e => { const r = c.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  c.addEventListener('pointerdown', e => { drawing = true; last = pos(e); c.setPointerCapture(e.pointerId); e.preventDefault(); });
+  c.addEventListener('pointermove', e => { if (!drawing) return; const p = pos(e); x.beginPath(); x.moveTo(last[0], last[1]); x.lineTo(p[0], p[1]); x.stroke(); last = p; dirty = true; e.preventDefault(); });
+  const end = () => { drawing = false; }; c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end);
+  return {
+    dirty: () => dirty,
+    clear: () => { x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, c.width, c.height); x.restore(); dirty = false; },
+    data: () => { const o = document.createElement('canvas'); o.width = 600; o.height = Math.round(c.height * 600 / c.width); const ox = o.getContext('2d'); ox.drawImage(c, 0, 0, o.width, o.height); return o.toDataURL('image/png'); }
+  };
+}
 function clearSig(){ const c = $('#sig'); if (!c) return; const x = c.getContext('2d'); x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, c.width, c.height); x.restore(); F.sigDirty = false; }
 function missingFields(){
-  const isNew = F.mode === 'new', m = [];
+  const isNew = F.mode === 'new', m = [], s = F.spec;
   const need = (path, label, ok) => { if (!ok) m.push([path, label]); };
+  if (isNew && isAdmin()) need('storeId', 'Store', F.storeId);
   need('client.name', 'Client का नाम', F.client.name.trim());
   need('client.phone', 'Contact No. (10 अंक)', phone10(F.client.phone).length === 10);
-  need('spec.jtype', 'Jewellery Type', F.spec.jtype);
-  if (F.spec.jtype === 'Other') need('spec.jtypeOther', 'Jewellery Type (लिखें)', F.spec.jtypeOther.trim());
-  need('spec.metalColor', 'Metal Color', F.spec.metalColor);
-  need('spec.purity', 'Purity', F.spec.purity);
-  need('spec.size', 'Size / Length (या NA)', F.spec.size.trim());
-  need('spec.dia1Ct', 'Dia Ct. 1 (या NA)', F.spec.dia1Ct.trim());
-  need('spec.design', 'Design details / Remark', F.spec.design.trim());
+  need('spec.jtype', 'Jewellery Type', s.jtype);
+  if (s.jtype === 'Other') need('spec.jtypeOther', 'Jewellery Type (लिखें)', s.jtypeOther.trim());
+  need('spec.metalColor', 'Metal Color', s.metalColor);
+  need('spec.purity', 'Purity', s.purity);
+  need('spec.size', 'Size / Length (या NA)', s.size.trim());
+  need('spec.dia1Ct', 'Main diamond carat (या NA)', String(s.dia1Ct).trim());
+  if (hasDia(s.dia1Ct)) {
+    need('spec.dia1Shape', 'Main diamond — Shape', s.dia1Shape);
+    need('spec.dia1Color', 'Main diamond — Colour', s.dia1Color);
+    need('spec.dia1Clarity', 'Main diamond — Clarity', s.dia1Clarity);
+  }
+  if (hasDia(s.dia2Ct)) need('spec.dia2Shape', 'Side diamonds — Shape', s.dia2Shape);
+  [1, 2].forEach(n => { if (s['gem' + n + 'Type']) { need('spec.gem' + n + 'Color', 'Gemstone ' + n + ' — Colour', s['gem' + n + 'Color']); need('spec.gem' + n + 'Shape', 'Gemstone ' + n + ' — Shape', s['gem' + n + 'Shape']); } });
+  need('spec.design', 'Design details / Remark', s.design.trim());
   if (staff()) {
-    need('price.est', 'Est. Amount', num(F.price.est) > 0);
+    const c = F.price.calc;
     need('price.goldRateBooked', 'Gold Rate Booked (Yes/No)', F.price.goldRateBooked);
+    need('price.calc.goldRate', F.price.goldRateBooked === 'yes' ? 'Booked gold rate' : 'Gold rate', num(c.goldRate) > 0);
+    need('price.calc.goldWt', 'Gold weight', num(c.goldWt) > 0);
+    if (hasDia(s.dia1Ct)) need('price.calc.diaRate', 'Main diamond rate ₹/ct', num(c.diaRate) > 0);
+    if (hasDia(s.dia2Ct)) need('price.calc.dia2Rate', 'Side diamonds rate ₹/ct', num(c.dia2Rate) > 0);
+    need('price.calc.making', 'Making ₹/g', num(c.making) > 0);
+    need('price.est', 'Client से तय amount', num(F.price.est) > 0);
     if (isNew) {
       need('advance.amount', 'Advance Paid (0 भी चलेगा)', String(F.advance.amount).trim() !== '');
       if (num(F.advance.amount) > 0) need('advance.mode', 'Advance का mode (UPI/Cash…)', F.advance.mode);
@@ -1744,37 +2159,39 @@ function onFormInput(t){
   const path = t.dataset.f;
   setp(F, path, t.value);
   if (path === 'deliveryDay') { const dl = $('#f-days-left'); if (dl) dl.textContent = F.deliveryDay ? diffDays(F.deliveryDay, today()) + ' दिन बाद' : ''; }
-  if (path === 'spec.dia2Ct') { const w = $('#w-dia2shape'); if (w) w.hidden = !(F.spec.dia2Ct && F.spec.dia2Ct !== 'NA'); }
-  if (path.startsWith('price.calc') || path === 'spec.dia1Ct' || path === 'spec.dia2Ct') updateCalc();
+  if (/^spec\.dia[12]Ct$/.test(path)) syncFormVis();
+  if (path.startsWith('price.calc') || /^spec\.dia[12]Ct$/.test(path)) updateCalc();
   const w = t.closest('.fld'); if (w) w.classList.remove('miss');
   renderFormBar(); saveDraft();
 }
 function onChip(btn){
   const path = btn.dataset.f, v = btn.dataset.v;
   const cur = get(F, path);
-  const nv = cur === v && !['priority', 'price.goldRateBooked'].includes(path) ? '' : v;
+  const nv = cur === v && !['priority', 'price.goldRateBooked', 'storeId'].includes(path) ? '' : v;
   setp(F, path, nv);
   $$(`[data-act="chip"][data-f="${path}"]`).forEach(b => b.classList.toggle('on', b.dataset.v === nv));
-  if (path === 'spec.jtype') { const w = $('#w-f-spec-jtypeOther'); if (w) w.hidden = nv !== 'Other'; }
-  if (path === 'price.goldRateBooked') { const w = $('#w-f-price-goldRate'); if (w) w.hidden = nv !== 'yes'; }
+  syncFormVis(); updateCalc();
   const w = btn.closest('.fld'); if (w) w.classList.remove('miss');
   renderFormBar(); saveDraft();
 }
 function reviewForm(){
-  if (FP.busy()) return toast('Photo/Video upload पूरा होने दें…');
+  if (FP.busy() || (FIP && FIP.busy())) return toast('Photo/Video upload पूरा होने दें…');
   markMissing();
   const miss = missingFields();
   if (F.mode === 'edit') { if (miss.length) return openSheet('ये भरना बाकी है', missHtml(miss), {}); return saveEdit(); }
-  const s = F.spec, sum = [];
+  const s = F.spec;
   const row = (k, v) => v ? `<div>${esc(k)}</div><div>${esc(v)}</div>` : '';
   let h = miss.length ? `<p style="color:var(--bad);font-weight:600;margin-top:-4px">Submit से पहले ये भरें (दबाकर वहाँ जाएँ):</p>${missHtml(miss)}` : `<p class="small muted" style="margin-top:-4px">Client के साथ एक बार सब मिला लें. Submit करते ही order Darshana / Admin के पास approval के लिए चला जाएगा.</p>`;
-  h += `<div class="sum"><h5>Client</h5><div class="kv">${row('नाम', F.client.name)}${row('Contact', F.client.phone)}${row('City', F.client.city)}</div>
-    <h5>Product (factory को)</h5><div class="kv">${row('Type', jtypeOf(s))}${row('Qty', s.qty !== '1' ? s.qty : '')}${row('Metal', s.metalColor)}${row('Purity', s.purity)}${row('Size / Length', s.size)}${row('Dia Ct. 1', s.dia1Ct ? s.dia1Ct + (s.dia1Ct !== 'NA' ? ' ct ' + (s.dia1Shape || '') : '') : '')}${row('Dia Ct. 2', s.dia2Ct ? s.dia2Ct + (s.dia2Ct !== 'NA' ? ' ct ' + (s.dia2Shape || '') : '') : '')}${row('Gemstone 1', s.gem1)}${row('Gemstone 2', s.gem2)}${row('Engraving', s.engraving)}${s.design ? `<div class="full">${esc(s.design)}</div>` : ''}</div>
-    <h5>Photos / Video / Voice</h5><p style="margin:4px 0 8px">${FP.done().length ? FP.done().map(m => (m.kind === 'image' ? '📷' : m.kind === 'video' ? '🎥' : '🎙️') + (m.factory === false ? '🔒' : '')).join(' ') : '—'}</p>
-    <h5>Price & Payment</h5><div class="kv">${row('Est. Amount', F.price.est ? money(F.price.est) : '')}${row('Gold rate booked', F.price.goldRateBooked === 'yes' ? 'Yes' + (F.price.goldRate ? ' @ ' + money(F.price.goldRate) + '/g' : '') : F.price.goldRateBooked === 'no' ? 'No' : '')}${row('Advance', F.advance.amount !== '' ? money(F.advance.amount) + (F.advance.mode ? ' (' + F.advance.mode + ')' : '') : '')}</div>
-    <h5>Delivery</h5><div class="kv">${row('Date', F.deliveryDay ? fmtDay(F.deliveryDay) + ' (' + diffDays(F.deliveryDay, today()) + ' दिन)' : '')}${row('Priority', F.priority === 'urgent' ? 'Urgent' : 'Normal')}</div></div>`;
-  void sum;
-  if (F.price.goldRateBooked === 'yes' && num(F.price.est) && num(F.advance.amount) < num(F.price.est) * 0.5) h += `<p class="small" style="color:var(--warn)">⚠️ Gold rate booked है पर advance 50% से कम है (शर्त 6).</p>`;
+  const media = FP.done();
+  h += `<div class="sum"><h5>Client</h5><div class="kv">${row('Store', storeName(F.storeId))}${row('नाम', F.client.name)}${row('Contact', F.client.phone)}${row('City', F.client.city)}</div>
+    <h5>Product (factory को)</h5><div class="kv">${specRows(s).map(r => row(r[0], r[1])).join('')}${s.stoneNote ? `<div class="full">${esc(s.stoneNote)}</div>` : ''}${s.design ? `<div class="full">${esc(s.design)}</div>` : ''}</div>
+    <h5>Photos / Video / Voice</h5><p style="margin:4px 0 8px">${media.length ? media.map(m => (m.kind === 'image' ? '📷' : m.kind === 'video' ? '🎥' : '🎙️') + (m.voiceUrl ? '🎙️' : '') + (m.factory === false ? '🔒' : '')).join('  ') : '—'}</p>`;
+  if (staff()) {
+    h += `<h5>Estimate</h5><div class="calc-out" style="border-top:none;margin-top:0">${calcLines(F.price.calc, s).map(l => `<div class="${l[2] || ''}"><span>${esc(l[0])}</span><span>${esc(l[1])}</span></div>`).join('')}</div>
+      <div class="kv">${row('Client से तय amount', F.price.est ? money(F.price.est) : '')}${row('Gold rate booked', F.price.goldRateBooked === 'yes' ? 'Yes @ ' + money(F.price.calc.goldRate) + '/g' : F.price.goldRateBooked === 'no' ? 'No' : '')}${row('Advance', F.advance.amount !== '' ? money(F.advance.amount) + (F.advance.mode ? ' (' + F.advance.mode + ')' : '') : '')}${row('बाकी', F.price.est ? money(Math.max(0, num(F.price.est) - num(F.advance.amount))) : '')}</div>`;
+  }
+  h += `<h5>Delivery</h5><div class="kv">${row('Date', F.deliveryDay ? fmtDay(F.deliveryDay) + ' (' + diffDays(F.deliveryDay, today()) + ' दिन)' : '')}${row('Priority', F.priority === 'urgent' ? 'Urgent' : 'Normal')}</div></div>`;
+  if (staff() && F.price.goldRateBooked === 'yes' && num(F.price.est) && num(F.advance.amount) < num(F.price.est) * 0.5) h += `<p class="small" style="color:var(--warn)">⚠️ Gold rate booked है पर advance 50% से कम है (शर्त 6).</p>`;
   h += `<button class="btn primary big" data-act="f-submit" ${miss.length ? 'disabled' : ''}>✅ Order Submit करें</button>`;
   openSheet(miss.length ? 'कुछ बाकी है' : 'Review — सब सही है?', h, {});
 }
@@ -1786,29 +2203,35 @@ function gotoField(p){
   const i = w.querySelector('input,textarea,button'); if (i && i.tagName !== 'BUTTON') setTimeout(() => i.focus({preventScroll: true}), 350);
 }
 function ymOf(d){ return String(d.getFullYear()).slice(2) + pad(d.getMonth() + 1); }
+function sigData(){
+  const c = $('#sig'); if (!c) return '';
+  const w = 600, h = Math.round(c.height * w / c.width) || 255;
+  const o = document.createElement('canvas'); o.width = w; o.height = h;
+  const x = o.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h); x.drawImage(c, 0, 0, w, h);
+  return o.toDataURL('image/png');
+}
+function calcSaved(c, spec){ const v = calcValues(c, spec); return v.value ? Object.assign(clone(c), v) : null; }
 async function submitNew(){
-  if (FP.busy()) return toast('Upload पूरा होने दें…');
+  if (FP.busy() || (FIP && FIP.busy())) return toast('Upload पूरा होने दें…');
   const miss = missingFields(); if (miss.length) return reviewForm();
   const btn = $('[data-act="f-submit"]'); if (btn) { btn.disabled = true; btn.textContent = 'Submit हो रहा है…'; }
   try {
     const id = F.id, now = Date.now(), uid = S.authUser.uid;
-    let signUrl = '', signPath = '';
-    if (!F.ack.remote && F.sigDirty) {
-      const blob = await new Promise(r => $('#sig').toBlob(r, 'image/png'));
-      const res = await B.storage.upload('private/' + id + '/signature-' + now + '.png', blob, 'image/png');
-      signUrl = res.url; signPath = res.path;
-    }
-    const all = FP.done();
+    const storeId = isStore() ? myStore() : F.storeId;
+    const signData = !F.ack.remote && F.sigDirty ? sigData() : '';
     const fmedia = {}, pmedia = {};
-    all.forEach(m => { const f = m.factory !== false; const d = Object.assign({}, m); delete d.factory; delete d.id; (f ? fmedia : pmedia)[m.id] = d; });
+    FP.done().forEach(m => { const f = m.factory !== false; const d = Object.assign({}, m); delete d.factory; delete d.id; (f ? fmedia : pmedia)[m.id] = d; });
+    if (FIP) FIP.done().forEach(m => { const d = Object.assign({}, m, {receipt: true}); delete d.factory; delete d.id; pmedia[m.id] = d; });
     const spec = clone(F.spec); Object.keys(spec).forEach(k => { spec[k] = String(spec[k] == null ? '' : spec[k]).trim(); });
     if (!spec.qty) spec.qty = '1';
+    if (!F.gem2On) ['Type', 'Color', 'Shape', 'Ct', 'Pcs'].forEach(k => { spec['gem2' + k] = ''; });
     const ym = ymOf(new Date());
     const priv = {
+      storeId,
       client: {name: F.client.name.trim(), phone: phone10(F.client.phone), city: F.client.city.trim()},
-      price: {est: num(F.price.est), goldRateBooked: F.price.goldRateBooked, goldRate: F.price.goldRateBooked === 'yes' ? num(F.price.goldRate) : '', calc: calcValues(F.price.calc, spec).value ? Object.assign(clone(F.price.calc), calcValues(F.price.calc, spec)) : null, final: ''},
+      price: {est: num(F.price.est), goldRateBooked: F.price.goldRateBooked, goldRate: num(F.price.calc.goldRate), calc: calcSaved(F.price.calc, spec), final: ''},
       payments: {}, internalNote: F.internalNote.trim(), media: pmedia,
-      ack: {accepted: true, remote: !!F.ack.remote, at: now, signUrl, signPath, terms: TERMS.length},
+      ack: {accepted: true, remote: !!F.ack.remote, at: now, signData, terms: TERMS.length},
       log: {}
     };
     if (num(F.advance.amount) > 0) {
@@ -1816,25 +2239,26 @@ async function submitNew(){
       priv.log[logKey()] = logEntry('payment', 'Advance ' + money(F.advance.amount) + ' (' + F.advance.mode + ')');
     }
     let no = '';
+    const dday = F.deliveryDay;
+    const all = Object.keys(fmedia).length + Object.keys(pmedia).length;
     await B.db.counterTx('counters/' + ym, n => {
       no = 'DD-' + ym + '-' + String(n).padStart(3, '0');
       const order = {
-        no, ym, seq: n, orderDay: today(), createdAt: now, createdBy: uid, createdByName: myName(),
+        no, ym, seq: n, orderDay: today(), createdAt: now, createdBy: uid, createdByName: myName(), storeId, storeName: storeName(storeId),
         status: 'review', factoryVisible: false, stage: '', priority: F.priority, deliveryDay: F.deliveryDay,
         spec, media: fmedia, edited: {}, query: {open: false}, updatedAt: now, updatedBy: uid,
-        log: {[logKey()]: logEntry('created', 'Order बना — ' + itemLine({spec}) + (all.length ? '\n📎 ' + all.length + ' photo/video/voice' : ''))}
+        log: {[logKey()]: logEntry('created', 'Order बना — ' + itemLine({spec}) + (all ? '\n📎 ' + all + ' photo/video/voice' : ''))}
       };
       return [{path: 'orders/' + id, data: order}, {path: 'orders/' + id + '/private/info', data: priv}];
     });
-    const dday = F.deliveryDay;
-    clearDraft(); FORMKEY = null; F = null; FP = null;
+    clearDraft(); FORMKEY = null; F = null; FP = null; FIP = null;
     go('#/o/' + id);
     setTimeout(() => {
       const o = getOrder(id) || {no, spec, deliveryDay: dday};
       const admins = usersWith('admin').filter(u => u.phone && u.uid !== uid);
       openSheet('Order बन गया — ' + no, `<p>Order <b>${esc(no)}</b> Darshana / Admin के app में approval के लिए पहुँच गया है.</p>
         ${admins.length ? `<div class="lbl">WhatsApp पर भी बता दें</div><div class="btns" style="margin-bottom:10px">${pingBtns(id, o, 'admin')}</div>` : ''}
-        <div class="lbl">Client को confirmation</div><div class="btns"><a class="btn wa" target="_blank" rel="noopener" href="${esc(waLink(priv.client.phone, clientMsg(Object.assign({}, o, {no, deliveryDay: dday}), priv)))}">WhatsApp पर client को भेजें</a></div>
+        <div class="lbl">Client को</div><div class="btns"><a class="btn wa" target="_blank" rel="noopener" href="${esc(waLink(priv.client.phone, clientMsg(Object.assign({}, o, {no, deliveryDay: dday}), priv)))}">WhatsApp message</a><button class="btn" data-act="pdf">🧾 Receipt PDF</button></div>
         <button class="btn big" style="margin-top:12px" data-act="sheet-close">ठीक है</button>`, {id});
     }, 400);
   } catch (e) {
@@ -1847,8 +2271,9 @@ async function saveEdit(){
   const id = F.id, o = F.orig.o, p = F.orig.p;
   const fresh = getOrder(id);
   if (!canEdit(fresh)) { toast('ये order अब edit नहीं हो सकता.', 'bad'); return go('#/o/' + id); }
+  if (!F.gem2On) ['Type', 'Color', 'Shape', 'Ct', 'Pcs'].forEach(k => { F.spec['gem2' + k] = ''; });
   const main = {}, priv = {}, mainTxt = [], privTxt = [], edited = {};
-  const cur = {client: F.client, spec: F.spec, deliveryDay: F.deliveryDay, priority: F.priority, price: F.price, internalNote: F.internalNote};
+  const cur = {client: F.client, spec: F.spec, deliveryDay: F.deliveryDay, priority: F.priority, price: Object.assign({}, F.price, {goldRate: F.price.calc.goldRate}), internalNote: F.internalNote};
   const oldAll = {client: p.client || {}, spec: o.spec || {}, deliveryDay: o.deliveryDay, priority: o.priority, price: p.price || {}, internalNote: p.internalNote || ''};
   for (const [path, label, where] of EDIT_FIELDS) {
     if (!staff() && where === 'priv') continue;
@@ -1862,13 +2287,12 @@ async function saveEdit(){
     if (where === 'main') { setp(main, path, val); mainTxt.push(line); edited[path.replace(/\./g, '_')] = Date.now(); }
     else { setp(priv, path, val); privTxt.push(line); }
   }
-  /* calc */
-  const CALC_IN = ['goldWt', 'goldRate', 'diaRate', 'dia2Rate', 'gemAmt', 'making', 'other', 'gst'];
+  /* calculation */
   const calcSig = c => c && num(c.final) ? CALC_IN.map(k => String(num(c[k]))).join('|') + '|' + Math.round(num(c.final)) : '';
-  const nvCalc = calcValues(F.price.calc, F.spec).value ? Object.assign(clone(F.price.calc), calcValues(F.price.calc, F.spec)) : null;
-  if (calcSig(nvCalc) !== calcSig((p.price || {}).calc)) { priv.price = priv.price || {}; priv.price.calc = nvCalc; if (!privTxt.length) privTxt.push('हिसाब (calculation) बदला'); }
-  /* media: new, removed, moved */
-  const nowMedia = FP.done();
+  const nvCalc = calcSaved(F.price.calc, F.spec);
+  if (staff() && calcSig(nvCalc) !== calcSig((p.price || {}).calc)) { priv.price = priv.price || {}; priv.price.calc = nvCalc; privTxt.push('Estimate का हिसाब बदला' + (nvCalc ? ' (' + money(nvCalc.final) + ')' : '')); }
+  /* media: new, removed, moved between factory and store-only */
+  const nowMedia = FP.done().concat(FIP ? FIP.done().map(m => Object.assign(m, {factory: false, receipt: true})) : []);
   const oldF = o.media || {}, oldP = p.media || {};
   let mAdd = 0, mDel = 0;
   nowMedia.forEach(m => {
@@ -1876,7 +2300,7 @@ async function saveEdit(){
     const inF = oldF[m.id] && !oldF[m.id].deleted, inP = oldP[m.id] && !oldP[m.id].deleted;
     if (f && !inF) { setp(main, 'media.' + m.id, d); if (inP) setp(priv, 'media.' + m.id + '.deleted', true); else mAdd++; }
     if (!f && !inP) { setp(priv, 'media.' + m.id, d); if (inF) setp(main, 'media.' + m.id + '.deleted', true); else mAdd++; }
-    if (f && inF && (oldF[m.id].desc || '') !== d.desc) setp(main, 'media.' + m.id + '.desc', d.desc);
+    if (f && inF) { if ((oldF[m.id].desc || '') !== d.desc) setp(main, 'media.' + m.id + '.desc', d.desc); if ((oldF[m.id].voiceUrl || '') !== (d.voiceUrl || '')) { setp(main, 'media.' + m.id + '.voiceUrl', d.voiceUrl || ''); setp(main, 'media.' + m.id + '.voicePath', d.voicePath || ''); mAdd++; } }
     if (!f && inP && (oldP[m.id].desc || '') !== d.desc) setp(priv, 'media.' + m.id + '.desc', d.desc);
   });
   const ids = new Set(nowMedia.map(m => m.id));
@@ -1898,32 +2322,75 @@ async function saveEdit(){
   }
   const ok = await batch(ops);
   if (!ok) return;
-  FORMKEY = null; F = null; FP = null;
+  FORMKEY = null; F = null; FP = null; FIP = null;
   toast('बदलाव save हो गए.' + (fresh.status === 'factory' && mainTxt.length ? ' Factory को alert चला गया.' : ''));
   go('#/o/' + id);
 }
-
 /* ---------- team (admin) ---------- */
 function renderTeam(){
   const list = Object.entries(S.users).map(([uid, u]) => Object.assign({uid}, u)).sort((a, b) => (b.active ? 1 : 0) - (a.active ? 1 : 0) || (a.role > b.role ? 1 : -1));
-  let h = `<div class="view-title">Team & Logins</div>`;
+  const stores = storeList();
+  const mgr = sid => list.find(u => u.active && u.role === 'store' && u.storeId === sid);
+  let h = `<div class="view-title">Team, Stores & Logins</div>`;
+  h += `<div class="card"><h3>🏬 Stores <button class="btn sm tag" data-act="store-new">＋ नया Store</button></h3>` +
+    (stores.length ? stores.map(s => { const m = mgr(s.id); return `<div class="urow"><span class="av">🏬</span><div class="nm"><b>${esc(s.name)}</b><small>${esc([s.city, s.address].filter(Boolean).join(' · '))}<br>Manager: ${m ? esc(m.name) + ' (' + esc(m.loginId) + ')' : '<span style="color:var(--bad)">अभी कोई नहीं</span>'}</small></div><button class="btn sm" data-act="store-edit" data-sid="${esc(s.id)}">बदलें</button></div>`; }).join('') : '<p class="muted small">अभी कोई store नहीं.</p>') +
+    `<p class="small muted" style="margin:8px 0 0">हर store पर एक ही manager order punch कर सकता है. वो सिर्फ अपने store के orders देखेगा.</p></div>`;
   h += `<div class="card"><h3>नया व्यक्ति जोड़ें</h3>
     <div class="err" id="u-err" hidden></div>
     <div class="fld"><label for="u-name">नाम</label><input class="in" id="u-name" placeholder="जैसे: Nishant"></div>
-    <div class="lbl">Role</div><div class="chips" id="u-role" style="margin-bottom:6px">${[['store','Store (order लेने वाले)'],['admin','Admin (approve, सब access)'],['factory','Factory']].map((r, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="u-role" data-v="${r[0]}">${r[1]}</button>`).join('')}</div>
-    <p class="small muted" style="margin:0 0 12px">Store: order बनाए, price/payment देखे. Admin: approve करे, सब बदले, team बनाए. Factory: सिर्फ product details, photo/video/voice और stage update — price और client नहीं दिखेगा.</p>
+    <div class="lbl">Role</div><div class="chips" id="u-role" style="margin-bottom:6px">${[['store','Store manager'],['admin','Admin (approve, सब access)'],['factory','Factory']].map((r, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="u-role" data-v="${r[0]}">${r[1]}</button>`).join('')}</div>
+    <div id="u-store-wrap"><div class="lbl">कौन सा store?</div><div class="chips" id="u-store" style="margin-bottom:6px">${stores.map((s, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="u-store" data-v="${esc(s.id)}">${esc(s.name)}</button>`).join('')}</div></div>
+    <p class="small muted" style="margin:0 0 12px">Store manager: अपने store के order बनाए, price/payment देखे. Admin: approve करे, सब stores देखे, dashboard. Factory: सिर्फ product details, photo/video/voice और stage update — price और client नहीं दिखेगा.</p>
     <div class="two"><div class="fld"><label for="u-lid">Login ID</label><input class="in" id="u-lid" autocapitalize="none" placeholder="nishant"></div>
     <div class="fld"><label for="u-pw">Password</label><input class="in" id="u-pw" placeholder="कम से कम 6"></div></div>
-    <div class="fld"><label for="u-phone">WhatsApp नंबर (alert भेजने के लिए)</label><input class="in" id="u-phone" type="tel" inputmode="numeric" placeholder="10 अंक"></div>
-    <button class="btn primary big" data-act="u-add" id="u-add">Login बनाएँ</button><div id="u-cred"></div></div>`;
-  h += `<div class="card"><h3>सभी लोग</h3>` + list.map(u => `<div class="urow ${u.active ? '' : 'off'}"><span class="av">${esc(initial(u.name))}</span><div class="nm"><b>${esc(u.name)} ${u.uid === S.authUser.uid ? '<span class="pill gold">आप</span>' : ''}</b><small>${esc(ROLES[u.role] || u.role)} · ID: ${esc(u.loginId || '')}${u.phone ? ' · 📱 ' + esc(u.phone) : ''}${u.active ? '' : ' · बंद'}</small></div>
+    <div class="fld"><label for="u-phone">WhatsApp नंबर</label><input class="in" id="u-phone" type="tel" inputmode="numeric" placeholder="10 अंक"></div>
+    <button class="btn primary big" data-act="u-add" id="u-add">Login बनाएँ</button></div>`;
+  h += `<div class="card"><h3>सभी लोग</h3>` + list.map(u => `<div class="urow ${u.active ? '' : 'off'}"><span class="av">${esc(initial(u.name))}</span><div class="nm"><b>${esc(u.name)} ${u.uid === S.authUser.uid ? '<span class="pill gold">आप</span>' : ''}</b><small>${esc(ROLES[u.role] || u.role)}${u.role === 'store' && u.storeId ? ' · ' + esc(storeName(u.storeId)) : ''} · ID: ${esc(u.loginId || '')}${u.phone ? ' · 📱 ' + esc(u.phone) : ''}${u.active ? '' : ' · बंद'}</small></div>
     ${u.uid !== S.authUser.uid && u.active ? `<button class="btn sm" data-act="u-menu" data-uid="${esc(u.uid)}">⋯</button>` : ''}</div>`).join('') + `</div>`;
+  const b = S.brand || {};
+  h += `<div class="card"><h3>🧾 Receipt पर Deeva की तरफ़ से signature</h3>${b.signData ? `<img class="sigimg" src="${esc(b.signData)}" alt=""><p class="small muted" style="margin:6px 0 10px">${esc(b.signName || '')}</p>` : '<p class="small muted" style="margin-top:0">अभी signature नहीं है — PDF receipt पर सिर्फ Deeva seal आएगी.</p>'}<button class="btn sm" data-act="brand-sign">✍️ Signature ${b.signData ? 'बदलें' : 'set करें'}</button></div>`;
   patch($('#view'), h);
+  const roleOn = ($('#u-role .chip.on') || {dataset: {}}).dataset.v;
+  const w = $('#u-store-wrap'); if (w) w.hidden = roleOn !== 'store';
+}
+function sheetStore(sid){
+  const s = sid ? S.stores[sid] : {};
+  openSheet(sid ? 'Store बदलें' : 'नया Store', `<div class="fld"><label for="st-name">Store का नाम</label><input class="in" id="st-name" value="${esc(s.name || '')}" placeholder="Deeva Diamonds — Bilaspur"></div>
+    <div class="two"><div class="fld"><label for="st-city">City</label><input class="in" id="st-city" value="${esc(s.city || '')}"></div><div class="fld"><label for="st-phone">Store phone</label><input class="in" id="st-phone" inputmode="numeric" value="${esc(s.phone || '')}"></div></div>
+    <div class="fld"><label for="st-addr">Address (receipt पर आएगा)</label><input class="in" id="st-addr" value="${esc(s.address || '')}"></div>
+    <button class="btn primary big" data-act="store-save">Save करें</button>`, {sid: sid || ''});
+}
+async function saveStore(){
+  const sid = S.sheet.sid, name = $('#st-name').value.trim();
+  if (!name) return toast('Store का नाम डालें.', 'bad');
+  const d = {name, city: $('#st-city').value.trim(), phone: phone10($('#st-phone').value), address: $('#st-addr').value.trim()};
+  const ok = sid ? await write('stores/' + sid, d) : await commit(B.db.set('stores/' + B.db.newId('stores'), Object.assign(d, {active: true, at: Date.now()})));
+  if (ok) { closeSheet(); toast('Store save हो गया.'); }
+}
+function sheetBrandSign(){
+  const b = S.brand || {};
+  openSheet('Deeva की तरफ़ से signature', `<p class="small muted" style="margin-top:-6px">ये हर receipt PDF पर Deeva seal के साथ आएगा.</p>
+    <div class="fld"><label for="bs-name">नाम / पद</label><input class="in" id="bs-name" value="${esc(b.signName || 'Authorised Signatory')}"></div>
+    <div class="sig-wrap"><canvas id="bsig"></canvas><span>यहाँ sign करें</span></div><button type="button" class="btn ghost sm" data-act="bsig-clear">मिटाएँ</button>
+    <button class="btn primary big" data-act="brand-save" style="margin-top:8px">Save करें</button>`, {});
+  S.sheet.sig = attachSig($('#bsig'));
+}
+async function saveBrandSign(){
+  const sg = S.sheet.sig;
+  if (!sg || !sg.dirty()) return toast('पहले sign करें.', 'bad');
+  const ok = await commit(B.db.set('config/brand', {signData: sg.data(), signName: $('#bs-name').value.trim(), at: Date.now(), by: S.authUser.uid}));
+  if (ok) { closeSheet(); toast('Signature save हो गया.'); }
 }
 async function addUser(){
   const name = $('#u-name').value.trim(), lid = $('#u-lid').value.trim().toLowerCase(), pw = $('#u-pw').value, phone = phone10($('#u-phone').value);
   const roleV = (($('#u-role .chip.on') || {}).dataset || {}).v || 'store';
+  const storeId = roleV === 'store' ? ((($('#u-store .chip.on') || {}).dataset || {}).v || '') : '';
   if (!name) return showErr('#u-err', 'नाम डालें.');
+  if (roleV === 'store' && !storeId) return showErr('#u-err', 'Store चुनें (पहले ऊपर "नया Store" बनाएँ).');
+  if (roleV === 'store') {
+    const ex = Object.values(S.users).find(u => u.active && u.role === 'store' && u.storeId === storeId);
+    if (ex) return showErr('#u-err', storeName(storeId) + ' पर पहले से ' + ex.name + ' manager हैं. हर store पर एक ही — पहले उनका login बंद करें.');
+  }
   if (!/^[a-z0-9._-]{3,40}$/.test(lid)) return showErr('#u-err', 'Login ID में 3-40 अक्षर: a-z, 0-9, . _ - (space नहीं).');
   if (pw.length < 6) return showErr('#u-err', 'Password कम से कम 6 अक्षर.');
   showErr('#u-err', '');
@@ -1935,7 +2402,7 @@ async function addUser(){
     const uid = await B.auth.createUser(email, pw);
     await B.db.batch([
       {op: 'set', path: 'logins/' + lid, data: {email, uid, at: Date.now()}},
-      {op: 'set', path: 'users/' + uid, data: {name, role: roleV, loginId: lid, phone, active: true, at: Date.now(), by: S.authUser.uid}}
+      {op: 'set', path: 'users/' + uid, data: {name, role: roleV, storeId, loginId: lid, phone, active: true, at: Date.now(), by: S.authUser.uid}}
     ]);
     ['#u-name', '#u-lid', '#u-pw', '#u-phone'].forEach(s => { $(s).value = ''; });
     showCred(name, lid, pw, phone);
@@ -1953,6 +2420,7 @@ function userMenu(uid){
   const u = S.users[uid];
   openSheet(u.name, `<div class="fld"><label for="um-phone">WhatsApp नंबर</label><div class="inp"><input id="um-phone" type="tel" inputmode="numeric" value="${esc(u.phone || '')}"><button class="btn sm" data-act="um-phone" style="flex:none">Save</button></div></div>
     <div class="lbl">Role</div><div class="chips" id="um-role" style="margin-bottom:8px">${Object.entries(ROLES).map(([k, v]) => `<button class="chip ${u.role === k ? 'on' : ''}" data-act="um-role" data-v="${k}">${v}</button>`).join('')}</div>
+    ${u.role === 'store' ? `<div class="lbl">Store</div><div class="chips" style="margin-bottom:8px">${storeList().map(s => `<button class="chip ${u.storeId === s.id ? 'on' : ''}" data-act="um-store" data-v="${esc(s.id)}">${esc(s.name)}</button>`).join('')}</div>` : ''}
     <div class="btns" style="margin-top:14px"><button class="btn" data-act="um-newpw">🔑 नया Password बनाएँ</button><button class="btn danger" data-act="um-off">Login बंद करें</button></div>`, {uid});
 }
 function userNewPw(){
@@ -1975,6 +2443,131 @@ async function userNewPwDo(){
     ]);
     showCred(u.name, u.loginId, pw, u.phone);
   } catch (e) { toast(authErr(e), 'bad'); }
+}
+
+/* ---------- dashboard (admin) ---------- */
+async function loadDash(){
+  if (S.dashLoading) return;
+  S.dashLoading = true; render();
+  try {
+    const [orders, privs] = await Promise.all([B.db.getQuery('orders', []), B.db.getGroup('private')]);
+    const pm = Object.fromEntries(privs.map(x => [x.id, x.data]));
+    S.dash = {at: Date.now(), rows: orders.map(x => ({id: x.id, o: x.data, p: pm[x.id] || {}}))};
+  } catch (e) { console.error(e); toast('Dashboard load नहीं हुआ — ' + errText(e), 'bad'); }
+  S.dashLoading = false; render();
+}
+const monthKey = ms => { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
+const monthLabel = (k, withYear) => { const [y, m] = k.split('-').map(Number); return HMON[m - 1] + (withYear ? ' ' + String(y).slice(2) : ''); };
+function niceMax(v){ if (v <= 0) return 4; const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v / p; const m = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10; return m * p; }
+const compact = v => v >= 1e7 ? (v / 1e7).toFixed(v >= 1e8 ? 0 : 1).replace(/\.0$/, '') + 'Cr' : v >= 1e5 ? (v / 1e5).toFixed(v >= 1e6 ? 0 : 1).replace(/\.0$/, '') + 'L' : v >= 1000 ? (v / 1000).toFixed(v >= 1e4 ? 0 : 1).replace(/\.0$/, '') + 'K' : String(Math.round(v * 10) / 10);
+function lineChart(id, keys, values, fmt, unit, minMax){
+  const W = 380, H = 210, L = 40, R = 16, T = 22, Bm = 26;
+  const pts = values.map((v, i) => v == null ? null : v);
+  const raw = Math.max(minMax || 1, ...pts.filter(v => v != null));
+  const max = id === 'orders' ? Math.ceil(raw / 4) * 4 : niceMax(raw);   /* counts: whole-number ticks */
+  const xs = i => L + (keys.length === 1 ? (W - L - R) / 2 : i * (W - L - R) / (keys.length - 1));
+  const ys = v => T + (H - T - Bm) * (1 - v / max);
+  const yearful = keys.length && keys[0].slice(0, 4) !== keys[keys.length - 1].slice(0, 4);
+  const every = Math.max(1, Math.ceil(keys.length / 6));
+  let g = '';
+  for (let i = 0; i <= 4; i++) { const v = max * i / 4, y = ys(v); g += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="1"/><text x="${L - 6}" y="${y + 4}" text-anchor="end" font-size="11.5" fill="var(--ink2)">${esc(compact(v))}</text>`; }
+  keys.forEach((k, i) => { if ((keys.length - 1 - i) % every === 0) g += `<text x="${xs(i)}" y="${H - 7}" text-anchor="${i === 0 && keys.length > 1 ? 'start' : 'middle'}" font-size="11.5" fill="var(--ink2)">${esc(monthLabel(k, yearful && (i === 0 || k.endsWith('-01'))))}</text>`; });
+  let path = '', area = '', seg = [];
+  const flush = () => { if (seg.length) { path += 'M' + seg.map(p => p.join(',')).join('L'); if (seg.length > 1) area += `<path d="M${seg[0][0]},${ys(0)}L${seg.map(p => p.join(',')).join('L')}L${seg[seg.length - 1][0]},${ys(0)}Z" fill="var(--chart-wash)"/>`; } seg = []; };
+  pts.forEach((v, i) => { if (v == null) flush(); else seg.push([xs(i).toFixed(1), ys(v).toFixed(1)]); });
+  flush();
+  const lastI = pts.map((v, i) => v == null ? -1 : i).filter(i => i >= 0).pop();
+  let end = '';
+  if (lastI != null && lastI >= 0) end = `<circle cx="${xs(lastI)}" cy="${ys(pts[lastI])}" r="5" fill="var(--chart)" stroke="var(--card)" stroke-width="2"/><text x="${Math.min(xs(lastI), W - R - 4)}" y="${ys(pts[lastI]) - 11}" text-anchor="${xs(lastI) > W - 60 ? 'end' : 'middle'}" font-size="12.5" font-weight="700" fill="var(--ink)">${esc(fmt(pts[lastI]))}</text>`;
+  const singles = pts.map((v, i) => v != null && (pts[i - 1] == null) && (pts[i + 1] == null) && i !== lastI ? `<circle cx="${xs(i)}" cy="${ys(v)}" r="4" fill="var(--chart)" stroke="var(--card)" stroke-width="2"/>` : '').join('');
+  const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(unit)}" data-chart="${id}">${g}${area}<path d="${path}" fill="none" stroke="var(--chart)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>${singles}${end}<line class="xh" x1="0" x2="0" y1="${T}" y2="${H - Bm}" stroke="var(--ink2)" stroke-width="1" opacity="0"/><circle class="xd" r="5" fill="var(--chart)" stroke="var(--card)" stroke-width="2" opacity="0"/><rect x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent" data-hover="${id}"/></svg>`;
+  CHARTS[id] = {keys, pts, fmt, unit, xs, ys, W};
+  const table = `<details class="tv"><summary>Table देखें</summary><div class="scroll-x"><table class="tbl"><tr><th>महीना</th><th>${esc(unit)}</th></tr>${keys.map((k, i) => `<tr><td>${esc(monthLabel(k, true))}</td><td>${pts[i] == null ? '—' : esc(fmt(pts[i]))}</td></tr>`).join('')}</table></div></details>`;
+  return `<div class="chart" id="ch-${id}">${svg}<div class="tip" hidden></div></div>${table}`;
+}
+const CHARTS = {};
+function chartHover(e, el){
+  const id = el.dataset.hover, c = CHARTS[id]; if (!c) return;
+  const svg = el.ownerSVGElement, box = svg.getBoundingClientRect();
+  const x = (e.clientX - box.left) * c.W / box.width;
+  let best = -1, bd = 1e9;
+  c.pts.forEach((v, i) => { if (v == null) return; const d = Math.abs(c.xs(i) - x); if (d < bd) { bd = d; best = i; } });
+  const wrap = document.getElementById('ch-' + id), tip = wrap.querySelector('.tip'), xh = svg.querySelector('.xh'), xd = svg.querySelector('.xd');
+  if (best < 0) return;
+  const px = c.xs(best), py = c.ys(c.pts[best]);
+  xh.setAttribute('x1', px); xh.setAttribute('x2', px); xh.setAttribute('opacity', '.5');
+  xd.setAttribute('cx', px); xd.setAttribute('cy', py); xd.setAttribute('opacity', '1');
+  tip.hidden = false; tip.innerHTML = esc(monthLabel(c.keys[best], true)) + ' · <b>' + esc(c.fmt(c.pts[best])) + '</b>';
+  const left = px * box.width / c.W; tip.style.left = Math.max(60, Math.min(box.width - 60, left)) + 'px';
+}
+function chartLeave(el){ const id = el.dataset.hover; const wrap = document.getElementById('ch-' + id); if (!wrap) return; wrap.querySelector('.tip').hidden = true; const svg = wrap.querySelector('svg'); svg.querySelector('.xh').setAttribute('opacity', '0'); svg.querySelector('.xd').setAttribute('opacity', '0'); }
+function renderDash(){
+  if (!S.dash && !S.dashLoading) { loadDash(); }
+  let h = `<div class="row" style="margin-bottom:4px"><div class="view-title" style="margin:4px 0 6px">Business Dashboard</div><span class="grow"></span><button class="btn sm" data-act="dash-reload" ${S.dashLoading ? 'disabled' : ''}>${S.dashLoading ? 'Load…' : '↻ Refresh'}</button></div>`;
+  const stores = storeList();
+  h += `<div class="filters">` + [['all', 'सभी stores']].concat(stores.map(s => [s.id, s.name])).map(x => `<button class="fchip ${S.dashStore === x[0] ? 'on' : ''}" data-act="dash-store" data-v="${esc(x[0])}">🏬 ${esc(x[1])}</button>`).join('') + `</div>`;
+  h += `<div class="filters">` + [[6, '6 महीने'], [12, '12 महीने'], [0, 'सब']].map(x => `<button class="fchip ${S.dashRange === x[0] ? 'on' : ''}" data-act="dash-range" data-v="${x[0]}">${x[1]}</button>`).join('') + `</div>`;
+  if (!S.dash) { patch($('#view'), h + '<div class="empty">Dashboard load हो रहा है…</div>'); return; }
+  const rowsAll = S.dash.rows.filter(r => S.dashStore === 'all' || r.o.storeId === S.dashStore);
+  const now = new Date();
+  const firstMs = r => r.o.createdAt || 0;
+  const minMs = rowsAll.length ? Math.min(...rowsAll.map(firstMs)) : now.getTime();
+  const start = S.dashRange ? new Date(now.getFullYear(), now.getMonth() - S.dashRange + 1, 1) : new Date(new Date(minMs).getFullYear(), new Date(minMs).getMonth(), 1);
+  const keys = []; for (let d = new Date(start); d <= now; d.setMonth(d.getMonth() + 1)) keys.push(d.getFullYear() + '-' + pad(d.getMonth() + 1));
+  const inRange = ms => ms && ms >= start.getTime();
+  const live = rowsAll.filter(r => r.o.status !== 'cancelled');
+  const period = live.filter(r => inRange(r.o.createdAt));
+  const total = r => num(r.p.price && (r.p.price.final || r.p.price.est));
+  const booked = period.reduce((a, r) => a + total(r), 0);
+  const collected = rowsAll.reduce((a, r) => a + Object.values(r.p.payments || {}).filter(x => !x.deleted && inRange(parseDay(x.day || '1970-01-01').getTime() || x.at)).reduce((s, x) => s + num(x.amount), 0), 0);
+  const pending = live.reduce((a, r) => a + Math.max(0, total(r) - paidTotal(r.p)), 0);
+  const made = live.filter(r => r.o.dispatch && r.o.dispatch.at && r.o.approvedAt && inRange(r.o.dispatch.at));
+  const days = r => (r.o.dispatch.at - r.o.approvedAt) / 86400000;
+  const avgDays = made.length ? made.reduce((a, r) => a + days(r), 0) / made.length : null;
+  const onTime = made.filter(r => r.o.factoryDue && dayOf(new Date(r.o.dispatch.at)) <= r.o.factoryDue);
+  const onPct = made.filter(r => r.o.factoryDue).length ? Math.round(onTime.length / made.filter(r => r.o.factoryDue).length * 100) : null;
+  const inFactory = live.filter(r => r.o.status === 'factory');
+  const lateNow = inFactory.filter(r => r.o.factoryDue && diffDays(r.o.factoryDue, today()) < 0);
+  h += `<div class="kpis">
+    <div class="kpi hero"><small>Business booked (${S.dashRange ? S.dashRange + ' महीने' : 'सब'})</small><b>${money(booked)}</b><span>${period.length} ${period.length === 1 ? 'order' : 'orders'} · कुल मिला ${money(collected)}</span></div>
+    <div class="kpi"><small>Orders</small><b>${period.length}</b><span>इस period में</span></div>
+    <div class="kpi"><small>बनने में औसत</small><b>${avgDays == null ? '—' : avgDays.toFixed(1) + ' दिन'}</b><span>approve → dispatch</span></div>
+    <div class="kpi"><small>Time पर dispatch</small><b>${onPct == null ? '—' : onPct + '%'}</b><span>${onTime.length} / ${made.filter(r => r.o.factoryDue).length} orders</span></div>
+    <div class="kpi"><small>बाकी वसूली</small><b>${money(pending)}</b><span>सभी चालू orders</span></div>
+    <div class="kpi"><small>अभी factory में</small><b>${inFactory.length}</b><span>${lateNow.length ? '<span style="color:var(--bad);font-weight:700">' + lateNow.length + ' late</span>' : 'कोई late नहीं'}</span></div>
+    <div class="kpi"><small>Approval बाकी</small><b>${live.filter(r => r.o.status === 'review' || r.o.status === 'query').length}</b><span>review + query</span></div>
+    <div class="kpi"><small>Delivered</small><b>${period.filter(r => r.o.status === 'delivered').length}</b><span>इस period में</span></div>
+  </div>`;
+  const byMonth = (list, msOf, val) => { const m = {}; list.forEach(r => { const ms = msOf(r); if (!inRange(ms)) return; const k = monthKey(ms); (m[k] = m[k] || []).push(val(r)); }); return m; };
+  const cnt = byMonth(live, firstMs, () => 1);
+  const val = byMonth(live, firstMs, total);
+  const dd = byMonth(made, r => r.o.dispatch.at, days);
+  h += `<div class="card"><h3>हर महीने कितने orders आए</h3>${lineChart('orders', keys, keys.map(k => (cnt[k] || []).length), v => Math.round(v) + (Math.round(v) === 1 ? ' order' : ' orders'), 'Orders', 4)}</div>`;
+  h += `<div class="card"><h3>Order बनने में औसत दिन</h3><p class="small muted" style="margin:-6px 0 6px">Approve से factory dispatch तक, dispatch वाले महीने के हिसाब से</p>${lineChart('days', keys, keys.map(k => dd[k] ? dd[k].reduce((a, b) => a + b, 0) / dd[k].length : null), v => v.toFixed(1) + ' दिन', 'औसत दिन', 10)}</div>`;
+  h += `<div class="card"><h3>हर महीने का business (₹)</h3><p class="small muted" style="margin:-6px 0 6px">Client से तय amount, order वाले महीने में</p>${lineChart('value', keys, keys.map(k => (val[k] || []).reduce((a, b) => a + b, 0)), v => money(v), 'Business ₹', 10000)}</div>`;
+  /* pipeline now */
+  const pipe = [['Approval बाकी', r => r.o.status === 'review'], ['Query', r => r.o.status === 'query']].concat(STAGES.filter(s => s[0] !== 'dispatched').map(s => [STAGE_SHORT[s[0]], r => r.o.status === 'factory' && r.o.stage === s[0]])).concat([['Dispatched (रास्ते में)', r => r.o.status === 'dispatched'], ['Store पर (देना बाकी)', r => r.o.status === 'received']]);
+  const pc = pipe.map(p => [p[0], live.filter(p[1]).length]).filter(x => x[1] > 0);
+  const pmax = Math.max(1, ...pc.map(x => x[1]));
+  h += `<div class="card"><h3>अभी कौन सा order कहाँ है</h3>${pc.length ? `<div class="bars">${pc.map(x => `<div class="br"><span>${esc(x[0])}</span><span class="tr"><i style="width:${Math.max(4, x[1] / pmax * 100)}%"></i></span><b>${x[1]}</b></div>`).join('')}</div>` : '<p class="muted small" style="margin:0">अभी कोई चालू order नहीं.</p>'}</div>`;
+  /* store-wise */
+  if (stores.length) {
+    const rowsP = S.dash.rows.filter(r => r.o.status !== 'cancelled');
+    h += `<div class="card"><h3>Store-wise</h3><div class="scroll-x"><table class="tbl"><tr><th>Store</th><th>Orders</th><th>Business</th><th>औसत दिन</th><th>Time पर</th><th>चालू</th></tr>` + stores.map(s => {
+      const rs = rowsP.filter(r => r.o.storeId === s.id), rp = rs.filter(r => inRange(r.o.createdAt));
+      const mk = rs.filter(r => r.o.dispatch && r.o.dispatch.at && r.o.approvedAt && inRange(r.o.dispatch.at));
+      const ad = mk.length ? (mk.reduce((a, r) => a + days(r), 0) / mk.length).toFixed(1) : '—';
+      const withDue = mk.filter(r => r.o.factoryDue);
+      const ot = withDue.length ? Math.round(withDue.filter(r => dayOf(new Date(r.o.dispatch.at)) <= r.o.factoryDue).length / withDue.length * 100) + '%' : '—';
+      return `<tr><td>${esc(s.name)}</td><td>${rp.length}</td><td>${money(rp.reduce((a, r) => a + total(r), 0))}</td><td>${ad}</td><td>${ot}</td><td>${rs.filter(r => ACTIVE.includes(r.o.status)).length}</td></tr>`;
+    }).join('') + `</table></div></div>`;
+  }
+  /* what sells */
+  const types = {}; period.forEach(r => { const t = jtypeOf(r.o.spec); if (t) types[t] = (types[t] || 0) + 1; });
+  const tl = Object.entries(types).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (tl.length) { const tm = tl[0][1]; h += `<div class="card"><h3>कौन सा item ज़्यादा बन रहा है</h3><div class="bars">${tl.map(x => `<div class="br"><span>${esc(x[0])}</span><span class="tr"><i style="width:${Math.max(4, x[1] / tm * 100)}%"></i></span><b>${x[1]}</b></div>`).join('')}</div></div>`; }
+  h += `<p class="small muted center">Updated ${esc(fmtWhen(S.dash.at))}</p>`;
+  patch($('#view'), h);
 }
 
 /* ---------- account ---------- */
@@ -2007,7 +2600,11 @@ document.addEventListener('click', e => {
     case 'reset-pw': sendResetLink(); break;
     case 'filter': S.filter = t.dataset.v; render(); break;
     case 'hist-load': loadHistory(); break;
-    case 'notif-on': if ('Notification' in window) Notification.requestPermission().then(() => render()); break;
+    case 'store-filter': S.storeFilter = t.dataset.v; render(); break;
+    case 'dash-reload': loadDash(); break;
+    case 'dash-store': S.dashStore = t.dataset.v; render(); break;
+    case 'dash-range': S.dashRange = +t.dataset.v; render(); break;
+    case 'notif-on': if ('Notification' in window) Notification.requestPermission().then(p => { if (p === 'granted') { toast('Notification चालू हो गए.'); setupPush(); } render(); }); break;
     case 'notif-later': try { localStorage.setItem('do.notif.later', '1'); } catch (x) {} render(); break;
     case 'sheet-close': closeSheet(); break;
     case 'sheet-bg': if (e.target === t) closeSheet(); break;
@@ -2021,18 +2618,22 @@ document.addEventListener('click', e => {
     case 'pick1': {
       e.preventDefault();
       $$('#' + t.dataset.g + ' .chip').forEach(c => c.classList.toggle('on', c === t));
-      if (S.sheet && (t.dataset.g === 'dp-mode' || t.dataset.g === 'py-mode')) S.sheet.mode = t.dataset.v;
+      if (t.dataset.g === 'u-role') { const w = $('#u-store-wrap'); if (w) w.hidden = t.dataset.v !== 'store'; }
+      if (S.sheet && ['dp-mode', 'py-mode', 'sc-pri'].includes(t.dataset.g)) S.sheet.mode = t.dataset.v;
       break;
     }
     case 'f-days': if (F) { const d = addDays(today(), +t.dataset.n); const i = $('#f-deliveryDay'); i.value = d; onFormInput(i); } break;
-    case 'calc-toggle': { const c = $('#calc'); c.hidden = !c.hidden; if (!c.hidden) updateCalc(); break; }
-    case 'calc-apply': { const v = calcValues(F.price.calc, F.spec); if (!v.final) return toast('पहले weight और rate डालें.', 'bad'); const i = $('#f-price-est'); i.value = String(Math.round(v.final)); onFormInput(i); toast('Est. Amount: ' + money(v.final)); break; }
+    case 'calc-apply': { const v = calcValues(F.price.calc, F.spec); if (!v.final) return toast('पहले rate और weight डालें.', 'bad'); const i = $('#f-price-est'); i.value = String(Math.round(v.final)); onFormInput(i); toast('Client amount = estimate ' + money(v.final)); break; }
+    case 'dia-na': { const i = document.getElementById(t.dataset.for); if (i) { i.value = 'NA'; onFormInput(i); } break; }
+    case 'gem2-add': if (F) { F.gem2On = true; syncFormVis(); saveDraft(); } break;
     case 'sig-clear': clearSig(); break;
-    case 'f-clear': askConfirm('अधूरा order मिटाएँ?', 'भरी हुई details और photos हट जाएँगी, नया order शुरू होगा.', 'हाँ, मिटाएँ', () => { clearDraft(); FORMKEY = null; F = null; render(); }, true); break;
+    case 'f-clear': askConfirm('अधूरा order मिटाएँ?', 'भरी हुई details और photos हट जाएँगी, नया order शुरू होगा.', 'हाँ, मिटाएँ', () => { clearDraft(); FORMKEY = null; F = null; FP = null; FIP = null; render(); }, true); break;
     case 'f-review': reviewForm(); break;
     case 'f-submit': submitNew(); break;
     case 'goto-field': gotoField(t.dataset.p); break;
     case 'rec': e.preventDefault(); { const p = PICKERS[t.dataset.p]; if (p) p.toggleRec(); } break;
+    case 'rec-item': e.preventDefault(); { const p = PICKERS[t.dataset.p]; if (p) p.toggleRec(t.dataset.id); } break;
+    case 'mvoice-del': e.preventDefault(); { const p = PICKERS[t.dataset.p]; if (p) p.delVoice(t.dataset.id); } break;
     case 'mdel': e.preventDefault(); { const p = PICKERS[t.dataset.p]; if (p) p.del(t.dataset.id); } break;
     case 'approve-open': sheetApprove(oid); break;
     case 'approve-do': doApprove(); break;
@@ -2059,6 +2660,9 @@ document.addEventListener('click', e => {
     case 'pay-do': doPay(); break;
     case 'final-open': sheetFinal(oid); break;
     case 'final-do': doFinal(); break;
+    case 'sched-open': sheetSchedule(oid); break;
+    case 'pdf': makeReceiptPdf(oid || (S.sheet && S.sheet.id)); break;
+    case 'sched-do': doSchedule(); break;
     case 'cancel-open': sheetCancel(oid); break;
     case 'cancel-do': doCancel(); break;
     case 'reopen': doReopen(); break;
@@ -2070,6 +2674,13 @@ document.addEventListener('click', e => {
     case 'um-newpw': userNewPw(); break;
     case 'um-off': { const uid = S.sheet.uid; askConfirm(S.users[uid].name + ' का login बंद करें?', 'वो अब app नहीं खोल पाएँगे. उनके बनाए orders वैसे ही रहेंगे.', 'हाँ, बंद करें', () => write('users/' + uid, {active: false}).then(ok => { if (ok) toast('Login बंद कर दिया.'); }), true); break; }
     case 'um-newpw-do': userNewPwDo(); break;
+    case 'um-store': { const v = t.dataset.v, uid = S.sheet.uid; const ex = Object.entries(S.users).find(([k, u]) => k !== uid && u.active && u.role === 'store' && u.storeId === v); if (ex) { toast(storeName(v) + ' पर पहले से ' + ex[1].name + ' हैं.', 'bad'); break; } write('users/' + uid, {storeId: v}).then(ok => { if (ok) { closeSheet(); toast('Store बदल गया.'); } }); break; }
+    case 'store-new': sheetStore(''); break;
+    case 'store-edit': sheetStore(t.dataset.sid); break;
+    case 'store-save': saveStore(); break;
+    case 'brand-sign': sheetBrandSign(); break;
+    case 'bsig-clear': if (S.sheet && S.sheet.sig) S.sheet.sig.clear(); break;
+    case 'brand-save': saveBrandSign(); break;
     case 'copy': { const tx = t.dataset.t; if (NATIVE && NATIVE.copy) NATIVE.copy(tx); else if (navigator.clipboard) navigator.clipboard.writeText(tx).catch(() => {}); toast('Copy हो गया.'); break; }
     case 'mic-lang': write('users/' + S.authUser.uid, {micLang: t.dataset.v}).then(ok => ok && toast('भाषा बदल गई.')); break;
     case 'pw-change': {
@@ -2084,6 +2695,7 @@ document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'q') { S.q = t.value; render(); return; }
   if (t.dataset && t.dataset.f && F && FORMKEY) { onFormInput(t); return; }
+  if (t.dataset && t.dataset.fb && S.sheet && S.sheet.calc) { S.sheet.calc[t.dataset.fb] = t.value; updateFinalCalc(false); return; }
   if (t.dataset && t.dataset.desc) { const p = PICKERS[t.dataset.p]; if (p && p.items[t.dataset.desc]) { p.items[t.dataset.desc].desc = t.value; if (p.opts.onChange) p.opts.onChange(); } }
 });
 document.addEventListener('change', e => {
@@ -2098,6 +2710,9 @@ document.addEventListener('change', e => {
   if (t.id === 'f-ack' && F) { F.ack.accepted = t.checked; $('#w-f-ack').classList.remove('miss'); renderFormBar(); saveDraft(); }
   if (t.id === 'f-remote' && F) { F.ack.remote = t.checked; $('#w-sig').hidden = t.checked; renderFormBar(); saveDraft(); }
 });
+document.addEventListener('pointermove', e => { const t = e.target.closest && e.target.closest('[data-hover]'); if (t) chartHover(e, t); });
+document.addEventListener('pointerdown', e => { const t = e.target.closest && e.target.closest('[data-hover]'); if (t) chartHover(e, t); });
+document.addEventListener('pointerout', e => { const t = e.target.closest && e.target.closest('[data-hover]'); if (t) chartLeave(t); });
 document.addEventListener('submit', e => {
   e.preventDefault();
   if (e.target.id === 'setup-form') doSetup();

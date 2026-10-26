@@ -23,6 +23,11 @@
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="false">
 
+        <!-- notifications sent by the Deeva Orders notification server (Firebase Cloud Messaging) -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/do_green" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="orders" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

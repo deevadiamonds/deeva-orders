@@ -1,6 +1,10 @@
 plugins {
     id 'com.android.application'
 }
+/* push notifications are switched on once app/google-services.json (from Firebase) is in the repo */
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
+}
 
 def appUrl = System.getenv('APP_URL') ?: 'https://example.github.io/deeva-orders/'
 def ksFile = file(System.getenv('DO_KEYSTORE') ?: 'release.jks')
@@ -44,4 +48,9 @@ android {
         targetCompatibility JavaVersion.VERSION_17
         encoding 'UTF-8'
     }
+}
+
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:33.5.1')
+    implementation 'com.google.firebase:firebase-messaging'
 }

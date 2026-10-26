@@ -71,7 +71,9 @@
       counterTx: async (cpath, build) => { await tick(); const n2 = ((store[cpath] && store[cpath].n) || 0) + 1; store[cpath] = {n: n2}; build(n2).forEach(o => apply({op: 'set', path: o.path, data: o.data})); emit(); return n2; },
       watchDoc: (path, cb) => { const L = {kind: 'doc', path, cb, first: true}; listeners.add(L); emit(); return () => listeners.delete(L); },
       watchQuery: (col, filters, cb, err, opts) => { const L = {kind: 'query', col, filters, opts, cb, first: true, last: new Map()}; listeners.add(L); emit(); return () => listeners.delete(L); },
-      getQuery: async (col, filters, opts) => { await tick(); return query(col, filters, opts); }
+      getQuery: async (col, filters, opts) => { await tick(); return query(col, filters, opts); },
+      getGroup: async name => { await tick(); return Object.keys(store).filter(p => { const s = p.split('/'); return s.length === 4 && s[2] === name; }).map(p => ({id: p.split('/')[1], data: clone(store[p])})); },
+      del: async path => { delete store[path]; emit(); await tick(); }
     }
   };
   window.__fake = {

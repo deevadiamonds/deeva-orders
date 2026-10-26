@@ -18,6 +18,8 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.util.Base64;
 import android.provider.MediaStore;
 import android.speech.RecognizerIntent;
 import android.webkit.JavascriptInterface;
@@ -31,7 +33,13 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import com.google.firebase.messaging.FirebaseMessaging;
+
 import org.json.JSONObject;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -362,6 +370,39 @@ public class MainActivity extends Activity {
         }
     }
 
+    /* ---------- receipt PDF: save to Downloads and open the share sheet (WhatsApp) ---------- */
+    private void savePdfAndShare(String b64, String name, String text) {
+        try {
+            byte[] data = Base64.decode(b64, Base64.DEFAULT);
+            String safe = name.replaceAll("[^A-Za-z0-9._-]", "_");
+            if (Build.VERSION.SDK_INT >= 29) {
+                ContentValues cv = new ContentValues();
+                cv.put(MediaStore.Downloads.DISPLAY_NAME, safe);
+                cv.put(MediaStore.Downloads.MIME_TYPE, "application/pdf");
+                cv.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Deeva Orders");
+                Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+                if (uri == null) throw new Exception("no uri");
+                try (OutputStream os = getContentResolver().openOutputStream(uri)) {
+                    if (os == null) throw new Exception("no stream");
+                    os.write(data);
+                }
+                Intent send = new Intent(Intent.ACTION_SEND);
+                send.setType("application/pdf");
+                send.putExtra(Intent.EXTRA_STREAM, uri);
+                if (text != null && !text.isEmpty()) send.putExtra(Intent.EXTRA_TEXT, text);
+                send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                startActivity(Intent.createChooser(send, safe));
+            } else {
+                File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                File f = new File(dir, safe);
+                try (FileOutputStream fo = new FileOutputStream(f)) { fo.write(data); }
+                Toast.makeText(this, getString(R.string.pdf_saved) + " " + f.getAbsolutePath(), Toast.LENGTH_LONG).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.pdf_failed, Toast.LENGTH_LONG).show();
+        }
+    }
+
     /** Methods the web app can call as window.DeevaApp.* */
     private class Bridge {
         @JavascriptInterface
@@ -391,6 +432,25 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void listen(final String lang) {
             runOnUiThread(() -> startSpeech(lang));
+        }
+
+        @JavascriptInterface
+        public void sharePdf(final String b64, final String name, final String text) {
+            runOnUiThread(() -> savePdfAndShare(b64, name, text));
+        }
+
+        /** Asks Firebase for this phone's notification address and hands it to the page (window.__doPushToken). */
+        @JavascriptInterface
+        public void requestPushToken() {
+            try {
+                FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
+                    if (!task.isSuccessful() || task.getResult() == null) return;
+                    final String js = "window.__doPushToken && window.__doPushToken(" + JSONObject.quote(task.getResult()) + ")";
+                    runOnUiThread(() -> web.evaluateJavascript(js, null));
+                });
+            } catch (Exception ignored) {
+                // push not configured yet (no google-services.json)
+            }
         }
 
         @JavascriptInterface
