@@ -21,15 +21,20 @@
   --g7:#0f5330; --g8:#0d3b25; --g9:#0a271b; --gold:#e7b150; --gold-ink:#875810; --gold-soft:#fbf0d6; --cream:#f6eedc;
   --ok:#17663b; --ok-soft:#e1f1e6; --warn:#8a4e00; --warn-soft:#fdebc9; --bad:#ad261c; --bad-soft:#fbe3df; --mute:#5f6660; --mute-soft:#ebe7dc;
   --shadow:0 1px 2px rgba(10,39,27,.06),0 6px 18px rgba(10,39,27,.07);
-  --r:14px; --font:"Mukta","Montserrat",system-ui,sans-serif; --num:"Montserrat","Mukta",system-ui,sans-serif;
+  --acc:#0f5330; --r:14px; --font:"Mukta","Montserrat",system-ui,sans-serif; --num:"Montserrat","Mukta",system-ui,sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
-  :root{
+  :root:not([data-theme="light"]){
     --bg:#0b1510; --card:#13211a; --card2:#182a21; --ink:#efe9dc; --ink2:#b4bdb5; --line:#26392e; --line2:#34503f;
     --gold-ink:#f0c46e; --gold-soft:#3a2e14; --ok:#86d8a7; --ok-soft:#173a26; --warn:#f3b863; --warn-soft:#3b2a10;
-    --bad:#ff9a8f; --bad-soft:#3d1a17; --mute:#aab2ab; --mute-soft:#1f2d25; --shadow:none; color-scheme:dark;
+    --bad:#ff9a8f; --bad-soft:#3d1a17; --mute:#aab2ab; --mute-soft:#1f2d25; --shadow:none; --acc:#e7b150; color-scheme:dark;
   }
+}
+:root[data-theme="dark"]{
+    --bg:#0b1510; --card:#13211a; --card2:#182a21; --ink:#efe9dc; --ink2:#b4bdb5; --line:#26392e; --line2:#34503f;
+    --gold-ink:#f0c46e; --gold-soft:#3a2e14; --ok:#86d8a7; --ok-soft:#173a26; --warn:#f3b863; --warn-soft:#3b2a10;
+    --bad:#ff9a8f; --bad-soft:#3d1a17; --mute:#aab2ab; --mute-soft:#1f2d25; --shadow:none; --acc:#e7b150; color-scheme:dark;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -40,7 +45,7 @@ a{color:inherit}
 img{max-width:100%}
 
 /* ---------- top bar ---------- */
-.top{position:sticky;top:0;z-index:30;background:linear-gradient(120deg,var(--g7),var(--g9));color:var(--cream);padding:calc(env(safe-area-inset-top) + 8px) 14px 8px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.top{position:sticky;top:0;z-index:30;background:linear-gradient(120deg,var(--g7),var(--g9));color:var(--cream);padding:calc(env(safe-area-inset-top) + 8px) max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
 .brand{display:flex;align-items:center;gap:9px;text-decoration:none;min-width:0}
 .brand img{width:30px;height:auto;flex:none}
 .brand b{font-family:"Playfair Display",Georgia,serif;font-weight:700;font-size:19px;letter-spacing:.2px;white-space:nowrap}
@@ -56,11 +61,10 @@ img{max-width:100%}
 .tabs{position:sticky;top:calc(env(safe-area-inset-top) + 50px);z-index:25;display:flex;gap:4px;background:var(--card);border-bottom:1px solid var(--line);padding:0 8px;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{flex:1 0 auto;text-decoration:none;text-align:center;padding:11px 12px 9px;font-weight:600;font-size:15px;color:var(--ink2);border-bottom:3px solid transparent;white-space:nowrap}
-.tab.on{color:var(--g7);border-bottom-color:var(--gold)}
-@media (prefers-color-scheme: dark){.tab.on{color:var(--gold)}}
+.tab.on{color:var(--acc);border-bottom-color:var(--gold)}
 .tab i{font-style:normal;display:inline-block;min-width:20px;padding:0 6px;margin-left:5px;border-radius:999px;background:var(--bad);color:#fff;font-size:12px;font-family:var(--num);line-height:20px}
 
-main{max-width:680px;margin:0 auto;padding:14px 14px 130px}
+main{max-width:680px;margin:0 auto;padding-block:14px 130px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .view-title{font-family:"Playfair Display",Georgia,serif;font-size:22px;margin:4px 2px 12px;font-weight:700}
 .muted{color:var(--ink2)}
 .small{font-size:13.5px}
@@ -77,8 +81,7 @@ main{max-width:680px;margin:0 auto;padding:14px 14px 130px}
 .btn.primary{background:var(--g7);border-color:var(--g7);color:var(--cream)}
 .btn.gold{background:var(--gold);border-color:var(--gold);color:var(--g9)}
 .btn.danger{color:var(--bad);border-color:var(--bad)}
-.btn.ghost{background:transparent;border-color:transparent;color:var(--g7)}
-@media (prefers-color-scheme: dark){.btn.ghost{color:var(--gold)}}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--acc)}
 .btn.big{width:100%;padding:14px;font-size:17px;border-radius:14px}
 .btn.sm{min-height:34px;padding:6px 10px;font-size:14px;border-radius:10px}
 .btn.wa{background:#1f8a4c;border-color:#1f8a4c;color:#fff}
@@ -160,8 +163,7 @@ main{max-width:680px;margin:0 auto;padding:14px 14px 130px}
 .calc .two{gap:8px}
 .calc-out{font-family:var(--num);font-size:13.5px;border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
 .calc-out div{display:flex;justify-content:space-between;padding:2px 0}
-.calc-out .fin{font-weight:700;font-size:15.5px;color:var(--g7)}
-@media (prefers-color-scheme: dark){.calc-out .fin{color:var(--gold)}}
+.calc-out .fin{font-weight:700;font-size:15.5px;color:var(--acc)}
 .stick{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--card);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 18px rgba(0,0,0,.08)}
 .stick .in2{max-width:680px;margin:0 auto;display:flex;gap:8px;align-items:center}
 .stick .btn{flex:1}
@@ -1152,6 +1154,9 @@ function openSheet(title, html, ctx){
   $('#sheet').innerHTML = `<div class="sheet-bg" data-act="sheet-bg"><div class="sheet" role="dialog" aria-label="${esc(title)}"><div class="grab"></div><h2>${esc(title)}<button class="btn ghost sm" data-act="sheet-close" aria-label="बंद करें">✕</button></h2><div id="sheet-body">${html}</div></div></div>`;
   document.body.style.overflow = 'hidden';
 }
+function askConfirm(title, msg, okLabel, onOk, danger){
+  openSheet(title, `<p>${esc(msg)}</p><div class="btns"><button class="btn ${danger ? 'danger' : 'primary'}" data-act="confirm-ok">${esc(okLabel)}</button><button class="btn" data-act="sheet-close">रहने दें</button></div>`, {onOk});
+}
 function closeSheet(){
   if (S.sheet && S.sheet.picker) S.sheet.picker.stopRec();
   S.sheet = null; $('#sheet').innerHTML = ''; document.body.style.overflow = '';
@@ -1250,7 +1255,7 @@ async function doStage(){
   const items = pk.done();
   const note = $('#st-note').value.trim();
   if (k === o.stage && !note && !items.length) return toast('नया stage चुनें या note/photo डालें.', 'bad');
-  if (k === 'cad_approval' && !items.some(m => m.kind === 'image')) { if (!confirm('CAD की photo नहीं लगाई. फिर भी भेजें?')) return; }
+  if (k === 'cad_approval' && !items.some(m => m.kind === 'image')) return toast('CAD की photo लगाएँ — store/admin उसी को देखकर OK करेंगे.', 'bad');
   let ok;
   if (k === o.stage) {
     const upd = {log: {[logKey()]: logEntry('note', (note || '') + (items.length ? '\n📎 ' + items.length + ' photo/video' : ''))}};
@@ -1950,10 +1955,16 @@ function userMenu(uid){
     <div class="lbl">Role</div><div class="chips" id="um-role" style="margin-bottom:8px">${Object.entries(ROLES).map(([k, v]) => `<button class="chip ${u.role === k ? 'on' : ''}" data-act="um-role" data-v="${k}">${v}</button>`).join('')}</div>
     <div class="btns" style="margin-top:14px"><button class="btn" data-act="um-newpw">🔑 नया Password बनाएँ</button><button class="btn danger" data-act="um-off">Login बंद करें</button></div>`, {uid});
 }
-async function userNewPw(){
+function userNewPw(){
   const uid = S.sheet.uid, u = S.users[uid];
-  const pw = prompt('नया password (कम से कम 6 अक्षर):');
-  if (!pw) return; if (pw.length < 6) return toast('Password कम से कम 6 अक्षर.', 'bad');
+  openSheet('नया Password — ' + u.name, `<p class="small muted" style="margin-top:-6px">पुराना password तुरंत बंद हो जाएगा. Login ID वही रहेगा (${esc(u.loginId || '')}).</p>
+    <div class="fld"><label for="np-pw">नया password (कम से कम 6 अक्षर)</label><input class="in" id="np-pw" autocomplete="off"></div>
+    <button class="btn primary big" data-act="um-newpw-do">Password बनाएँ</button>`, {uid});
+}
+async function userNewPwDo(){
+  const uid = S.sheet.uid, u = S.users[uid];
+  const pw = $('#np-pw').value;
+  if (pw.length < 6) return toast('Password कम से कम 6 अक्षर.', 'bad');
   try {
     const email = (u.loginId || 'user').replace(/[^a-z0-9]/g, '') + '-' + Math.random().toString(36).slice(2, 7) + '@' + (B.projectId || 'deeva-orders') + '.firebaseapp.com';
     const nuid = await B.auth.createUser(email, pw);
@@ -2017,7 +2028,7 @@ document.addEventListener('click', e => {
     case 'calc-toggle': { const c = $('#calc'); c.hidden = !c.hidden; if (!c.hidden) updateCalc(); break; }
     case 'calc-apply': { const v = calcValues(F.price.calc, F.spec); if (!v.final) return toast('पहले weight और rate डालें.', 'bad'); const i = $('#f-price-est'); i.value = String(Math.round(v.final)); onFormInput(i); toast('Est. Amount: ' + money(v.final)); break; }
     case 'sig-clear': clearSig(); break;
-    case 'f-clear': if (confirm('ये अधूरा order मिटाकर नया शुरू करें?')) { clearDraft(); FORMKEY = null; F = null; render(); } break;
+    case 'f-clear': askConfirm('अधूरा order मिटाएँ?', 'भरी हुई details और photos हट जाएँगी, नया order शुरू होगा.', 'हाँ, मिटाएँ', () => { clearDraft(); FORMKEY = null; F = null; render(); }, true); break;
     case 'f-review': reviewForm(); break;
     case 'f-submit': submitNew(); break;
     case 'goto-field': gotoField(t.dataset.p); break;
@@ -2033,7 +2044,8 @@ document.addEventListener('click', e => {
     case 'stage-pick': if (S.sheet) { S.sheet.stage = t.dataset.k; $$('#st-chips .chip').forEach(c => c.classList.toggle('on', c === t)); } break;
     case 'stage-do': doStage(); break;
     case 'stage-quick': setStage(oid, t.dataset.k, '', []).then(ok => { if (ok) toast('Stage: ' + STAGE_SHORT[t.dataset.k]); }); break;
-    case 'cad-ok': if (confirm('CAD OK करें? Factory casting शुरू करेगा.')) doCad(true); break;
+    case 'cad-ok': askConfirm('CAD OK करें?', 'Factory casting शुरू कर देगा.', '👍 हाँ, CAD OK', () => doCad(true)); break;
+    case 'confirm-ok': { const f = S.sheet && S.sheet.onOk; closeSheet(); if (f) f(); break; }
     case 'cad-change-open': openSheet('CAD में क्या बदलना है?', `<div class="fld">${textArea('cad-text', 'जैसे: flower थोड़ा छोटा, butterfly हटाओ', '')}</div><button class="btn primary big" data-act="cad-change-do">Factory को भेजें</button>`, {id: oid}); break;
     case 'cad-change-do': doCad(false); break;
     case 'note-open': sheetNote(oid); break;
@@ -2054,9 +2066,10 @@ document.addEventListener('click', e => {
     case 'u-add': addUser(); break;
     case 'u-menu': userMenu(t.dataset.uid); break;
     case 'um-phone': write('users/' + S.sheet.uid, {phone: phone10($('#um-phone').value)}).then(ok => ok && toast('Save हो गया.')); break;
-    case 'um-role': { const v = t.dataset.v; if (confirm(S.users[S.sheet.uid].name + ' का role "' + ROLES[v] + '" करें?')) write('users/' + S.sheet.uid, {role: v}).then(ok => { if (ok) { $$('#um-role .chip').forEach(c => c.classList.toggle('on', c === t)); toast('Role बदल गया.'); } }); break; }
+    case 'um-role': { const v = t.dataset.v, uid = S.sheet.uid; askConfirm(S.users[uid].name + ' का role बदलें?', 'नया role: ' + ROLES[v], 'हाँ, बदलें', () => write('users/' + uid, {role: v}).then(ok => { if (ok) toast('Role बदल गया.'); })); break; }
     case 'um-newpw': userNewPw(); break;
-    case 'um-off': if (confirm(S.users[S.sheet.uid].name + ' का login बंद करें? वो अब app नहीं खोल पाएँगे.')) write('users/' + S.sheet.uid, {active: false}).then(ok => { if (ok) { closeSheet(); toast('Login बंद कर दिया.'); } }); break;
+    case 'um-off': { const uid = S.sheet.uid; askConfirm(S.users[uid].name + ' का login बंद करें?', 'वो अब app नहीं खोल पाएँगे. उनके बनाए orders वैसे ही रहेंगे.', 'हाँ, बंद करें', () => write('users/' + uid, {active: false}).then(ok => { if (ok) toast('Login बंद कर दिया.'); }), true); break; }
+    case 'um-newpw-do': userNewPwDo(); break;
     case 'copy': { const tx = t.dataset.t; if (NATIVE && NATIVE.copy) NATIVE.copy(tx); else if (navigator.clipboard) navigator.clipboard.writeText(tx).catch(() => {}); toast('Copy हो गया.'); break; }
     case 'mic-lang': write('users/' + S.authUser.uid, {micLang: t.dataset.v}).then(ok => ok && toast('भाषा बदल गई.')); break;
     case 'pw-change': {

@@ -246,6 +246,7 @@ async def main():
         await pg.click('.ocard')
         await pg.wait_for_selector('[data-act="cad-ok"]')
         await pg.click('[data-act="cad-ok"]')
+        await pg.click('#sheet [data-act="confirm-ok"]')
         await pg.wait_for_function("!document.querySelector('[data-act=\"cad-ok\"]')")
         print('ok  store gave CAD OK')
         await logout()

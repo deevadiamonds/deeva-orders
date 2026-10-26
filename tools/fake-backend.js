@@ -74,5 +74,11 @@
       getQuery: async (col, filters, opts) => { await tick(); return query(col, filters, opts); }
     }
   };
-  window.__fake = {store, accounts, files};
+  window.__fake = {
+    store, accounts, files,
+    /* demo helpers */
+    account: (email, pw, uid) => { accounts[email] = {uid, email, pw}; },
+    as: email => { const a = accounts[email]; if (a) { current = a; fireAuth(); } },
+    preLogin: email => { current = accounts[email] || null; }
+  };
 })();
