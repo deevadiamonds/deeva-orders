@@ -1,7 +1,7 @@
 /**
  * Deeva Orders — notification server (Cloud Functions 2nd gen, asia-south1).
  * Sends a push notification (FCM) to the right people when an order changes:
- *   new order            → admins
+ *   new order            → admin + sub admin (all "admins" below means both)
  *   query sent           → that store's manager
  *   query answered       → admins
  *   approved             → factory + that store
@@ -77,7 +77,7 @@ async function notify(who, exceptUid, title, body, orderId) {
 exports.orderCreated = onDocumentCreated('orders/{orderId}', async (event) => {
   const o = event.data && event.data.data();
   if (!o) return;
-  await notify({ roles: ['admin'] }, o.createdBy, 'नया Order · ' + (o.storeName || o.createdByName || ''), o.no + ' — ' + itemLine(o) + ' · approval के लिए', event.params.orderId);
+  await notify({ roles: ['admin', 'subadmin'] }, o.createdBy, 'नया Order · ' + (o.storeName || o.createdByName || ''), o.no + ' — ' + itemLine(o) + ' · approval के लिए', event.params.orderId);
 });
 
 exports.orderUpdated = onDocumentUpdated('orders/{orderId}', async (event) => {
@@ -90,14 +90,14 @@ exports.orderUpdated = onDocumentUpdated('orders/{orderId}', async (event) => {
 
   if (b.status !== a.status) {
     if (a.status === 'query') return notify({ storeId: store }, by, '❓ Query · ' + no, short((a.query && a.query.text) || '', 200), id);
-    if (b.status === 'query' && a.status === 'review') return notify({ roles: ['admin'] }, by, '💬 Query का जवाब · ' + no, short((a.query && a.query.reply) || '', 200), id);
+    if (b.status === 'query' && a.status === 'review') return notify({ roles: ['admin', 'subadmin'] }, by, '💬 Query का जवाब · ' + no, short((a.query && a.query.reply) || '', 200), id);
     if (a.status === 'factory' && !b.factoryVisible) return notify({ roles: ['factory'], storeId: store }, by, '✅ Approve · ' + no, itemLine(a) + (a.factoryDue ? ' · dispatch ' + a.factoryDue + ' तक' : ''), id);
-    if (a.status === 'dispatched') return notify({ roles: ['admin'], storeId: store }, by, '🚚 Dispatched · ' + no, itemLine(a) + ' — factory से निकल गया', id);
-    if (a.status === 'delivered') return notify({ roles: ['admin'] }, by, '🎁 Delivered · ' + no, itemLine(a), id);
+    if (a.status === 'dispatched') return notify({ roles: ['admin', 'subadmin'], storeId: store }, by, '🚚 Dispatched · ' + no, itemLine(a) + ' — factory से निकल गया', id);
+    if (a.status === 'delivered') return notify({ roles: ['admin', 'subadmin'] }, by, '🎁 Delivered · ' + no, itemLine(a), id);
     if (a.status === 'received') return;
   }
   if (b.stage !== a.stage) {
-    if (a.stage === 'cad_approval') return notify({ roles: ['admin'], storeId: store }, by, 'CAD approval चाहिए · ' + no, 'Factory ने CAD भेजा है — देखकर OK करें', id);
+    if (a.stage === 'cad_approval') return notify({ roles: ['admin', 'subadmin'], storeId: store }, by, 'CAD approval चाहिए · ' + no, 'Factory ने CAD भेजा है — देखकर OK करें', id);
     if (b.stage === 'cad_approval' && a.stage === 'casting') return notify({ roles: ['factory'] }, by, '👍 CAD OK · ' + no, 'Casting शुरू करें', id);
     if (b.stage === 'cad_approval' && a.stage === 'cad') return notify({ roles: ['factory'] }, by, '↩️ CAD में बदलाव · ' + no, short((a.cad && a.cad.note) || '', 200), id);
   }
@@ -107,7 +107,7 @@ exports.orderUpdated = onDocumentUpdated('orders/{orderId}', async (event) => {
   }
   for (const l of newLogs.filter(x => (x.type === 'note' || x.type === 'media' || x.type === 'stage') && x.role === 'factory')) {
     if (l.type === 'stage' && !/\n/.test(l.text || '')) continue; /* plain stage moves stay quiet */
-    await notify({ roles: ['admin'], storeId: store }, by, 'Factory update · ' + no + ' (' + (STAGE[a.stage] || a.stage) + ')', short(l.text, 200), id);
+    await notify({ roles: ['admin', 'subadmin'], storeId: store }, by, 'Factory update · ' + no + ' (' + (STAGE[a.stage] || a.stage) + ')', short(l.text, 200), id);
   }
   for (const l of newLogs.filter(x => (x.type === 'note' || x.type === 'media') && x.role !== 'factory' && a.factoryVisible)) {
     await notify({ roles: ['factory'] }, by, 'Note · ' + no + ' · ' + who(l), short(l.text, 200), id);

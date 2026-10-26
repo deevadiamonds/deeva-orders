@@ -1,6 +1,7 @@
 rules_version = '2';
 // Deeva Orders — who can see and change what.
-//  admin   : everything (all stores, approve, edit, team, price, payments, dashboard)
+//  admin   : Mayuresh — everything (all stores, approve, edit, team, price, payments, dashboard, activity)
+//  subadmin: Darshana — same as admin (approvals are mainly hers), but cannot change an admin's account
 //  store   : one manager per store — creates orders for HIS store only, sees only his store's orders,
 //            client + price + payments of those orders, edits until approved, replies to queries,
 //            CAD decision, date / priority change, marks received / delivered
@@ -14,7 +15,8 @@ service cloud.firestore {
     function hasUser() { return signedIn() && exists(userDoc()); }
     function me() { return get(userDoc()).data; }
     function active() { return hasUser() && me().active == true; }
-    function isAdmin() { return active() && me().role == 'admin'; }
+    function isOwner() { return active() && me().role == 'admin'; }
+    function isAdmin() { return active() && me().role in ['admin', 'subadmin']; }
     function isStore() { return active() && me().role == 'store' && me().get('storeId', '') != ''; }
     function isFactory() { return active() && me().role == 'factory'; }
     function staff() { return isAdmin() || isStore(); }
@@ -37,12 +39,14 @@ service cloud.firestore {
     match /users/{uid} {
       allow get: if signedIn() && request.auth.uid == uid;
       allow read: if active();
-      allow create: if isAdmin()
+      allow create: if isOwner()
+        || (isAdmin() && request.resource.data.role != 'admin')
         || (signedIn() && uid == request.auth.uid
             && !exists(/databases/$(database)/documents/config/admin)
             && getAfter(/databases/$(database)/documents/config/admin).data.uid == request.auth.uid
             && request.resource.data.role == 'admin' && request.resource.data.active == true);
-      allow update: if isAdmin()
+      allow update: if isOwner()
+        || (isAdmin() && resource.data.role != 'admin' && request.resource.data.role != 'admin')
         || (active() && uid == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['micLang']));
       allow delete: if false;
@@ -56,7 +60,9 @@ service cloud.firestore {
     // Login ID -> sign-in email (looked up before login)
     match /logins/{id} {
       allow get: if true;
-      allow list, write: if isAdmin();
+      allow list, create: if isAdmin();
+      allow update, delete: if isOwner()
+        || (isAdmin() && get(/databases/$(database)/documents/users/$(resource.data.uid)).data.role != 'admin');
     }
 
     // phones / browsers registered for notifications (read only by the notification server)

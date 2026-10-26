@@ -85,13 +85,13 @@ async def main():
         # ---- 2. stores + logins
         await pg.evaluate("location.hash='#/team'")
         await pg.wait_for_selector('#u-name')
-        await pg.wait_for_function("document.body.innerText.includes('Deeva Diamonds — VIP Road')")
+        await pg.wait_for_function("document.querySelector('#view').innerText.includes('Raipur')")
         await pg.click('[data-act="store-new"]')
-        await pg.fill('#st-name', 'Deeva Diamonds — Bilaspur'); await pg.fill('#st-city', 'Bilaspur'); await pg.fill('#st-addr', 'Link Road, Bilaspur')
+        await pg.fill('#st-name', 'Bilaspur'); await pg.fill('#st-city', 'Bilaspur'); await pg.fill('#st-addr', 'Link Road, Bilaspur')
         await pg.click('[data-act="store-save"]')
-        await pg.wait_for_function("document.body.innerText.includes('Deeva Diamonds — Bilaspur')")
+        await pg.wait_for_function("document.querySelectorAll('[data-act=\"store-edit\"]').length === 2")
         sids = await pg.evaluate("Object.keys(__fake.store).filter(k => k.startsWith('stores/')).map(k => [k.split('/')[1], __fake.store[k].name])")
-        raipur = [s for s in sids if 'VIP' in s[1]][0][0]; bilaspur = [s for s in sids if 'Bilaspur' in s[1]][0][0]
+        raipur = [s for s in sids if s[1] == 'Raipur'][0][0]; bilaspur = [s for s in sids if s[1] == 'Bilaspur'][0][0]
 
         async def add(name, role, lid, pw, phone, store=None, expect_ok=True):
             await pg.fill('#u-name', name)
@@ -103,7 +103,7 @@ async def main():
                 await pg.wait_for_selector('#u-err:not([hidden])'); return await pg.inner_text('#u-err')
             await pg.wait_for_selector('#sheet .cred', timeout=5000)
             await close_sheet()
-        await add('Darshana', 'admin', 'darshana', 'darshana1', '9000000001')
+        await add('Darshana', 'subadmin', 'darshana', 'darshana1', '9000000001')
         await add('Nishant', 'store', 'nishant', 'nishant1', '9000000002', raipur)
         msg = await add('Duplicate', 'store', 'dup', 'dup12345', '9000000009', raipur, expect_ok=False)
         assert 'पहले से Nishant' in msg, msg
@@ -118,7 +118,7 @@ async def main():
         await pg.click('[data-act="brand-save"]')
         await pg.wait_for_function("!document.querySelector('#sheet .sheet')")
         await shot('01-team')
-        print('ok  2 stores, one manager per store enforced, logins, Deeva signature')
+        print('ok  default store Raipur + Bilaspur, one manager per store enforced, sub admin, logins, Deeva signature')
         await logout()
 
         # ---- 3. store creates an order
@@ -212,6 +212,8 @@ async def main():
 
         # ---- 5. Darshana query, Nishant edit + reply, approve
         await login('darshana', 'darshana1')
+        assert 'Sub Admin' in await pg.inner_text('#who')
+        t = await pg.inner_text('#tabs'); assert 'Dashboard' in t and 'Activity' in t and 'Team' in t, t
         await pg.click('.ocard')
         await pg.click('.alertbox [data-act="query-open"]')
         await pg.fill('#qr-text', 'Clarity VVS1 ya VVS2?')
@@ -335,7 +337,7 @@ async def main():
             print('TOASTS', await pg.inner_text('#toasts')); print(errs[-5:]); raise
         assert d.suggested_filename == no.replace(' ', '') .join(['Deeva-', '.pdf']) or d.suggested_filename == 'Deeva-' + no + '.pdf', d.suggested_filename
         rc = await pg.evaluate('window.__receipt')
-        for need in ['MADE TO ORDER', 'Nitu Pansari', 'Round — Portuguese cut', 'VVS2', 'Ruby', '₹51,000', 'Booked @ ₹8,544/g', 'Customer Signature', 'For Deeva Diamonds', 'data:image/png']:
+        for need in ['Deeva Diamonds — Raipur', 'MADE TO ORDER', 'Nitu Pansari', 'Round — Portuguese cut', 'VVS2', 'Ruby', '₹51,000', 'Booked @ ₹8,544/g', 'Customer Signature', 'For Deeva Diamonds', 'data:image/png']:
             assert need in rc, need
         assert rc.count('data:image/png') >= 3, 'seal + client signature + Deeva signature'
         if SHOTS:
@@ -360,12 +362,28 @@ async def main():
         await pg.wait_for_selector('.kpi.hero', timeout=5000)
         await pg.wait_for_function("document.querySelectorAll('.chart svg').length === 3")
         t = await text()
-        assert '₹51,000' in t and 'Deeva Diamonds — Bilaspur' in t and 'Pendant with chain' in t, t
+        assert '₹51,000' in t and 'Bilaspur' in t and 'Pendant with chain' in t, t
         await pg.hover('[data-hover="orders"]')
         await shot('09-dashboard')
         await pg.click('[data-act="dash-store"][data-v="%s"]' % bilaspur)
         await pg.wait_for_function("document.querySelector('.kpi.hero b').innerText === '₹0'")
         print('ok  dashboard: KPIs, 3 line charts, store-wise table, store filter')
+        await pg.evaluate("location.hash='#/activity'")
+        await pg.wait_for_function("document.body.innerText.includes('सारी Activity') && document.querySelectorAll('#view .ocard').length > 10")
+        t = await text()
+        for need in ['Nishant · Raipur (Store)', 'Factory Raju (Factory)', 'Darshana (Sub Admin)', 'Main diamond clarity: VVS1 → VVS2', 'Payment ₹25,000 (Cash)', 'Nitu Pansari']:
+            assert need in t, need
+        await pg.click('[data-act="act-who"][data-v="money"]')
+        await pg.wait_for_function("document.querySelectorAll('#view .ocard').length >= 2 && !document.querySelector('#view').innerText.includes('Dispatched —')")
+        await shot('10-activity')
+        print('ok  activity: every action by every person, payments filter')
+        await logout()
+        await login('darshana', 'darshana1')
+        await pg.evaluate("location.hash='#/team'")
+        await pg.wait_for_selector('.urow')
+        owner_row = await pg.evaluate("[...document.querySelectorAll('.urow')].find(r => r.innerText.includes('Mayuresh')).innerHTML")
+        assert 'u-menu' not in owner_row, 'sub admin must not be able to change the admin'
+        print('ok  sub admin cannot change the main admin')
         await logout()
 
         await pg.fill('#l-id', 'nishant'); await pg.fill('#l-pw', 'nope'); await pg.click('#l-submit')

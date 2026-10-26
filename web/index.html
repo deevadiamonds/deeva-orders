@@ -496,7 +496,8 @@ const STATUS = {
   dispatched: ['Dispatched', 'dark'], received: ['Store पर आया', 'ok2'], delivered: ['Delivered', 'mute'], cancelled: ['Cancelled', 'mute']
 };
 const ACTIVE = ['review','query','factory','dispatched','received'];
-const ROLES = {admin: 'Admin', store: 'Store', factory: 'Factory'};
+const ROLES = {admin: 'Admin', subadmin: 'Sub Admin', store: 'Store', factory: 'Factory'};
+const ADMIN_ROLES = ['admin', 'subadmin'];
 const TERMS = [
   'The jewellery will be produced exactly as per the approved reference.',
   'Minor variations in finishing, weight or handmade detailing may occur.',
@@ -530,14 +531,16 @@ const S = {
   authUser: null, me: null, users: {}, orders: {}, priv: {}, extra: {}, extraPriv: {}, history: null, histLoading: false,
   route: {v: 'loading'}, filter: 'all', q: '', firstOrders: true, unsubs: [], privUnsubs: {}, viewUnsubs: [], viewId: null,
   needSetup: false, settingUp: false, booted: false, micFor: null, stores: {}, storeFilter: 'all', brand: null,
-  pushToken: null, pushOn: false, dash: null, dashLoading: false, dashStore: 'all', dashRange: 12
+  pushToken: null, pushOn: false, dash: null, dashLoading: false, dashStore: 'all', dashRange: 12,
+  actStore: 'all', actWho: 'all', actQ: '', actLimit: 150
 };
 const role = () => (S.me && S.me.role) || '';
-const isAdmin = () => role() === 'admin';
+const isOwner = () => role() === 'admin';                                  /* Mayuresh — main admin */
+const isAdmin = () => role() === 'admin' || role() === 'subadmin';         /* admin or sub admin (Darshana): full access */
 const isStore = () => role() === 'store';
 const isFactory = () => role() === 'factory';
 const staff = () => isAdmin() || isStore();
-const myName = () => (S.me && S.me.name) || '';
+const myName = () => (S.me ? personName(S.me) : '');
 const getOrder = id => S.orders[id] || S.extra[id] || null;
 const getPriv = id => S.priv[id] || S.extraPriv[id] || null;
 const uname = uid => (S.users[uid] && S.users[uid].name) || '';
@@ -656,6 +659,7 @@ function parseRoute(){
   if (p[0] === 'edit' && p[1]) return {v: 'form', mode: 'edit', id: p[1]};
   if (p[0] === 'team') return {v: 'team'};
   if (p[0] === 'dash') return {v: 'dash'};
+  if (p[0] === 'activity') return {v: 'activity'};
   if (p[0] === 'account') return {v: 'account'};
   return {v: 'home'};
 }
@@ -683,6 +687,7 @@ function doRender(){
   else if (r.v === 'form') renderFormRoute(r);
   else if (r.v === 'team') { if (!isAdmin()) return go('#/'); renderTeam(); }
   else if (r.v === 'dash') { if (!isAdmin()) return go('#/'); renderDash(); }
+  else if (r.v === 'activity') { if (!isAdmin()) return go('#/'); renderActivity(); }
   else if (r.v === 'account') renderAccount();
   if (r.v !== 'order' && r.v !== 'form') $('#stickbar').innerHTML = '';
 }
@@ -692,7 +697,7 @@ function attentionCount(){
   const r = role(); let n = 0;
   for (const id in S.orders) {
     const o = S.orders[id];
-    if (r === 'admin' && (o.status === 'review' || o.stage === 'cad_approval')) n++;
+    if (isAdmin() && (o.status === 'review' || o.stage === 'cad_approval')) n++;
     else if (r === 'store' && (o.status === 'query' || o.stage === 'cad_approval' || o.status === 'dispatched')) n++;
     else if (r === 'factory' && o.status === 'factory' && (o.stage === 'new' || o.factoryAck === false)) n++;
   }
@@ -704,6 +709,7 @@ function renderTop(){
   const tabs = [['#/', 'Orders' + (att ? `<i>${att}</i>` : ''), v === 'home' || v === 'order']];
   if (staff()) tabs.push(['#/new', '＋ नया Order', v === 'form' && S.route.mode === 'new']);
   if (isAdmin()) tabs.push(['#/dash', 'Dashboard', v === 'dash']);
+  if (isAdmin()) tabs.push(['#/activity', 'Activity', v === 'activity']);
   if (isAdmin()) tabs.push(['#/team', 'Team', v === 'team']);
   patch($('#tabs'), tabs.map(t => `<a class="tab ${t[2] ? 'on' : ''}" href="${t[0]}">${t[1]}</a>`).join(''));
 }
@@ -755,7 +761,7 @@ async function doSetup(){
       {op: 'set', path: 'users/' + u.uid, data: {name, role: 'admin', loginId: email, phone: '', active: true, at: Date.now(), by: u.uid}},
       {op: 'set', path: 'config/admin', data: {uid: u.uid, at: Date.now()}}
     ]);
-    try { await B.db.set('stores/' + B.db.newId('stores'), {name: 'Deeva Diamonds — VIP Road', city: 'Raipur', address: '1st Floor, Currency Tower, VIP Road, Raipur', phone: '', active: true, at: Date.now()}); } catch (e) { console.error(e); }
+    try { await B.db.set('stores/' + B.db.newId('stores'), {name: 'Raipur', city: 'Raipur', address: '1st Floor, Currency Tower, VIP Road, Raipur', phone: '', active: true, at: Date.now()}); } catch (e) { console.error(e); }
     S.needSetup = false; S.settingUp = false; S.booted = true;
     if (!S.authUser) startSession(u);
     S.route = parseRoute(); render();
@@ -874,13 +880,13 @@ function detectEvents(prev, next){
     const n = next[id], o = prev[id];
     if (n.updatedBy === me) continue;
     if (!o) {
-      if (r === 'admin' && n.status === 'review') evs.push(['नया Order', n.no + ' — ' + itemLine(n)]);
+      if (isAdmin() && n.status === 'review') evs.push(['नया Order', n.no + ' — ' + itemLine(n)]);
       if (r === 'factory') evs.push(['नया Order आया', n.no + ' — ' + itemLine(n)]);
       continue;
     }
     if (o.status !== n.status) {
       if (n.status === 'query' && r === 'store') evs.push(['Query आई', n.no + ': ' + ((n.query && n.query.text) || '')]);
-      if (n.status === 'review' && o.status === 'query' && r === 'admin') evs.push(['Query का जवाब आया', n.no]);
+      if (n.status === 'review' && o.status === 'query' && isAdmin()) evs.push(['Query का जवाब आया', n.no]);
       if (n.status === 'factory' && o.status !== 'factory' && r === 'store') evs.push(['Approve हो गया', n.no + ' factory को चला गया']);
       if (n.status === 'dispatched' && r !== 'factory') evs.push(['Dispatched', n.no + ' factory से निकल गया']);
       continue;
@@ -952,7 +958,13 @@ function mediaList(map){ return Object.entries(map || {}).map(([id, m]) => Objec
 function paidTotal(p){ return Object.values((p && p.payments) || {}).filter(x => !x.deleted).reduce((a, x) => a + num(x.amount), 0); }
 function waLink(phone, text){ const p = phone10(phone); return 'https://wa.me/' + (p ? '91' + p : '') + '?text=' + encodeURIComponent(text); }
 function appLink(id){ return location.origin + location.pathname + '#/o/' + id; }
-function usersWith(r){ return Object.entries(S.users).filter(([, u]) => u.active && u.role === r).map(([uid, u]) => Object.assign({uid}, u)); }
+function usersWith(r){
+  const roles = r === 'admin' ? ['subadmin', 'admin'] : [r];   /* approvals go to the sub admin first */
+  return Object.entries(S.users).filter(([, u]) => u.active && roles.includes(u.role)).map(([uid, u]) => Object.assign({uid}, u))
+    .sort((a, b) => roles.indexOf(a.role) - roles.indexOf(b.role));
+}
+/* how a person is shown: store managers carry their store's name */
+function personName(u){ if (!u) return ''; return u.role === 'store' && u.storeId && storeName(u.storeId) ? u.name + ' · ' + storeName(u.storeId) : u.name; }
 
 /* ---------- home ---------- */
 function homeFilters(){
@@ -976,7 +988,7 @@ function homeFilters(){
 }
 function needsMe(o){
   const r = role();
-  if (r === 'admin') return o.status === 'review' || (o.status === 'factory' && o.stage === 'cad_approval');
+  if (isAdmin()) return o.status === 'review' || (o.status === 'factory' && o.stage === 'cad_approval');
   if (r === 'store') return o.status === 'query' || (o.status === 'factory' && o.stage === 'cad_approval') || o.status === 'dispatched';
   return o.status === 'factory' && (o.stage === 'new' || o.factoryAck === false);
 }
@@ -1591,7 +1603,7 @@ function receiptHtml(o, p, seal){
   <div style="padding:6px 40px 30px">
     <div style="display:flex;gap:30px">
       <div style="flex:1;min-width:0">${h2('Client')}${kv([['Name', c.name], ['Contact', c.phone], ['City', c.city]])}</div>
-      <div style="flex:1;min-width:0">${h2('Store')}${kv([['Store', st.name || o.storeName || 'Deeva Diamonds'], ['Address', st.address], ['Phone', st.phone], ['Order taken by', o.createdByName]])}</div>
+      <div style="flex:1;min-width:0">${h2('Store')}${kv([['Store', 'Deeva Diamonds — ' + (st.name || o.storeName || '')], ['Address', st.address], ['Phone', st.phone], ['Order taken by', o.createdByName]])}</div>
     </div>
     ${h2('Product details')}${kv(specRows(o.spec).map(r => [r[0], r[1]]))}
     ${o.spec && o.spec.stoneNote ? `<p style="margin:6px 0 0;font-size:13.5px"><b>Diamond / gemstone:</b> ${esc(o.spec.stoneNote)}</p>` : ''}
@@ -1716,13 +1728,23 @@ function makePicker(containerId, orderId, opts){
   const recClock = () => { const s = Math.floor((Date.now() - recStart) / 1000); return Math.floor(s / 60) + ':' + pad(s % 60); };
   P.render = () => {
     const box = el(); if (!box) return;
+    /* the buttons are built once: re-creating a file input while the phone's picker is open would lose the chosen file */
+    if (!box.querySelector(':scope > .mbtns')) {
+      let b = `<div class="mbtns" style="grid-template-columns:repeat(${kinds.length},1fr)">`;
+      if (kinds.includes('image')) b += `<label class="btn"><span>📷</span>${esc(opts.imageLabel || 'Photo')}<input type="file" accept="image/*" multiple hidden data-pick="image" data-p="${containerId}"></label>`;
+      if (kinds.includes('video')) b += `<label class="btn"><span>🎥</span>Video<input type="file" accept="video/*" multiple hidden data-pick="video" data-p="${containerId}"></label>`;
+      if (kinds.includes('audio')) b += `<button type="button" class="btn" data-act="rec" data-p="${containerId}"></button>`;
+      box.innerHTML = b + `</div><div class="mlist"></div>`;
+    }
+    const rb = box.querySelector(':scope > .mbtns [data-act="rec"]');
+    if (rb) {
+      const on = !!(rec && !recFor);
+      rb.classList.toggle('rec', on);
+      const inner = on ? '<span>⏹</span>रोकें <b id="rt-' + containerId + '">' + recClock() + '</b>' : '<span>🎙️</span>Voice note';
+      if (rb._h !== inner) { rb.innerHTML = inner; rb._h = inner; }
+    }
     const list = Object.values(items).sort((a, b) => a.at - b.at);
-    const cols = kinds.length;
-    let h = `<div class="mbtns" style="grid-template-columns:repeat(${cols},1fr)">`;
-    if (kinds.includes('image')) h += `<label class="btn"><span>📷</span>${esc(opts.imageLabel || 'Photo')}<input type="file" accept="image/*" multiple hidden data-pick="image" data-p="${containerId}"></label>`;
-    if (kinds.includes('video')) h += `<label class="btn"><span>🎥</span>Video<input type="file" accept="video/*" multiple hidden data-pick="video" data-p="${containerId}"></label>`;
-    if (kinds.includes('audio')) h += `<button type="button" class="btn ${rec && !recFor ? 'rec' : ''}" data-act="rec" data-p="${containerId}"><span>${rec && !recFor ? '⏹' : '🎙️'}</span>${rec && !recFor ? 'रोकें <b id="rt-' + containerId + '">' + recClock() + '</b>' : 'Voice note'}</button>`;
-    h += `</div>`;
+    let h = '';
     h += list.map(m => {
       let th = '';
       if (m.kind === 'image') th = m.preview || m.url ? `<img src="${esc(m.preview || m.url)}" alt="">` : '🖼️';
@@ -1745,7 +1767,7 @@ function makePicker(containerId, orderId, opts){
         <div class="mmeta"><span>${state}</span>${opts.allowInternal ? `<label><input type="checkbox" data-fact="${esc(m.id)}" data-p="${containerId}" ${m.factory !== false ? 'checked' : ''}>Factory को भी दिखे</label>` : ''}</div>
       </div><button type="button" class="mdel" data-act="mdel" data-id="${esc(m.id)}" data-p="${containerId}" aria-label="हटाएँ">✕</button></div>`;
     }).join('');
-    patch(box, h);
+    patch(box.querySelector(':scope > .mlist'), h);
   };
   const upload = async (blob, type, path, onProg) => B.storage.upload(path, blob, type, onProg);
   P.add = async (file, kind) => {
@@ -2338,15 +2360,15 @@ function renderTeam(){
   h += `<div class="card"><h3>नया व्यक्ति जोड़ें</h3>
     <div class="err" id="u-err" hidden></div>
     <div class="fld"><label for="u-name">नाम</label><input class="in" id="u-name" placeholder="जैसे: Nishant"></div>
-    <div class="lbl">Role</div><div class="chips" id="u-role" style="margin-bottom:6px">${[['store','Store manager'],['admin','Admin (approve, सब access)'],['factory','Factory']].map((r, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="u-role" data-v="${r[0]}">${r[1]}</button>`).join('')}</div>
+    <div class="lbl">Role</div><div class="chips" id="u-role" style="margin-bottom:6px">${[['store','Store manager'],['subadmin','Sub Admin (approval, सब access)'],['factory','Factory']].concat(isOwner() ? [['admin','Admin']] : []).map((r, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="u-role" data-v="${r[0]}">${r[1]}</button>`).join('')}</div>
     <div id="u-store-wrap"><div class="lbl">कौन सा store?</div><div class="chips" id="u-store" style="margin-bottom:6px">${stores.map((s, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="u-store" data-v="${esc(s.id)}">${esc(s.name)}</button>`).join('')}</div></div>
-    <p class="small muted" style="margin:0 0 12px">Store manager: अपने store के order बनाए, price/payment देखे. Admin: approve करे, सब stores देखे, dashboard. Factory: सिर्फ product details, photo/video/voice और stage update — price और client नहीं दिखेगा.</p>
+    <p class="small muted" style="margin:0 0 12px">Store manager: सिर्फ अपने store के order बनाए और देखे, price/payment देखे. Sub Admin: orders approve करे, सब stores, dashboard, activity — सब कुछ (बस Admin का account नहीं बदल सकता). Factory: सिर्फ product details, photo/video/voice और stage update — price और client नहीं दिखेगा.</p>
     <div class="two"><div class="fld"><label for="u-lid">Login ID</label><input class="in" id="u-lid" autocapitalize="none" placeholder="nishant"></div>
     <div class="fld"><label for="u-pw">Password</label><input class="in" id="u-pw" placeholder="कम से कम 6"></div></div>
     <div class="fld"><label for="u-phone">WhatsApp नंबर</label><input class="in" id="u-phone" type="tel" inputmode="numeric" placeholder="10 अंक"></div>
     <button class="btn primary big" data-act="u-add" id="u-add">Login बनाएँ</button></div>`;
   h += `<div class="card"><h3>सभी लोग</h3>` + list.map(u => `<div class="urow ${u.active ? '' : 'off'}"><span class="av">${esc(initial(u.name))}</span><div class="nm"><b>${esc(u.name)} ${u.uid === S.authUser.uid ? '<span class="pill gold">आप</span>' : ''}</b><small>${esc(ROLES[u.role] || u.role)}${u.role === 'store' && u.storeId ? ' · ' + esc(storeName(u.storeId)) : ''} · ID: ${esc(u.loginId || '')}${u.phone ? ' · 📱 ' + esc(u.phone) : ''}${u.active ? '' : ' · बंद'}</small></div>
-    ${u.uid !== S.authUser.uid && u.active ? `<button class="btn sm" data-act="u-menu" data-uid="${esc(u.uid)}">⋯</button>` : ''}</div>`).join('') + `</div>`;
+    ${u.uid !== S.authUser.uid && u.active && (isOwner() || u.role !== 'admin') ? `<button class="btn sm" data-act="u-menu" data-uid="${esc(u.uid)}">⋯</button>` : ''}</div>`).join('') + `</div>`;
   const b = S.brand || {};
   h += `<div class="card"><h3>🧾 Receipt पर Deeva की तरफ़ से signature</h3>${b.signData ? `<img class="sigimg" src="${esc(b.signData)}" alt=""><p class="small muted" style="margin:6px 0 10px">${esc(b.signName || '')}</p>` : '<p class="small muted" style="margin-top:0">अभी signature नहीं है — PDF receipt पर सिर्फ Deeva seal आएगी.</p>'}<button class="btn sm" data-act="brand-sign">✍️ Signature ${b.signData ? 'बदलें' : 'set करें'}</button></div>`;
   patch($('#view'), h);
@@ -2419,7 +2441,7 @@ function showCred(name, lid, pw, phone){
 function userMenu(uid){
   const u = S.users[uid];
   openSheet(u.name, `<div class="fld"><label for="um-phone">WhatsApp नंबर</label><div class="inp"><input id="um-phone" type="tel" inputmode="numeric" value="${esc(u.phone || '')}"><button class="btn sm" data-act="um-phone" style="flex:none">Save</button></div></div>
-    <div class="lbl">Role</div><div class="chips" id="um-role" style="margin-bottom:8px">${Object.entries(ROLES).map(([k, v]) => `<button class="chip ${u.role === k ? 'on' : ''}" data-act="um-role" data-v="${k}">${v}</button>`).join('')}</div>
+    <div class="lbl">Role</div><div class="chips" id="um-role" style="margin-bottom:8px">${Object.entries(ROLES).filter(([k]) => isOwner() || k !== 'admin').map(([k, v]) => `<button class="chip ${u.role === k ? 'on' : ''}" data-act="um-role" data-v="${k}">${v}</button>`).join('')}</div>
     ${u.role === 'store' ? `<div class="lbl">Store</div><div class="chips" style="margin-bottom:8px">${storeList().map(s => `<button class="chip ${u.storeId === s.id ? 'on' : ''}" data-act="um-store" data-v="${esc(s.id)}">${esc(s.name)}</button>`).join('')}</div>` : ''}
     <div class="btns" style="margin-top:14px"><button class="btn" data-act="um-newpw">🔑 नया Password बनाएँ</button><button class="btn danger" data-act="um-off">Login बंद करें</button></div>`, {uid});
 }
@@ -2570,6 +2592,49 @@ function renderDash(){
   patch($('#view'), h);
 }
 
+/* ---------- activity (admin + sub admin): every action on every order ---------- */
+function renderActivity(){
+  if (!S.dash && !S.dashLoading) loadDash();
+  let h = `<div class="row" style="margin-bottom:4px"><div class="view-title" style="margin:4px 0 6px">सारी Activity</div><span class="grow"></span><button class="btn sm" data-act="dash-reload" ${S.dashLoading ? 'disabled' : ''}>${S.dashLoading ? 'Load…' : '↻ Refresh'}</button></div>`;
+  const stores = storeList();
+  if (stores.length > 1) h += `<div class="filters">` + [['all', 'सभी stores']].concat(stores.map(s => [s.id, s.name])).map(x => `<button class="fchip ${S.actStore === x[0] ? 'on' : ''}" data-act="act-store" data-v="${esc(x[0])}">🏬 ${esc(x[1])}</button>`).join('') + `</div>`;
+  h += `<div class="filters">` + [['all', 'सब लोग'], ['store', 'Store'], ['admin', 'Admin / Sub Admin'], ['factory', 'Factory'], ['money', '💰 Payments']].map(x => `<button class="fchip ${S.actWho === x[0] ? 'on' : ''}" data-act="act-who" data-v="${x[0]}">${x[1]}</button>`).join('') + `</div>`;
+  h += `<input class="search" id="aq" type="search" placeholder="Order no., नाम या काम से खोजें" value="${esc(S.actQ)}">`;
+  if (!S.dash) { patch($('#view'), h + '<div class="empty">Activity load हो रही है…</div>'); return; }
+  /* history from the last load + live data for open orders */
+  const rows = {};
+  S.dash.rows.forEach(r => { rows[r.id] = {o: r.o, p: r.p}; });
+  Object.keys(S.orders).forEach(id => { rows[id] = {o: S.orders[id], p: S.priv[id] || (rows[id] && rows[id].p) || {}}; });
+  let ev = [];
+  for (const id in rows) {
+    const {o, p} = rows[id];
+    if (S.actStore !== 'all' && o.storeId !== S.actStore) continue;
+    const client = (p && p.client && p.client.name) || '';
+    Object.values(o.log || {}).forEach(x => ev.push(Object.assign({id, no: o.no, storeId: o.storeId, client}, x)));
+    Object.values((p && p.log) || {}).forEach(x => ev.push(Object.assign({id, no: o.no, storeId: o.storeId, client, priv: true}, x)));
+  }
+  if (S.actWho === 'money') ev = ev.filter(x => x.type === 'payment' || x.type === 'price');
+  else if (S.actWho === 'admin') ev = ev.filter(x => ADMIN_ROLES.includes(x.role));
+  else if (S.actWho !== 'all') ev = ev.filter(x => x.role === S.actWho);
+  const q = S.actQ.trim().toLowerCase();
+  if (q) ev = ev.filter(x => [x.no, x.name, x.text, x.client].join(' ').toLowerCase().includes(q));
+  ev.sort((a, b) => (b.at || 0) - (a.at || 0));
+  const total = ev.length;
+  ev = ev.slice(0, S.actLimit);
+  if (!ev.length) h += `<div class="empty"><b>कोई activity नहीं</b>Filter बदलकर देखें.</div>`;
+  let lastDay = '';
+  h += ev.map(x => {
+    const d = dayOf(new Date(x.at || 0));
+    let head = '';
+    if (d !== lastDay) { lastDay = d; head = `<div class="lbl" style="margin:14px 2px 6px;color:var(--gold-ink)">${d === today() ? 'आज' : d === addDays(today(), -1) ? 'कल' : esc(fmtDay(d))}</div>`; }
+    return head + `<a class="ocard" href="#/o/${esc(x.id)}" style="padding:10px 12px;margin-bottom:8px"><div style="display:flex;gap:10px"><span class="ic" style="width:30px;height:30px;border-radius:50%;background:var(--mute-soft);display:grid;place-items:center;flex:none">${LOGICON[x.type] || '•'}</span>
+      <div style="min-width:0;flex:1"><div style="font-size:14.5px;white-space:pre-wrap;overflow-wrap:anywhere">${x.priv ? '<span class="lock">🔒</span> ' : ''}${esc(x.text)}</div>
+      <div class="small muted" style="margin-top:2px">${esc(x.name || '')}${x.role ? ' (' + esc(ROLES[x.role] || x.role) + ')' : ''} · ${esc(fmtTime(x.at || 0))} · <b style="color:var(--ink)">${esc(x.no || '')}</b>${x.client ? ' · ' + esc(x.client) : ''}${stores.length > 1 && x.storeId ? ' · 🏬 ' + esc(storeName(x.storeId)) : ''}</div></div></div></a>`;
+  }).join('');
+  if (total > ev.length) h += `<button class="btn big" data-act="act-more" style="margin-top:8px">और दिखाएँ (${total - ev.length} बाकी)</button>`;
+  patch($('#view'), h);
+}
+
 /* ---------- account ---------- */
 function notifLater(){ try { return localStorage.getItem('do.notif.later') === '1'; } catch (e) { return false; } }
 function renderAccount(){
@@ -2602,6 +2667,9 @@ document.addEventListener('click', e => {
     case 'hist-load': loadHistory(); break;
     case 'store-filter': S.storeFilter = t.dataset.v; render(); break;
     case 'dash-reload': loadDash(); break;
+    case 'act-store': S.actStore = t.dataset.v; S.actLimit = 150; render(); break;
+    case 'act-who': S.actWho = t.dataset.v; S.actLimit = 150; render(); break;
+    case 'act-more': S.actLimit += 150; render(); break;
     case 'dash-store': S.dashStore = t.dataset.v; render(); break;
     case 'dash-range': S.dashRange = +t.dataset.v; render(); break;
     case 'notif-on': if ('Notification' in window) Notification.requestPermission().then(p => { if (p === 'granted') { toast('Notification चालू हो गए.'); setupPush(); } render(); }); break;
@@ -2694,6 +2762,7 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'q') { S.q = t.value; render(); return; }
+  if (t.id === 'aq') { S.actQ = t.value; render(); return; }
   if (t.dataset && t.dataset.f && F && FORMKEY) { onFormInput(t); return; }
   if (t.dataset && t.dataset.fb && S.sheet && S.sheet.calc) { S.sheet.calc[t.dataset.fb] = t.value; updateFinalCalc(false); return; }
   if (t.dataset && t.dataset.desc) { const p = PICKERS[t.dataset.p]; if (p && p.items[t.dataset.desc]) { p.items[t.dataset.desc].desc = t.value; if (p.opts.onChange) p.opts.onChange(); } }

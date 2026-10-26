@@ -32,11 +32,11 @@ window.__demoPdfPreview = true;
   const ring = svg('<ellipse cx="200" cy="230" rx="110" ry="96" fill="none" stroke="#c9875f" stroke-width="18"/><ellipse cx="200" cy="230" rx="110" ry="96" fill="none" stroke="#e8b48f" stroke-width="6"/><path d="M160 130 L200 92 L240 130 L200 172 Z" fill="#eef5fb" stroke="#9aa8b4" stroke-width="3"/><path d="M160 130 L240 130 M200 92 L185 130 L200 172 L215 130 Z" fill="none" stroke="#9aa8b4" stroke-width="2"/>', '#f4f1ec');
   const cad = svg('<g fill="none" stroke="#2c5e8c" stroke-width="2"><ellipse cx="200" cy="225" rx="105" ry="92"/><ellipse cx="200" cy="225" rx="88" ry="76"/><path d="M160 128 L200 90 L240 128 L200 170 Z"/><path d="M150 140 L250 140 M200 90 L200 170"/></g><text x="24" y="40" font-family="monospace" font-size="15" fill="#2c5e8c">CAD v1 · 18KT · 2.9 g</text>', '#eef3f8');
   const earr = svg('<g fill="#fff" stroke="#9aa8b4" stroke-width="3"><circle cx="130" cy="150" r="22"/><path d="M130 180 L105 260 L130 300 L155 260 Z"/><circle cx="270" cy="150" r="22"/><path d="M270 180 L245 260 L270 300 L295 260 Z"/></g>', '#eef0f2');
-  F.store['stores/s_rpr'] = {name: 'Deeva Diamonds — VIP Road', city: 'Raipur', address: '1st Floor, Currency Tower, VIP Road, Raipur', phone: '9201661918', active: true, at: now - 300 * D};
-  F.store['stores/s_bsp'] = {name: 'Deeva Diamonds — Bilaspur (demo)', city: 'Bilaspur', address: 'Link Road, Bilaspur', phone: '', active: true, at: now - 120 * D};
+  F.store['stores/s_rpr'] = {name: 'Raipur', city: 'Raipur', address: '1st Floor, Currency Tower, VIP Road, Raipur', phone: '9201661918', active: true, at: now - 300 * D};
+  F.store['stores/s_bsp'] = {name: 'Bilaspur (demo)', city: 'Bilaspur', address: 'Link Road, Bilaspur', phone: '', active: true, at: now - 120 * D};
   const people = [
     ['u_mayuresh', 'mayuresh@demo', 'Mayuresh Sisodiya', 'admin', 'mayuresh@demo', '9000000001', ''],
-    ['u_darshana', 'darshana-x1@demo', 'Darshana', 'admin', 'darshana', '9000000002', ''],
+    ['u_darshana', 'darshana-x1@demo', 'Darshana', 'subadmin', 'darshana', '9000000002', ''],
     ['u_nishant', 'nishant-x2@demo', 'Nishant', 'store', 'nishant', '9000000003', 's_rpr'],
     ['u_ravi', 'ravi-x5@demo', 'Ravi (demo)', 'store', 'ravi', '9000000005', 's_bsp'],
     ['u_factory', 'factory-x3@demo', 'Factory (Raju)', 'factory', 'factory', '9000000004', '']
@@ -72,7 +72,7 @@ window.__demoPdfPreview = true;
     const est = Math.round(calc.final / 100) * 100;
     const approvedAt = createdAt + (0.4 + rr()) * D;
     const makeDays = 7 + Math.round(rr() * 9);
-    const o = Object.assign({no: nn.no, ym: nn.ym, seq: nn.seq, orderDay: dayAt(createdAt), createdAt, createdBy: store === 's_rpr' ? 'u_nishant' : 'u_ravi', createdByName: store === 's_rpr' ? 'Nishant' : 'Ravi (demo)', storeId: store, storeName: F.store['stores/' + store].name,
+    const o = Object.assign({no: nn.no, ym: nn.ym, seq: nn.seq, orderDay: dayAt(createdAt), createdAt, createdBy: store === 's_rpr' ? 'u_nishant' : 'u_ravi', createdByName: store === 's_rpr' ? 'Nishant · Raipur' : 'Ravi (demo) · Bilaspur (demo)', storeId: store, storeName: F.store['stores/' + store].name,
       status: st, factoryVisible: st !== 'review' && st !== 'query', stage: '', priority: rr() < 0.2 ? 'urgent' : 'normal', deliveryDay: dayAt(createdAt + (makeDays + 4) * D), factoryDue: dayAt(approvedAt + (makeDays + (rr() < 0.25 ? -2 : 1)) * D),
       cadRequired: true, cad: {ok: true, by: 'Nishant', at: approvedAt + 2 * D}, factoryAck: true, approvedAt, approvedBy: 'Darshana',
       spec, media: {}, edited: {}, query: {open: false}, updatedAt: createdAt, updatedBy: 'u_factory', log: {}}, extra.o || {});
@@ -114,7 +114,7 @@ window.__demoPdfPreview = true;
 </script>"""
 
 DEMO_BAR = """<div class="demo-bar" id="demo-bar"><div class="demo-in"><span class="demo-tag">DEMO</span><span class="demo-txt">नकली data · इस रूप में देखें:</span>
-<span class="demo-btns"><button type="button" data-demo="nishant-x2@demo" class="on">Nishant · Store</button><button type="button" data-demo="darshana-x1@demo">Darshana · Admin</button><button type="button" data-demo="factory-x3@demo">Factory</button><button type="button" data-demo="ravi-x5@demo">Ravi · Bilaspur</button></span></div></div>"""
+<span class="demo-btns"><button type="button" data-demo="nishant-x2@demo" class="on">Nishant · Store</button><button type="button" data-demo="darshana-x1@demo">Darshana · Sub Admin</button><button type="button" data-demo="factory-x3@demo">Factory</button><button type="button" data-demo="ravi-x5@demo">Ravi · Bilaspur</button><button type="button" data-demo="mayuresh@demo">Mayuresh · Admin</button></span></div></div>"""
 DEMO_CSS = """<style>
 .demo-bar{background:var(--gold-soft);border-bottom:1px solid var(--gold);padding-block:7px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .demo-in{max-width:680px;margin:0 auto;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13.5px;color:var(--ink)}

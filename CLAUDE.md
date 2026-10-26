@@ -19,13 +19,15 @@ mandatory fields, and the same record goes to Darshana/Admin for approval and th
 
 | Role | Who | Can |
 |---|---|---|
-| `admin` | Mayuresh (first setup, real Gmail), Darshana | everything, all stores: approve → factory, query, edit any time, CAD OK, stage, dispatch, cancel/reopen, payments, final bill, Dashboard, Team, Stores, Deeva receipt signature |
+| `admin` | Mayuresh (first setup, real Gmail) — main admin | everything, all stores, every activity: approve → factory, query, edit any time, CAD OK, stage, dispatch, cancel/reopen, payments, final bill, Dashboard, Team, Stores, Deeva receipt signature |
+| `subadmin` | Darshana — approvals are mainly hers | same as admin (`isAdmin()` = admin or subadmin), but cannot change an `admin` account or login, and cannot create admins |
 | `store` | one manager per store (`users.storeId`), e.g. Nishant = VIP Road Raipur | only HIS store's orders: create, see client + price + payments, edit until approved, reply to queries, CAD OK / change, date/priority change any time, notes & media, payments + receipt photo, final bill, "Store पर मिल गया", Delivered, receipt PDF |
 | `factory` | one factory person | only approved orders (`factoryVisible == true`), only product details + factory media + voice notes. **Never** client name/phone, price, payments, internal notes, queries. Updates stage, adds photos (CAD), dispatches (time punch) |
 
 ## Stores
 
-`stores/{sid}` = `{name, city, address, phone, active, at}`. First setup creates "Deeva Diamonds — VIP Road" (Raipur).
+`stores/{sid}` = `{name, city, address, phone, active, at}`. First setup creates the store "Raipur" (VIP Road address). Names are short ("Raipur", "Bilaspur", "Raipur A"); the
+receipt prints "Deeva Diamonds — <store>".
 Orders and their private doc carry `storeId` (+ `storeName` on the order). Admin can filter Orders and the Dashboard by store.
 Team page: add store, one active store manager per store (UI blocks a second one), move a manager to another store.
 
@@ -78,7 +80,10 @@ Storage: `orders/{orderId}/{mediaId}.{ext}` (any active user reads; image/video/
 - Receipt PDF: `receiptHtml()` builds an A4 page (logo, client, store, product rows, estimate/final bill, payments, terms,
   client signature, drawn Deeva seal + authorised signature) → html2canvas 1.4.1 + jsPDF 2.5.1 (cdnjs, loaded on demand) →
   `sharePdf()`: APK `DeevaApp.sharePdf(base64)` (Downloads + share sheet), else Web Share with file, else download.
-- Dashboard (`#/dash`, admin): loads all orders + `collectionGroup('private')`; KPI tiles, 3 SVG line charts
+- Activity (`#/activity`, admin + sub admin): every log entry of every order (main + private logs) newest first,
+  filters store / who (Store, Admin/Sub Admin, Factory, Payments) / search; uses the dashboard load + live open orders.
+  Store managers are shown as "Name · Store" (`personName()`), also inside log entries.
+- Dashboard (`#/dash`, admin + sub admin): loads all orders + `collectionGroup('private')`; KPI tiles, 3 SVG line charts
   (orders / avg making days approve→dispatch / business ₹ per month, hover crosshair + table view), pipeline bars,
   store-wise table, top items. Filters: store, 6/12 months/all. Chart colours `--chart` (#1d7f4b light, #bf8a2a dark).
 - `functions/index.js` — notification server (Node 22, 2nd gen, asia-south1): `orderCreated` → admins; `orderUpdated` →
