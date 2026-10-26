@@ -81,6 +81,20 @@ window.__demoPdfPreview = true;
       cadRequired: true, cad: {ok: true, by: 'Nishant', at: approvedAt + 2 * D}, factoryAck: true, approvedAt, approvedBy: 'Darshana',
       spec, media: {}, edited: {}, query: {open: false}, updatedAt: createdAt, updatedBy: 'u_factory', log: {}}, extra.o || {});
     if (['dispatched', 'received', 'delivered'].includes(st) && !o.dispatch) { const at = approvedAt + makeDays * D; o.dispatch = {at, by: 'u_factory', byName: 'Factory (Raju)', mode: 'Courier', ref: 'DTDC ' + Math.round(1000 + rr() * 8000), grossWt: String(item[8]), note: 'Hallmark done'}; o.stage = 'dispatched'; o.stageAt = {dispatched: at}; o.updatedAt = at; }
+    if (o.dispatch && !o.dispatch.actual) {
+      const dias = [1, 2, 3, 4].filter(i => parseFloat(spec['dia' + i + 'Ct']) > 0).map(i => ({n: i, type: spec['dia' + i + 'Type'], ct: Math.round(parseFloat(spec['dia' + i + 'Ct']) * (1 + (rr() - 0.4) * 0.1) * 100) / 100, pcs: spec['dia' + i + 'Pcs'] || '1', cert: spec['dia' + i + 'Type'] === 'Solitaire' ? 'yes' : 'no', certNo: spec['dia' + i + 'Type'] === 'Solitaire' ? 'IGI LG' + Math.round(100000 + rr() * 800000) : ''}));
+      const gems = [1, 2].filter(i => spec['gem' + i + 'Type']).map(i => ({n: i, type: spec['gem' + i + 'Type'], ct: parseFloat(spec['gem' + i + 'Ct']) || 0, pcs: spec['gem' + i + 'Pcs'] || '1'}));
+      const gross = Math.round(item[8] * (1 + (rr() - 0.5) * 0.08) * 1000) / 1000;
+      const stoneCt = dias.concat(gems).reduce((a, x) => a + x.ct, 0);
+      const net = Math.round((gross - stoneCt * 0.2) * 1000) / 1000;
+      o.dispatch.grossWt = String(gross);
+      o.dispatch.actual = {grossWt: gross, netWt: net, hallmark: 'yes', huid: 'HU' + Math.round(1000 + rr() * 8000), dias, gems};
+      const touch = {'14KT': 59, '18KT': 76, '22KT': 92}[item[2]] || 59;
+      const lines = dias.map(x => ({kind: 'd', n: x.n, type: x.type, ct: x.ct, pcs: x.pcs, rate: 18500, amt: Math.round(x.ct * 18500)})).concat(gems.map(x => ({kind: 'g', n: x.n, type: x.type, ct: x.ct, pcs: x.pcs, rate: 0, amt: 900})));
+      const labour = Math.round(net * 850 * 100) / 100;
+      const total = lines.reduce((a, l) => a + l.amt, 0) + labour + 250;
+      F.store['orders/' + id + '/factory/bill'] = {orderNo: nn.no, goldMode: 'fine', purity: item[2], netWt: net, touch, fine: Math.round(net * touch / 100 * 1000) / 1000, goldRate: 0, goldAmt: 0, lines, labourRate: 850, labour, other: 250, total, at: o.dispatch.at, by: 'u_factory', byName: 'Factory (Raju)'};
+    }
     if (st === 'delivered') o.delivered = {at: o.dispatch.at + 2 * D, by: 'Nishant'};
     o.log[k()] = L(createdAt, o.createdBy, o.createdByName, 'store', 'created', 'Order बना — ' + item[0]);
     F.store['orders/' + id] = o;
@@ -109,7 +123,7 @@ window.__demoPdfPreview = true;
     o: {factoryVisible: false, approvedAt: null, factoryDue: '', cad: {}, deliveryDay: day(15), media: {m3: {kind: 'image', url: pendant, path: 'demo', desc: 'Reference — drop nahi chahiye', by: 'u_nishant', byName: 'Nishant', at: now - 2 * H}}}
   });
   makeOrder('o3', now - 14 * D, 'dispatched', 's_rpr', ITEMS[2], 'Pooja Sharma', {
-    o: {priority: 'urgent', deliveryDay: day(1), factoryDue: day(-1), approvedAt: now - 13 * D, dispatch: {at: now - 20 * H, by: 'u_factory', byName: 'Factory (Raju)', mode: 'Courier', ref: 'DTDC 7731', grossWt: '4.1', note: 'Hallmark done'}, stage: 'dispatched', stageAt: {dispatched: now - 20 * H},
+    o: {priority: 'urgent', deliveryDay: day(1), factoryDue: day(-1), approvedAt: now - 13 * D, dispatch: {at: now - 20 * H, by: 'u_factory', byName: 'Factory (Raju)', mode: 'Courier', ref: 'DTDC 7731', note: 'Screw back'}, stage: 'dispatched', stageAt: {dispatched: now - 20 * H},
       media: {m4: {kind: 'image', url: earr, path: 'demo', desc: 'Bana hua piece', by: 'u_factory', byName: 'Factory (Raju)', at: now - 20 * H, stage: 'dispatched'}}}
   });
   makeOrder('o4', now - 6 * D, 'factory', 's_bsp', ITEMS[3], 'Kavita Soni', {o: {stage: 'setting', stageAt: {setting: now - D}, approvedAt: now - 5 * D, factoryDue: day(-1), deliveryDay: day(3)}});

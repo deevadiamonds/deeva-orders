@@ -55,6 +55,19 @@ what balance is counted against. `config/rates` = `{day, gold{9KT,14KT,18KT,22KT
 set by admin / sub admin ("📈 आज का Rate"); picking purity or Gold-rate-booked fills gold rate + making unless typed by hand.
 Final bill (delivery) recomputes with the factory's final gross weight (`dispatch.grossWt`); booked rate stays, else today's rate.
 
+## Factory dispatch slip (पर्ची) and factory bill
+
+Factory (or admin) dispatches with `sheetDispatch()`: actual gross g, net g (auto = gross − all actual stone ct × 0.2, can
+be typed), per diamond line actual ct / pcs / certified yes-no + certificate no, per gemstone actual ct / pcs, hallmark
+yes-no + HUID, courier, note, slip photo. Saved in `orders/{id}.dispatch.actual` = `{grossWt, netWt, hallmark, huid,
+dias[{n,type,ct,pcs,cert,certNo}], gems[{n,type,ct,pcs}]}` — visible to store, admin, factory (`slipBlock()` shows order vs
+actual, differences in orange). The factory's money side goes to `orders/{id}/factory/bill` = `{goldMode 'fine'|'money',
+touch %, fine g (= net × touch %), goldRate, goldAmt (= net × rate), lines[{kind d|g, n, type, ct, pcs, rate, amt}],
+labourRate, labour (= net × rate), other, total}` — admin + sub admin + factory only, never the store or the client.
+Default touch by purity: `TOUCH` (14KT 58.5 …), editable. Final bill (`sheetFinal`) starts from the slip: gross, net
+(`calc.netWt` overrides the computed net), actual carats (`calc.dct{n}`, `calc.gct{n}` override the ordered ct), with the
+client's own rates (diamond ₹/ct, making, booked gold rate).
+
 ## Data model (Firestore)
 
 | Path | Fields | Who |
@@ -88,9 +101,11 @@ Storage: `orders/{orderId}/{mediaId}.{ext}` (any active user reads; image/video/
 - `web/config.js` — `self.DO_CONFIG` (Firebase web config + `vapidKey`), shared by the page and `sw.js`.
 - `web/sw.js` (app-shell cache, never touches Firebase traffic; imports `config.js` + firebase-messaging for closed-app
   notifications), `web/manifest.webmanifest`, `web/icons/*` (from the official Deeva logo: gold mark on Deeva green).
-- Receipt PDF: `receiptHtml()` builds a SHORT A5 client receipt (logo, order no, client, delivery date, item + diamond /
-  gemstone lines, approx weight, amount / final bill, booked gold rate, payments, balance, 7 terms in small print, client
-  signature, drawn Deeva seal + authorised signature; no internal price breakdown) → html2canvas 1.4.1 + jsPDF 2.5.1 (cdnjs,
+- Receipt PDF: `receiptHtml()` builds the client receipt, ONE page A5 wide and as long as needed (logo, order no, client,
+  delivery date, item + diamond / gemstone lines (actual carats + "Certified" after dispatch), net / gross weight,
+  hallmark + HUID, the ESTIMATE exactly as worked out — gold net g × rate, each diamond ct × ₹/ct, making, GST — owner's
+  rule: the client must see the diamond and gold rates; the FINAL BILL breakdown at actual weight once made; agreed amount,
+  booked gold rate, payments, balance, 7 terms, client signature, Deeva seal + authorised signature; never the factory bill) → html2canvas 1.4.1 + jsPDF 2.5.1 (cdnjs,
   on demand) → `sharePdf(blob, name, text, phone, toWhatsApp)`: APK `DeevaApp.sharePdfWhatsApp` opens the client's chat in
   WhatsApp Business / WhatsApp with the PDF attached (jid extra), `DeevaApp.sharePdf` = share sheet; browser: Web Share with
   file, else download + "open client's chat" link.

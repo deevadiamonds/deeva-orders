@@ -488,6 +488,8 @@ const DIA_TYPES = ['Solitaire','Side','Cluster','Halo','Accent','Baguette set'];
 const DIA_N = [1, 2, 3, 4];                 /* up to 4 diamond lines per order */
 const DIA_KEYS = ['Type', 'Ct', 'Pcs', 'Shape', 'Color', 'Clarity', 'Cut', 'Cert'];
 const CT_TO_G = 0.2;                        /* 1 carat = 0.2 gram, for net gold weight */
+/* fine gold % (touch) by purity — the factory can change it on the dispatch slip */
+const TOUCH = {'9KT': 37.5, '14KT': 58.5, '18KT': 75, '22KT': 91.6, 'Silver': 92.5, 'Platinum': 95};
 const GEM_TYPES = ['Ruby','Emerald','Blue Sapphire','Pink Sapphire','Yellow Sapphire','Tanzanite','Amethyst','Blue Topaz','Citrine','Garnet','Peridot','Aquamarine','Morganite','Opal','Pearl','Onyx','Turquoise','Coral','Moissanite','Other'];
 const GEM_COLORS = ['Red','Pink','Blue','Green','Yellow','Purple','Orange','White','Black','Multi-colour'];
 const GEM_SHAPES = ['Round','Oval','Pear','Cushion','Emerald','Princess','Heart','Marquise','Trillion','Baguette','Cabochon','Drop / Briolette','Bead','Other'];
@@ -529,7 +531,7 @@ const EDIT_FIELDS = [
   ['price.est','Client से तय amount','priv'], ['price.goldRateBooked','Gold rate booked','priv'], ['price.goldRate','Gold rate','priv'],
   ['internalNote','Internal note','priv']
 ];
-const CALC_IN = ['grossWt', 'goldRate', 'making', 'd1Rate', 'd2Rate', 'd3Rate', 'd4Rate', 'gemAmt', 'other', 'gst'];
+const CALC_IN = ['grossWt', 'goldRate', 'making', 'd1Rate', 'd2Rate', 'd3Rate', 'd4Rate', 'gemAmt', 'other', 'gst', 'netWt', 'dct1', 'dct2', 'dct3', 'dct4', 'gct1', 'gct2'];
 const EMPTY_CALC = () => ({grossWt: '', goldRate: '', making: '', d1Rate: '', d2Rate: '', d3Rate: '', d4Rate: '', gemAmt: '', other: '', gst: '3'});
 const GEM_KEYS = ['Type', 'Color', 'Shape', 'Ct', 'Size', 'Pcs'];
 /* weights: 3 decimals in grams, and milligrams for small stones */
@@ -544,7 +546,7 @@ const S = {
   route: {v: 'loading'}, filter: 'all', q: '', firstOrders: true, unsubs: [], privUnsubs: {}, viewUnsubs: [], viewId: null,
   needSetup: false, settingUp: false, booted: false, micFor: null, stores: {}, storeFilter: 'all', brand: null,
   pushToken: null, pushOn: false, dash: null, dashLoading: false, dashStore: 'all', dashRange: 12,
-  actStore: 'all', actWho: 'all', actQ: '', actLimit: 150
+  actStore: 'all', actWho: 'all', actQ: '', actLimit: 150, fbill: {}, fbUnsub: null, fbFor: null
 };
 const role = () => (S.me && S.me.role) || '';
 const isOwner = () => role() === 'admin';                                  /* Mayuresh — main admin */
@@ -809,6 +811,7 @@ function stopAll(){
   S.unsubs.forEach(u => { try { u(); } catch (e) {} }); S.unsubs = [];
   Object.values(S.privUnsubs).forEach(u => { try { u(); } catch (e) {} }); S.privUnsubs = {};
   S.viewUnsubs.forEach(u => { try { u(); } catch (e) {} }); S.viewUnsubs = []; S.viewId = null;
+  if (S.fbUnsub) { try { S.fbUnsub(); } catch (e) {} } S.fbUnsub = null; S.fbFor = null; S.fbill = {};
   Object.assign(S, {me: null, users: {}, orders: {}, priv: {}, extra: {}, extraPriv: {}, history: null, firstOrders: true});
 }
 let dataStarted = false;
@@ -874,6 +877,12 @@ function syncPriv(){
 }
 function watchView(id){
   if (S.viewId !== id) { S.viewUnsubs.forEach(u => { try { u(); } catch (e) {} }); S.viewUnsubs = []; S.viewId = id; }
+  /* factory's bill: admin / sub admin / factory, only while the order is open */
+  if (S.fbFor !== id) {
+    if (S.fbUnsub) { try { S.fbUnsub(); } catch (e) {} S.fbUnsub = null; }
+    S.fbFor = id;
+    if (id && (isAdmin() || isFactory())) S.fbUnsub = B.db.watchDoc('orders/' + id + '/factory/bill', s => { S.fbill[id] = s.exists ? s.data : null; render(); }, () => {});
+  }
   if (!id || S.orders[id] || S.viewUnsubs.length) return;
   S.viewUnsubs.push(B.db.watchDoc('orders/' + id, s => { if (s.exists) S.extra[id] = s.data; else S.extra[id] = {missing: true}; render(); }, e => { S.extra[id] = {missing: true, err: errText(e)}; render(); }));
   if (staff()) S.viewUnsubs.push(B.db.watchDoc('orders/' + id + '/private/info', s => { S.extraPriv[id] = s.exists ? s.data : null; render(); }, () => {}));
@@ -1193,6 +1202,7 @@ function renderOrder(id){
   }
   /* product */
   h += `<div class="card"><h3>💎 Product details</h3>${specBlock(o)}</div>`;
+  h += slipBlock(o, S.fbill[id]);
   /* media */
   const fm = mediaList(o.media), im = staff() && p ? mediaList(p.media) : [];
   h += `<div class="card"><h3>📷 Photos · Video · Voice note <span class="tag muted small">${fm.length + im.length}</span></h3>${fm.length || im.length ? galleryHtml(fm, false) + (im.length ? '<div style="height:10px"></div>' + galleryHtml(im, true) : '') : '<p class="muted small">कोई photo/video नहीं.</p>'}
@@ -1209,8 +1219,39 @@ function renderOrder(id){
   renderOrderBar(id, o, p);
 }
 function dispatchText(o){
-  const d = o.dispatch || {};
-  return [fmtWhen(d.at), d.mode, d.ref ? 'Ref: ' + d.ref : '', d.note, d.byName ? '— ' + d.byName : ''].filter(Boolean).join(' · ');
+  const d = o.dispatch || {}, a = d.actual || {};
+  return [fmtWhen(d.at), d.mode, d.ref ? 'Ref: ' + d.ref : '', a.grossWt ? 'Gross ' + fmtG(a.grossWt) + ' · Net ' + fmtG(a.netWt) : (d.grossWt ? 'Gross ' + d.grossWt + 'g' : ''), a.hallmark ? 'Hallmark ' + (a.hallmark === 'yes' ? '✓' : '✗') : '', d.note, d.byName ? '— ' + d.byName : ''].filter(Boolean).join(' · ');
+}
+/* ordered vs actual (everyone who can see the order) + factory's bill (admin / sub admin / factory) */
+function slipBlock(o, bill){
+  const d = o.dispatch || {}, a = d.actual; if (!a) return '';
+  const s = o.spec || {};
+  const est = isFactory() ? null : (getPriv(S.route.id) || {}).price;
+  const estC = est && est.calc ? calcValues(est.calc, s) : null;
+  const tr = (l, ord, act, diff) => `<tr><td>${l}</td><td>${ord}</td><td style="${diff ? 'color:var(--warn);font-weight:700' : 'font-weight:600'}">${act}</td></tr>`;
+  let h = `<div class="card"><h3>📋 Dispatch पर्ची <span class="tag muted small">${esc(fmtWhen(d.at))}</span></h3><div class="scroll-x"><table class="tbl"><tr><th></th><th>Order में</th><th>Actual</th></tr>`;
+  h += tr('Gross weight', estC && estC.gross ? fmtG(estC.gross) : '—', fmtG(a.grossWt), estC && estC.gross && Math.abs(estC.gross - a.grossWt) > 0.0005);
+  h += tr('<b>Net gold</b>', estC && estC.gross ? fmtG(estC.net) : '—', '<b>' + fmtG(a.netWt) + '</b>', estC && estC.gross && Math.abs(estC.net - a.netWt) > 0.0005);
+  (a.dias || []).forEach(x => {
+    const oc = s['dia' + x.n + 'Ct'], op = s['dia' + x.n + 'Pcs'];
+    h += tr('Diamond ' + x.n + (x.type ? ' · ' + esc(x.type) : ''), esc(oc || '—') + ' ct' + (op ? ' / ' + esc(op) + ' pc' : ''), x.ct + ' ct / ' + esc(x.pcs) + ' pc', num(oc) !== num(x.ct) || String(op || '') !== String(x.pcs || ''));
+    if (x.cert) h += tr('&nbsp;&nbsp;Certified', '', x.cert === 'yes' ? '✓ हाँ' + (x.certNo ? ' · ' + esc(x.certNo) : '') : 'नहीं', false);
+  });
+  (a.gems || []).forEach(x => { const oc = s['gem' + x.n + 'Ct']; h += tr('Gemstone ' + x.n + ' · ' + esc(x.type), esc(oc || '—') + ' ct', x.ct + ' ct / ' + esc(x.pcs) + ' pc', num(oc) !== num(x.ct)); });
+  h += tr('Hallmark', '', a.hallmark === 'yes' ? '✓ हाँ' + (a.huid ? ' · ' + esc(a.huid) : '') : 'नहीं', a.hallmark !== 'yes');
+  h += `</table></div>`;
+  if (bill && (isAdmin() || isFactory())) {
+    const row = (l, val, cls) => `<div class="wr ${cls || ''}"><span>${l}</span><span>${val}</span></div>`;
+    let b = '';
+    if (bill.goldMode === 'fine') b += row('Fine gold — ' + fmtG(bill.netWt) + ' × ' + bill.touch + '%', '<b>' + fmtG(bill.fine) + '</b>');
+    else b += row('Gold — ' + fmtG(bill.netWt) + ' × ' + money(bill.goldRate), money2(bill.goldAmt));
+    (bill.lines || []).forEach(l => { if (l.amt) b += row((l.kind === 'd' ? 'Diamond ' : 'Gemstone ') + l.n + (l.type ? ' · ' + esc(l.type) : '') + ' — ' + l.ct + ' ct' + (l.rate ? ' × ' + money(l.rate) : ''), money2(l.amt)); });
+    if (bill.labour) b += row('Labour — ' + fmtG(bill.netWt) + ' × ' + money(bill.labourRate), money2(bill.labour));
+    if (bill.other) b += row('Other', money2(bill.other));
+    b += row('<b>Factory total</b>', '<b>' + money2(bill.total) + '</b>' + (bill.goldMode === 'fine' ? ' <small>+ fine ' + fmtG(bill.fine) + '</small>' : ''), 'net');
+    h += `<div class="lbl" style="margin-top:12px">🔒 Factory का हिसाब ${isFactory() ? '' : '<span class="small muted" style="font-weight:400">(सिर्फ Admin / Sub Admin)</span>'}</div><div class="wbox" style="margin:0">${b}</div>`;
+  }
+  return h + `</div>`;
 }
 function priceBlock(o, p){
   const pr = p.price || {};
@@ -1433,25 +1474,110 @@ async function doNote(){
   const ok = internal ? await write('orders/' + id + '/private/info', upd) : await write('orders/' + id, stamp(upd));
   if (ok) { closeSheet(); toast('Save हो गया.'); }
 }
+/* ---------- factory dispatch slip (पर्ची): actual weights, carats, pieces, certified, hallmark + factory's bill ---------- */
+function dpLines(o){
+  const s = o.spec || {};
+  const dias = DIA_N.filter(n => hasDia(s['dia' + n + 'Ct'])).map(n => ({kind: 'd', n, type: s['dia' + n + 'Type'] || '', ct: s['dia' + n + 'Ct'], pcs: s['dia' + n + 'Pcs'] || '', shape: s['dia' + n + 'Shape'] || ''}));
+  const gems = [1, 2].filter(n => s['gem' + n + 'Type']).map(n => ({kind: 'g', n, type: s['gem' + n + 'Type'], ct: s['gem' + n + 'Ct'] || '', pcs: s['gem' + n + 'Pcs'] || ''}));
+  return dias.concat(gems);
+}
 function sheetDispatch(id){
-  openSheet('🚚 Dispatch करें', `
-    <div class="lbl">कैसे भेजा?</div><div class="chips" id="dp-mode" style="margin-bottom:12px">${['Hand delivery','Courier','Staff ने लिया','Other'].map((m, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="dp-mode" data-v="${esc(m)}">${esc(m)}</button>`).join('')}</div>
+  const o = getOrder(id), s = o.spec || {};
+  const lines = dpLines(o);
+  const inp = (key, label, val, ph, extra) => `<div class="fld" style="margin-bottom:8px"><label for="dp-${key}" class="small">${label}</label><input class="in" id="dp-${key}" data-dp="${key}" inputmode="decimal" value="${esc(val == null ? '' : val)}" placeholder="${esc(ph || '')}" ${extra || ''}></div>`;
+  const chipRow = (g, opts, cur) => `<div class="chips" id="${g}" style="margin-bottom:10px">${opts.map(x => `<button type="button" class="chip ${cur === x[0] ? 'on' : ''}" data-act="pick1" data-g="${g}" data-v="${x[0]}">${x[1]}</button>`).join('')}</div>`;
+  let h = `<p class="small muted" style="margin-top:-6px">जो असल में बना है वही लिखें — order से अलग हो तो भी. Store को weight / carat / pieces / certified / hallmark दिखेंगे; ₹ वाला हिसाब सिर्फ Admin को.</p>`;
+  h += `<div class="lbl" style="font-size:15.5px">⚖️ Weight</div><div class="two">${inp('gross', 'Gross weight g (stones समेत)', '', '5.000')}${inp('net', 'Net gold weight g', '', 'अपने-आप')}</div><div class="hint" id="dp-net-hint" style="margin:-4px 0 10px">Net = gross − (सब diamond + gemstone ct × 0.200 g). अलग है तो बदल दें.</div>`;
+  lines.forEach(l => {
+    const key = l.kind + l.n;
+    const title = l.kind === 'd' ? 'Diamond ' + l.n + (l.type ? ' · ' + l.type : '') : 'Gemstone ' + l.n + ' · ' + l.type;
+    h += `<div style="border-top:1px dashed var(--line2);padding-top:10px;margin-top:4px"><div class="lbl" style="font-size:15px">${l.kind === 'd' ? '💎' : '🔴'} ${esc(title)} <span class="small muted" style="font-weight:400">— order: ${esc(l.ct || '—')} ct${l.pcs ? ', ' + esc(l.pcs) + ' pcs' : ''}${l.shape ? ', ' + esc(l.shape) : ''}</span></div>
+      <div class="two">${inp(key + '-ct', 'Actual carat (ct)', l.ct, '')}${inp(key + '-pcs', 'Pieces', l.pcs, '', 'inputmode="numeric"')}</div>
+      ${l.kind === 'd' ? `<span class="lbl small">Certified?</span>${chipRow('dp-' + key + '-cert', [['yes', 'हाँ — certified'], ['no', 'नहीं']], /solitaire/i.test(l.type) ? '' : 'no')}${inp(key + '-certno', 'Certificate no. (अगर है)', '', 'IGI …', 'inputmode="text"')}` : ''}
+      <div class="two">${inp(key + '-rate', '₹ per carat', '', '')}${inp(key + '-amt', 'Amount ₹', '', '')}</div></div>`;
+  });
+  h += `<div style="border-top:1px dashed var(--line2);padding-top:10px;margin-top:4px"><div class="lbl" style="font-size:15.5px">🏷️ Hallmark</div>${chipRow('dp-hm', [['yes', 'हाँ — hallmark हुआ'], ['no', 'नहीं']], '')}${inp('huid', 'HUID (अगर है)', '', '', 'inputmode="text"')}</div>`;
+  h += `<div style="border-top:1px dashed var(--line2);padding-top:10px;margin-top:4px"><div class="lbl" style="font-size:15.5px">🪙 Gold का हिसाब</div>${chipRow('dp-gm', [['fine', 'Fine में (gold)'], ['money', 'पैसे में (₹)']], '')}
+    <div id="dp-fine-box" hidden><div class="two">${inp('touch', 'Fine % (touch) — ' + esc(s.purity || ''), TOUCH[s.purity] || '', '58.5')}<div></div></div></div>
+    <div id="dp-money-box" hidden><div class="two">${inp('grate', 'Gold rate ₹/g', '', '')}<div></div></div></div>
+    <div class="two">${inp('lrate', 'Labour / making ₹/g', '', '')}${inp('other', 'Other ₹ (hallmark, certificate…)', '', '')}</div>
+    <div class="wbox" id="dp-sum"></div></div>`;
+  h += `<div style="border-top:1px dashed var(--line2);padding-top:10px;margin-top:4px"><div class="lbl" style="font-size:15.5px">🚚 भेजना</div>${chipRow('dp-mode', [['Hand delivery', 'Hand delivery'], ['Courier', 'Courier'], ['Staff ने लिया', 'Staff ने लिया'], ['Other', 'Other']], 'Hand delivery')}
     <div class="fld"><label for="dp-ref">Courier / Tracking no. / किसको दिया</label><input class="in" id="dp-ref"></div>
-    <div class="two"><div class="fld"><label for="dp-wt">Final gross weight g (stones समेत)</label><input class="in" id="dp-wt" inputmode="decimal" placeholder="3.62"></div><div class="fld"><label for="dp-dia">Final diamond ct (कुल)</label><input class="in" id="dp-dia" inputmode="decimal"></div></div>
-    <div class="fld"><label for="dp-note">Note</label>${textArea('dp-note', 'जैसे: hallmark done, screw back', '')}</div>
-    <div class="lbl">बने हुए piece की photo/video</div><div id="dp-media"></div>
-    <button class="btn gold big" data-act="dispatch-do">🚚 Dispatch — अभी का time punch होगा</button>`, {id, mode: 'Hand delivery'});
-  S.sheet.picker = makePicker('dp-media', id, {kinds: ['image', 'video'], stage: () => 'dispatched'});
+    <div class="fld"><label for="dp-note">Note</label>${textArea('dp-note', 'जैसे: screw back, rhodium', '')}</div>
+    <div class="lbl">📄 Dispatch पर्ची की photo + बने हुए piece की photo/video</div><div id="dp-media"></div></div>`;
+  h += `<button class="btn gold big" data-act="dispatch-do">🚚 Dispatch — अभी का time punch होगा</button>`;
+  openSheet('🚚 Dispatch पर्ची — ' + o.no, h, {id, mode: 'Hand delivery', lines, purity: s.purity, netManual: false});
+  S.sheet.picker = makePicker('dp-media', id, {kinds: ['image', 'video'], stage: () => 'dispatched', imageLabel: 'पर्ची / Photo'});
   S.sheet.picker.render();
+  dpUpdate();
+}
+const dpVal = k => { const e = document.getElementById('dp-' + k); return e ? e.value.trim() : ''; };
+const dpPick = g => { const e = document.querySelector('#dp-' + g + ' .chip.on'); return e ? e.dataset.v : ''; };
+/* reads the slip, fills the automatic numbers, returns {actual, bill} */
+function dpCompute(){
+  const sh = S.sheet; if (!sh || !sh.lines) return null;
+  const gross = num(dpVal('gross'));
+  let stoneCt = 0;
+  const lines = sh.lines.map(l => {
+    const key = l.kind + l.n, ct = num(dpVal(key + '-ct')), pcs = dpVal(key + '-pcs');
+    stoneCt += ct;
+    const rate = num(dpVal(key + '-rate'));
+    const amtEl = document.getElementById('dp-' + key + '-amt');
+    if (rate && amtEl && !amtEl.dataset.manual) amtEl.value = String(Math.round(ct * rate));
+    return {kind: l.kind, n: l.n, type: l.type, ct, pcs, cert: l.kind === 'd' ? dpPick(key + '-cert') : '', certNo: l.kind === 'd' ? dpVal(key + '-certno') : '', rate, amt: num(amtEl ? amtEl.value : 0)};
+  });
+  const autoNet = Math.max(0, gross - stoneCt * CT_TO_G);
+  const netEl = document.getElementById('dp-net');
+  if (netEl && !sh.netManual) netEl.value = gross ? (Math.round(autoNet * 1000) / 1000).toFixed(3) : '';
+  const net = num(netEl ? netEl.value : autoNet);
+  const mode = dpPick('gm');
+  const touch = num(dpVal('touch')), grate = num(dpVal('grate')), lrate = num(dpVal('lrate')), other = num(dpVal('other'));
+  const fine = net * touch / 100, goldAmt = mode === 'money' ? net * grate : 0, labour = net * lrate;
+  const stonesAmt = lines.reduce((a, l) => a + l.amt, 0);
+  const total = stonesAmt + labour + other + goldAmt;
+  return {gross, net, autoNet, stoneCt, lines, mode, touch, fine, grate, goldAmt, lrate, labour, other, stonesAmt, total, hallmark: dpPick('hm'), huid: dpVal('huid')};
+}
+function dpUpdate(){
+  const v = dpCompute(); if (!v) return;
+  const fb = $('#dp-fine-box'), mb = $('#dp-money-box');
+  if (fb) fb.hidden = v.mode !== 'fine'; if (mb) mb.hidden = v.mode !== 'money';
+  const row = (l, val, cls) => `<div class="wr ${cls || ''}"><span>${l}</span><span>${val}</span></div>`;
+  let h = row('Gross', fmtG(v.gross)) + row('− Stones ' + r3(v.stoneCt) + ' ct', '− ' + fmtG(v.stoneCt * CT_TO_G)) + row('<b>Net gold</b>', '<b>' + fmtG(v.net) + '</b>' + (Math.abs(v.net - v.autoNet) > 0.0005 && v.gross ? ' <small>(हाथ से)</small>' : ''), 'net');
+  if (v.mode === 'fine') h += row('Fine gold — ' + fmtG(v.net) + ' × ' + (v.touch || 0) + '%', '<b>' + fmtG(v.fine) + '</b>');
+  if (v.mode === 'money') h += row('Gold — ' + fmtG(v.net) + ' × ' + money(v.grate), money2(v.goldAmt));
+  v.lines.forEach(l => { if (l.amt) h += row((l.kind === 'd' ? 'Diamond ' : 'Gemstone ') + l.n + (l.type ? ' · ' + esc(l.type) : '') + ' — ' + l.ct + ' ct', money2(l.amt)); });
+  if (v.labour) h += row('Labour — ' + fmtG(v.net) + ' × ' + money(v.lrate), money2(v.labour));
+  if (v.other) h += row('Other', money2(v.other));
+  h += row('<b>Total ₹</b>', '<b>' + money2(v.total) + '</b>' + (v.mode === 'fine' && v.fine ? ' <small>+ fine ' + fmtG(v.fine) + '</small>' : ''), 'net');
+  const box = $('#dp-sum'); if (box) box.innerHTML = h;
 }
 async function doDispatch(){
-  const id = S.sheet.id, pk = S.sheet.picker;
+  const id = S.sheet.id, pk = S.sheet.picker, o = getOrder(id);
   if (pk.busy()) return toast('Upload पूरा होने दें…');
+  const v = dpCompute();
+  const miss = [];
+  if (!(v.gross > 0)) miss.push('Gross weight');
+  if (!(v.net > 0)) miss.push('Net gold weight');
+  v.lines.forEach(l => { if (!(l.ct > 0)) miss.push((l.kind === 'd' ? 'Diamond ' : 'Gemstone ') + l.n + ' का actual carat'); if (!String(l.pcs).trim()) miss.push((l.kind === 'd' ? 'Diamond ' : 'Gemstone ') + l.n + ' के pieces'); if (l.kind === 'd' && !l.cert) miss.push('Diamond ' + l.n + ' — certified हाँ / नहीं'); });
+  if (!v.hallmark) miss.push('Hallmark हाँ / नहीं');
+  if (!v.mode) miss.push('Gold का हिसाब — Fine में या पैसे में');
+  if (v.mode === 'fine' && !(v.touch > 0)) miss.push('Fine % (touch)');
+  if (v.mode === 'money' && !(v.grate > 0)) miss.push('Gold rate');
+  if (miss.length) return toast('भरना बाकी: ' + miss.join(', '), 'bad');
   const items = pk.done(), now = Date.now();
-  const d = {at: now, by: S.authUser.uid, byName: myName(), mode: S.sheet.mode || '', ref: $('#dp-ref').value.trim(), grossWt: $('#dp-wt').value.trim(), diaCt: $('#dp-dia').value.trim(), note: $('#dp-note').value.trim()};
-  const upd = {status: 'dispatched', stage: 'dispatched', stageAt: {dispatched: now}, dispatch: d, log: {[logKey()]: logEntry('dispatched', 'Dispatched — ' + [d.mode, d.ref, d.grossWt ? 'Gross ' + d.grossWt + 'g' : '', d.diaCt ? 'Dia ' + d.diaCt + 'ct' : '', d.note].filter(Boolean).join(' · ') + (items.length ? '\n📎 ' + items.length + ' photo/video' : ''))}};
+  const actual = {grossWt: r3(v.gross), netWt: r3(v.net), hallmark: v.hallmark, huid: v.huid,
+    dias: v.lines.filter(l => l.kind === 'd').map(l => ({n: l.n, type: l.type, ct: l.ct, pcs: l.pcs, cert: l.cert, certNo: l.certNo})),
+    gems: v.lines.filter(l => l.kind === 'g').map(l => ({n: l.n, type: l.type, ct: l.ct, pcs: l.pcs}))};
+  const d = {at: now, by: S.authUser.uid, byName: myName(), mode: S.sheet.mode || '', ref: $('#dp-ref').value.trim(), note: $('#dp-note').value.trim(), grossWt: actual.grossWt, actual};
+  const lineTxt = actual.dias.map(x => 'Dia ' + x.n + (x.type ? ' ' + x.type : '') + ' ' + x.ct + 'ct/' + x.pcs + 'pc' + (x.cert === 'yes' ? ' certified' + (x.certNo ? ' ' + x.certNo : '') : '')).concat(actual.gems.map(x => x.type + ' ' + x.ct + 'ct/' + x.pcs + 'pc'));
+  const upd = {status: 'dispatched', stage: 'dispatched', stageAt: {dispatched: now}, dispatch: d,
+    log: {[logKey()]: logEntry('dispatched', 'Dispatched — ' + [d.mode, d.ref].filter(Boolean).join(' · ') + '\nGross ' + fmtG(v.gross) + ' · Net ' + fmtG(v.net) + (lineTxt.length ? '\n' + lineTxt.join(' · ') : '') + '\nHallmark: ' + (v.hallmark === 'yes' ? 'हाँ' + (v.huid ? ' (' + v.huid + ')' : '') : 'नहीं') + (d.note ? '\n' + d.note : '') + (items.length ? '\n📎 ' + items.length + ' photo/video' : ''))}};
   if (items.length) { upd.media = {}; items.forEach(m => { const x = Object.assign({}, m); delete x.id; upd.media[m.id] = x; }); }
-  const ok = await write('orders/' + id, stamp(upd));
+  const bill = {orderNo: o.no, goldMode: v.mode, purity: o.spec && o.spec.purity || '', netWt: r3(v.net), touch: v.touch, fine: r3(v.fine), goldRate: v.grate, goldAmt: Math.round(v.goldAmt * 100) / 100,
+    lines: v.lines.map(l => ({kind: l.kind, n: l.n, type: l.type, ct: l.ct, pcs: l.pcs, rate: l.rate, amt: l.amt})), labourRate: v.lrate, labour: Math.round(v.labour * 100) / 100, other: v.other,
+    total: Math.round(v.total * 100) / 100, at: now, by: S.authUser.uid, byName: myName()};
+  const ok = await batch([{op: 'update', path: 'orders/' + id, data: stamp(upd)}, {op: 'set', path: 'orders/' + id + '/factory/bill', data: bill}]);
   if (ok) { closeSheet(); toast('Dispatch punch हो गया: ' + fmtWhen(now)); }
 }
 function sheetSchedule(id){
@@ -1524,20 +1650,27 @@ async function doPay(){
 function sheetFinal(id){
   const o = getOrder(id), p = getPriv(id) || {}, pr = p.price || {};
   const c = Object.assign(EMPTY_CALC(), pr.finalCalc || pr.calc || {});
-  if (!pr.finalCalc && o.dispatch && (o.dispatch.grossWt || o.dispatch.goldWt)) c.grossWt = o.dispatch.grossWt || o.dispatch.goldWt;
+  const a = (o.dispatch && o.dispatch.actual) || null;
+  /* first time: take the factory's actual weights and carats from the dispatch slip */
+  if (!pr.finalCalc && a) {
+    c.grossWt = String(a.grossWt); c.netWt = String(a.netWt);
+    (a.dias || []).forEach(x => { c['dct' + x.n] = String(x.ct); });
+    (a.gems || []).forEach(x => { c['gct' + x.n] = String(x.ct); });
+  } else if (!pr.finalCalc && o.dispatch && o.dispatch.grossWt) c.grossWt = o.dispatch.grossWt;
   const booked = pr.goldRateBooked === 'yes';
   const pur = o.spec && o.spec.purity;
   if (booked) c.goldRate = pr.goldRate || c.goldRate;
   else if (!pr.finalCalc && S.rates && S.rates.gold && S.rates.gold[pur]) c.goldRate = S.rates.gold[pur];
   const f = (k, label, dis, hide) => `<div class="fld" style="margin-bottom:8px" ${hide ? 'hidden' : ''}><label for="fb-${k}" class="small">${esc(label)}</label><input class="in" id="fb-${k}" data-fb="${k}" inputmode="decimal" value="${esc(c[k] == null ? '' : c[k])}" ${dis ? 'readonly' : ''}></div>`;
   const s = o.spec || {};
-  const dRows = DIA_N.filter(n => hasDia(s['dia' + n + 'Ct'])).map(n => f('d' + n + 'Rate', 'Diamond ' + n + (s['dia' + n + 'Type'] ? ' · ' + s['dia' + n + 'Type'] : '') + ' (' + s['dia' + n + 'Ct'] + 'ct) ₹/ct')).join('');
-  const gross = o.dispatch && (o.dispatch.grossWt || o.dispatch.goldWt);
-  openSheet('🧮 Final bill (delivery के समय)', `<p class="small muted" style="margin-top:-6px">${gross ? 'Factory ने final gross weight ' + esc(gross) + 'g बताया है. ' : ''}${booked ? 'Gold rate book है — वही rate लगेगा.' : 'Gold rate book नहीं है — आज का rate लगेगा' + (S.rates && S.rates.day === today() ? ' (भर दिया है).' : '.')}</p>
-    <div class="two">${f('grossWt', 'Final gross weight g')}${f('goldRate', booked ? 'Booked rate ₹/g' : 'आज का rate ₹/g', booked)}</div>
-    <div class="two">${f('making', 'Making ₹/g')}${f('gst', 'GST %')}</div>
-    ${dRows}
+  const dRows = DIA_N.filter(n => hasDia(s['dia' + n + 'Ct'])).map(n => `<div class="two">${f('dct' + n, 'Diamond ' + n + (s['dia' + n + 'Type'] ? ' · ' + s['dia' + n + 'Type'] : '') + ' — actual ct (order ' + s['dia' + n + 'Ct'] + ')')}${f('d' + n + 'Rate', 'Client rate ₹/ct', false)}</div>`).join('');
+  const gRows = [1, 2].filter(n => s['gem' + n + 'Type']).map(n => `<div class="two">${f('gct' + n, 'Gemstone ' + n + ' · ' + s['gem' + n + 'Type'] + ' — actual ct')}<div></div></div>`).join('');
+  openSheet('🧮 Final bill (delivery के समय)', `<p class="small muted" style="margin-top:-6px">${a ? 'Factory की dispatch पर्ची से actual weight और carat भर दिए हैं. ' : ''}Client के rate (diamond ₹/ct, making) order वाले ही हैं. ${booked ? 'Gold rate book है — वही rate लगेगा.' : 'Gold rate book नहीं है — आज का rate लगेगा' + (S.rates && S.rates.day === today() ? ' (भर दिया है).' : '.')}</p>
+    <div class="two">${f('grossWt', 'Gross weight g')}${f('netWt', 'Net gold weight g (factory)')}</div>
+    <div class="two">${f('goldRate', booked ? 'Booked rate ₹/g' : 'आज का rate ₹/g', booked)}${f('making', 'Making ₹/g')}</div>
+    ${dRows}${gRows}
     <div class="two">${f('gemAmt', 'Gemstone ₹', false, !(s.gem1Type || s.gem2Type))}${f('other', 'Other ₹')}</div>
+    <div class="two">${f('gst', 'GST %')}<div></div></div>
     <div class="wbox" id="fb-wt"></div>
     <div class="calc"><div class="calc-out" id="fb-out" style="border-top:none;margin-top:0;padding-top:0"></div></div>
     <div class="fld"><label for="fb-final">Final amount ₹ <span class="req">*</span></label><input class="in" id="fb-final" inputmode="decimal" value="${esc(pr.final || '')}"><div class="hint">ऊपर के हिसाब से भरा जाता है — discount हो तो बदल दें. Client से तय amount: ${money(pr.est || 0)}</div></div>
@@ -1623,8 +1756,24 @@ function receiptHtml(o, p, seal){
   const v = calc ? calcValues(calc, s) : null;
   const lab = t => `<div style="font:700 10px Montserrat,Arial,sans-serif;letter-spacing:1.6px;color:${GOLD};text-transform:uppercase;margin-bottom:3px">${t}</div>`;
   const item = [jtypeOf(s) + (s.qty && s.qty !== '1' ? ' × ' + s.qty : ''), [s.purity, s.metalColor].filter(Boolean).join(' '), s.size && s.size !== 'NA' ? s.size : ''].filter(Boolean).join(' · ');
-  const stones = specRows(s).filter(r => /^Diamond|^Gemstone/.test(r[0])).map(r => `<div style="margin-top:2px"><b>${esc(r[0])}:</b> ${esc(r[1])}</div>`).join('');
+  const act = (o.dispatch && o.dispatch.actual) || null;
+  const sAct = Object.assign({}, s);
+  if (act) { (act.dias || []).forEach(x => { sAct['dia' + x.n + 'Ct'] = String(x.ct); sAct['dia' + x.n + 'Pcs'] = String(x.pcs); }); (act.gems || []).forEach(x => { sAct['gem' + x.n + 'Ct'] = String(x.ct); sAct['gem' + x.n + 'Pcs'] = String(x.pcs); }); }
+  const stones = specRows(sAct).filter(r => /^Diamond|^Gemstone/.test(r[0])).map(r => {
+    let extra = '';
+    const m = /^Diamond (\d)/.exec(r[0]);
+    if (m && act) { const x = (act.dias || []).find(d => d.n === +m[1]); if (x && x.cert === 'yes') extra = ' · <b>Certified</b>' + (x.certNo ? ' ' + esc(x.certNo) : ''); }
+    return `<div style="margin-top:2px"><b>${esc(r[0])}:</b> ${esc(r[1])}${extra}</div>`;
+  }).join('');
   const design = s.design ? (s.design.length > 150 ? s.design.slice(0, 149) + '…' : s.design) : '';
+  /* the estimate / final bill exactly as worked out: gold rate, every diamond's ₹/ct, making, GST */
+  const breakdown = (c, title, totalLabel) => {
+    const cv = calcValues(c, s); if (!cv.value) return '';
+    return `<div style="padding:9px 0 4px;border-bottom:1px solid ${LINE}">${lab(title)}<table style="width:100%;border-collapse:collapse;font-size:12.5px">` +
+      calcLines(c, s, true, totalLabel).map(l => l[2] === 'note'
+        ? `<tr><td colspan="2" style="padding:1px 0 4px;color:${MUTE};font-size:11.5px">${esc(l[0])}</td></tr>`
+        : `<tr><td style="padding:2.5px 0;${l[2] ? 'font-weight:700;color:' + G : 'color:' + INK}">${esc(l[0])}</td><td style="padding:2.5px 0;text-align:right;font-weight:${l[2] ? 700 : 600};${l[2] ? 'color:' + G : ''};white-space:nowrap">${esc(l[1])}</td></tr>`).join('') + `</table></div>`;
+  };
   const row = (k, val, strong) => `<tr><td style="padding:4px 0;color:${strong ? INK : MUTE};${strong ? 'font-weight:700;font-size:15px;color:' + G : ''}">${esc(k)}</td><td style="padding:4px 0;text-align:right;font-weight:${strong ? 700 : 600};${strong ? 'font-size:15px;color:' + G : ''}">${esc(val)}</td></tr>`;
   return `<div style="width:560px;background:#fff;color:${INK};font-family:Mukta,Montserrat,Arial,sans-serif;font-size:13px;line-height:1.4">
   <div style="background:linear-gradient(120deg,#0f5330,#0a271b);padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:14px">
@@ -1640,10 +1789,14 @@ function receiptHtml(o, p, seal){
     <div style="padding:10px 0;border-bottom:1px solid ${LINE}">${lab('Your jewellery')}
       <div style="font-weight:700;font-size:14.5px">${esc(item)}</div>${stones}
       ${v && v.gross ? `<div style="margin-top:3px;color:${MUTE}">${pr.finalCalc ? 'Weight' : 'Approx. weight'}: <b style="color:${INK}">Net gold ${fmtG(v.net)}</b>${v.diaCt ? ' · Diamonds ' + r3(v.diaCt) + ' ct (' + fmtG(v.diaCt * CT_TO_G) + ')' : ''}${v.gemCt ? ' · Gemstones ' + r3(v.gemCt) + ' ct' : ''} · Gross ${fmtG(v.gross)}</div>` : ''}
+      ${act ? `<div style="margin-top:3px;color:${MUTE}">Hallmark: <b style="color:${INK}">${act.hallmark === 'yes' ? 'Yes' + (act.huid ? ' · HUID ' + esc(act.huid) : '') : 'No'}</b></div>` : ''}
       ${design ? `<div style="margin-top:3px;color:${MUTE}">${esc(design)}</div>` : ''}
     </div>
+    ${pr.calc ? breakdown(pr.calc, 'Estimate (at order)' + (pr.goldRateBooked === 'yes' ? ' — gold rate booked' : '')) : ''}
+    ${pr.finalCalc ? breakdown(pr.finalCalc, 'Final bill (actual weight)', 'Total (actual)') : ''}
     <table style="width:100%;border-collapse:collapse;margin:8px 0 4px;font-size:13.5px">
-      ${row(pr.final ? 'Final bill' : 'Order amount', money(total))}
+      ${pr.final ? row('Order amount (agreed)', money(pr.est)) : ''}
+      ${row(pr.final ? 'Final bill amount' : 'Order amount (agreed)', money(total))}
       ${row('Gold rate', pr.goldRateBooked === 'yes' ? 'Booked @ ' + money(pr.goldRate || (calc && calc.goldRate) || 0) + '/g' + (s.purity ? ' (' + s.purity + ')' : '') : 'Market rate on delivery date')}
       ${pays.map(x => row('Paid · ' + fmtDayEn(x.day) + ' · ' + (x.mode || ''), money(x.amount))).join('')}
       ${row('Balance', money(Math.max(0, total - paid)), true)}
@@ -1675,15 +1828,10 @@ async function makeReceiptPdf(id, toWhatsApp){
     try { await document.fonts.ready; } catch (e) {}
     const canvas = await window.html2canvas(wrap.firstElementChild, {scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false});
     wrap.remove();
-    const pdf = new window.jspdf.jsPDF({unit: 'pt', format: 'a5'});
-    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
-    const slice = Math.floor(canvas.width * ph / pw);
-    for (let y = 0, page = 0; y < canvas.height; y += slice, page++) {
-      const part = document.createElement('canvas'); part.width = canvas.width; part.height = Math.min(slice, canvas.height - y);
-      const px = part.getContext('2d'); px.fillStyle = '#fff'; px.fillRect(0, 0, part.width, part.height); px.drawImage(canvas, 0, -y);
-      if (page) pdf.addPage();
-      pdf.addImage(part.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, part.height * pw / part.width);
-    }
+    /* one page, A5 width, as long as the receipt (never cut into pages) */
+    const pw = 419.53, ph = Math.max(595.28, canvas.height * pw / canvas.width);
+    const pdf = new window.jspdf.jsPDF({unit: 'pt', format: [pw, ph], orientation: 'portrait'});
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, canvas.height * pw / canvas.width);
     const name = 'Deeva-' + o.no + '.pdf';
     if (window.__demoPdfPreview) {   /* demo page: the viewer cannot download, so show the receipt instead */
       const lb = document.createElement('div'); lb.className = 'lightbox'; lb.style.overflow = 'auto'; lb.style.placeItems = 'start center';
@@ -2136,24 +2284,30 @@ function syncFormVis(){
 function calcValues(c, spec){
   c = c || {}; spec = spec || {};
   const gross = num(c.grossWt);
+  const has = v => v != null && String(v).trim() !== '';
+  /* final bill: actual carats from the factory slip override the ordered ones */
+  const dct = n => has(c['dct' + n]) ? num(c['dct' + n]) : num(spec['dia' + n + 'Ct']);
+  const gct = n => has(c['gct' + n]) ? num(c['gct' + n]) : num(spec['gem' + n + 'Ct']);
   const dias = DIA_N.filter(n => hasDia(spec['dia' + n + 'Ct'])).map(n => {
-    const ct = num(spec['dia' + n + 'Ct']), rate = num(c['d' + n + 'Rate']);
+    const ct = dct(n), rate = num(c['d' + n + 'Rate']);
     return {n, type: spec['dia' + n + 'Type'] || '', ct, g: ct * CT_TO_G, rate, amt: ct * rate};
   });
-  const gems = [1, 2].filter(n => spec['gem' + n + 'Type'] && num(spec['gem' + n + 'Ct']) > 0).map(n => {
-    const ct = num(spec['gem' + n + 'Ct']); return {n, type: spec['gem' + n + 'Type'], ct, g: ct * CT_TO_G};
+  const gems = [1, 2].filter(n => spec['gem' + n + 'Type'] && gct(n) > 0).map(n => {
+    const ct = gct(n); return {n, type: spec['gem' + n + 'Type'], ct, g: ct * CT_TO_G};
   });
   if (!gems.length && num(c.gemWt)) gems.push({n: 1, type: 'Gemstone', ct: num(c.gemWt), g: num(c.gemWt) * CT_TO_G});   /* older orders */
   const diaCt = dias.reduce((a, d) => a + d.ct, 0);
   const gemCt = gems.reduce((a, d) => a + d.ct, 0);
   const stoneCt = diaCt + gemCt;
   const stoneG = stoneCt * CT_TO_G;
-  const net = Math.max(0, gross - stoneG);
+  const netAuto = Math.max(0, gross - stoneG);
+  const netGiven = num(c.netWt) > 0;                 /* factory weighed the net gold itself */
+  const net = netGiven ? num(c.netWt) : netAuto;
   const gold = net * num(c.goldRate), mk = net * num(c.making);
   const diaTotal = dias.reduce((a, d) => a + d.amt, 0);
   const value = gold + diaTotal + mk + num(c.gemAmt) + num(c.other);
   const gstAmt = value * num(c.gst) / 100;
-  return {gross, dias, gems, diaCt, gemCt, stoneCt, stoneG, net, gold, diaTotal, mk, gem: num(c.gemAmt), oth: num(c.other), value, gstPct: num(c.gst), gstAmt, final: value + gstAmt};
+  return {gross, dias, gems, diaCt, gemCt, stoneCt, stoneG, net, netAuto, netGiven, gold, diaTotal, mk, gem: num(c.gemAmt), oth: num(c.other), value, gstPct: num(c.gst), gstAmt, final: value + gstAmt};
 }
 /* the weight working: gross − each stone (ct → g) = net gold */
 function weightHtml(c, spec){
@@ -2164,17 +2318,18 @@ function weightHtml(c, spec){
   const ctTxt = ct => (Math.round(ct * 1000) / 1000).toFixed(2) + ' ct = ' + fmtG(ct * CT_TO_G);
   v.dias.forEach(d => { h += row('− Diamond ' + d.n + (d.type ? ' · ' + esc(d.type) : ''), '− ' + esc(ctTxt(d.ct))); });
   v.gems.forEach(d => { h += row('− Gemstone ' + d.n + ' · ' + esc(d.type), '− ' + esc(ctTxt(d.ct))); });
-  h += row('<b>Net gold weight</b>', '<b>' + esc(fmtG(v.net)) + '</b>', 'net');
+  if (v.netGiven && Math.abs(v.net - v.netAuto) > 0.0005) { h += row('= ' + esc(fmtG(v.netAuto)) + ' (हिसाब से)', ''); h += row('<b>Net gold weight</b> <small>factory की पर्ची से</small>', '<b>' + esc(fmtG(v.net)) + '</b>', 'net'); }
+  else h += row('<b>Net gold weight</b>', '<b>' + esc(fmtG(v.net)) + '</b>', 'net');
   if (v.gross && v.stoneG >= v.gross) h += `<div class="small" style="color:var(--bad);margin-top:4px">⚠️ Stones का weight gross से ज़्यादा है — gross weight जाँचें.</div>`;
   return h;
 }
 const r3 = v => Math.round(v * 1000) / 1000;
 const EMON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const fmtDayEn = s => { if (!s) return ''; const d = parseDay(s); return d.getDate() + ' ' + EMON[d.getMonth()] + ' ' + d.getFullYear(); };
-function calcLines(c, spec, en){
+function calcLines(c, spec, en, totalLabel){
   const v = calcValues(c, spec || (F && F.spec));
   const L = [];
-  if (v.gross) L.push([(en ? 'Net gold ' : 'Net gold ') + fmtG(v.net) + ' = gross ' + fmtG(v.gross) + ' − stones ' + r3(v.stoneCt) + ' ct (' + fmtG(v.stoneG) + ')', '', 'note']);
+  if (v.gross) L.push(['Net gold ' + fmtG(v.net) + (v.netGiven && Math.abs(v.net - v.netAuto) > 0.0005 ? (en ? ' (as weighed by factory; gross ' : ' (factory की पर्ची; gross ') + fmtG(v.gross) + ')' : ' = gross ' + fmtG(v.gross) + ' − stones ' + r3(v.stoneCt) + ' ct (' + fmtG(v.stoneG) + ')'), '', 'note']);
   L.push(['Gold' + (v.net ? ' — net ' + fmtG(v.net) + ' × ' + money(c.goldRate || 0) : ''), money2(v.gold)]);
   v.dias.forEach(d => L.push(['Diamond ' + d.n + (d.type ? ' · ' + d.type : '') + ' — ' + d.ct + ' ct × ' + money(d.rate), money2(d.amt)]));
   if (v.gem) L.push(['Gemstone', money2(v.gem)]);
@@ -2182,7 +2337,7 @@ function calcLines(c, spec, en){
   if (v.oth) L.push(['Other', money2(v.oth)]);
   L.push(['Value', money2(v.value)]);
   if (v.gstAmt) L.push(['GST ' + (v.gstPct || 0) + '%', money2(v.gstAmt)]);
-  L.push([en ? 'Total estimate' : 'कुल estimate', money2(v.final), 'fin']);
+  L.push([totalLabel || (en ? 'Total estimate' : 'कुल estimate'), money2(v.final), 'fin']);
   return L;
 }
 function calcOutHtml(c, spec){ return calcLines(c, spec).map(l => l[2] === 'note' ? `<div class="small muted" style="padding:0 0 4px">${esc(l[0])}</div>` : `<div class="${l[2] || ''}"><span>${esc(l[0])}</span><span>${esc(l[1])}</span></div>`).join(''); }
@@ -2822,6 +2977,7 @@ document.addEventListener('click', e => {
       $$('#' + t.dataset.g + ' .chip').forEach(c => c.classList.toggle('on', c === t));
       if (t.dataset.g === 'u-role') { const w = $('#u-store-wrap'); if (w) w.hidden = t.dataset.v !== 'store'; }
       if (S.sheet && ['dp-mode', 'py-mode', 'sc-pri'].includes(t.dataset.g)) S.sheet.mode = t.dataset.v;
+      if (S.sheet && S.sheet.lines && /^dp-/.test(t.dataset.g)) dpUpdate();
       break;
     }
     case 'f-days': if (F) { const d = addDays(today(), +t.dataset.n); const i = $('#f-deliveryDay'); i.value = d; onFormInput(i); } break;
@@ -2913,6 +3069,11 @@ document.addEventListener('input', e => {
   if (t.id === 'aq') { S.actQ = t.value; render(); return; }
   if (t.dataset && t.dataset.f && F && FORMKEY) { onFormInput(t); return; }
   if (t.dataset && t.dataset.fb && S.sheet && S.sheet.calc) { S.sheet.calc[t.dataset.fb] = t.value; updateFinalCalc(false); return; }
+  if (t.dataset && t.dataset.dp && S.sheet && S.sheet.lines) {
+    if (t.dataset.dp === 'net') S.sheet.netManual = t.value.trim() !== '';
+    if (/-amt$/.test(t.dataset.dp)) t.dataset.manual = t.value.trim() ? '1' : '';
+    dpUpdate(); return;
+  }
   if (t.dataset && t.dataset.desc) { const p = PICKERS[t.dataset.p]; if (p && p.items[t.dataset.desc]) { p.items[t.dataset.desc].desc = t.value; if (p.opts.onChange) p.opts.onChange(); } }
 });
 document.addEventListener('change', e => {

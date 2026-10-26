@@ -134,6 +134,13 @@ service cloud.firestore {
       allow update: if isAdmin() || (isStore() && storeUpdate()) || (isFactory() && factoryUpdate());
       allow delete: if false;
 
+      // factory's own bill for this order (gold fine / money, diamond amounts, labour, total) — admin, sub admin and the factory; never the store
+      match /factory/{doc} {
+        allow read, create, update: if isAdmin()
+          || (isFactory() && get(/databases/$(database)/documents/orders/$(id)).data.factoryVisible == true);
+        allow delete: if false;
+      }
+
       // client name/phone, price, payments, signature, internal notes & receipts — never visible to the factory
       match /private/{doc} {
         allow read: if isAdmin() || (isStore() && resource.data.storeId == myStore());

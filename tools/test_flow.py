@@ -316,24 +316,61 @@ async def main():
         await pg.click('[data-act="stage-do"]')
         await pg.wait_for_selector('#stickbar [data-act="dispatch-open"]')
         await pg.click('#stickbar [data-act="dispatch-open"]')
-        await pg.click('#dp-mode [data-v="Courier"]'); await pg.fill('#dp-ref', 'DTDC 123'); await pg.fill('#dp-wt', '3.62')
+        await pg.wait_for_selector('#dp-gross')
+        assert await pg.input_value('#dp-d1-ct') == '0.40' and await pg.input_value('#dp-touch') == '58.5'
+        await pg.click('[data-act="dispatch-do"]')
+        await pg.wait_for_function("document.querySelector('#toasts').innerText.includes('भरना बाकी')")
+        await pg.fill('#dp-gross', '3.62')
+        await pg.fill('#dp-d1-ct', '0.42'); await pg.click('#dp-d1-cert [data-v="yes"]'); await pg.fill('#dp-d1-certno', 'IGI123'); await pg.fill('#dp-d1-rate', '21000')
+        await pg.fill('#dp-d2-pcs', '12'); await pg.click('#dp-d2-cert [data-v="no"]'); await pg.fill('#dp-d2-amt', '1400')
+        await pg.fill('#dp-g1-amt', '1200')
+        await pg.click('#dp-hm [data-v="yes"]'); await pg.fill('#dp-huid', 'AB1234')
+        await pg.click('#dp-gm [data-v="fine"]'); await pg.fill('#dp-touch', '59')
+        await pg.fill('#dp-lrate', '900'); await pg.fill('#dp-other', '300')
+        assert await pg.input_value('#dp-net') == '3.476', await pg.input_value('#dp-net')   # 3.62 − 0.72 ct × 0.2
+        assert await pg.input_value('#dp-d1-amt') == '8820'
+        sm = await pg.inner_text('#dp-sum')
+        # fine 3.476 × 59% = 2.051 g; total 8820 + 1400 + 1200 + 3.476×900 (3128.4) + 300 = 14,848.4
+        for x in ['Net gold', '3.476 g', 'Fine gold — 3.476 g × 59%', '2.051 g', '₹14,848.4']:
+            assert x in sm, (x, sm)
+        await pg.click('#dp-mode [data-v="Courier"]'); await pg.fill('#dp-ref', 'DTDC 123')
+        await pg.set_input_files('#dp-media input[data-pick="image"]', str(TMP / 'ref.png'))
+        await pg.wait_for_function("document.querySelector('#dp-media').innerText.includes('✓ Upload')")
         await pg.click('[data-act="dispatch-do"]')
         await pg.wait_for_function("document.querySelector('.dhead').innerText.includes('Dispatched')")
-        print('ok  factory dispatched with final gold weight')
+        bill = await pg.evaluate("Object.entries(__fake.store).find(([k]) => k.endsWith('/factory/bill'))[1]")
+        assert bill['goldMode'] == 'fine' and abs(bill['fine'] - 2.051) < 1e-9 and bill['total'] == 14848.4, bill
+        st = await order_doc(); a = st['dispatch']['actual']
+        assert a['netWt'] == 3.476 and a['dias'][0]['ct'] == 0.42 and a['dias'][0]['cert'] == 'yes' and a['hallmark'] == 'yes', a
+        t = await text(); assert 'Dispatch पर्ची' in t and 'Factory total' in t
+        await shot('06-factory-slip')
+        print('ok  factory dispatch slip: actual ct / pcs / certified / hallmark, net auto, fine 59% = 2.051 g, factory total ₹14,848.4')
+        await logout()
+        await login('owner@gmail.com', 'owner123')
+        await pg.click('.ocard')
+        await pg.wait_for_function("document.body.innerText.includes('Factory total')")
+        t = await text(); assert '0.42 ct / 1 pc' in t and '✓ हाँ · IGI123' in t and '✓ हाँ · AB1234' in t, t
+        print('ok  admin sees ordered vs actual + factory bill')
         await logout()
 
         # ---- 9. store: received, final bill, payment + receipt, PDF, delivered
         await login('nishant', 'nishant1')
         await pg.click('.ocard')
+        await pg.wait_for_function("document.body.innerText.includes('Dispatch पर्ची')")
+        t = await text()
+        assert '0.42 ct / 1 pc' in t and 'Factory total' not in t and '14,848' not in t and 'Fine gold' not in t, 'store must not see factory money'
+        print('ok  store sees actual weights / carats / hallmark but not the factory bill')
         await pg.click('[data-act="recv"]')
         await pg.wait_for_selector('[data-act="deliv-open"]')
         await pg.click('#price-card [data-act="final-open"]')
         assert await pg.input_value('#fb-grossWt') == '3.62'
         assert await pg.get_attribute('#fb-goldRate', 'readonly') is not None
+        assert await pg.input_value('#fb-netWt') == '3.476' and await pg.input_value('#fb-dct1') == '0.42'
         fb = await pg.input_value('#fb-final')
-        # net 3.62 − 0.14 = 3.48 g: 3.48*8544 = 29733.12; + 8800 + 1500 + 1500 + 3.48*2000 = 6960 -> 48493.12; +3% = 49947.91
-        assert fb == '49948', fb
-        assert 'Net gold weight' in await pg.inner_text('#fb-wt') and '3.480 g' in await pg.inner_text('#fb-wt')
+        # actual: net 3.476 g; gold 3.476×8544 = 29698.944; dia1 0.42×22000 = 9240; dia2 1500; gem 1500; making 3.476×2000 = 6952
+        # value 48890.944; +3% = 50357.67
+        assert fb == '50358', fb
+        assert 'Net gold weight' in await pg.inner_text('#fb-wt') and '3.476 g' in await pg.inner_text('#fb-wt')
         await pg.fill('#fb-final', '51000')
         await pg.click('[data-act="final-do"]')
         await pg.wait_for_function("document.body.innerText.includes('Final bill')")
@@ -349,7 +386,7 @@ async def main():
         await pg.evaluate("""(libs) => {
           libs.forEach(src => { const s = document.createElement('script'); s.dataset.lib = src; document.head.appendChild(s); });
           window.html2canvas = async (el) => { window.__receipt = el.outerHTML; const c = document.createElement('canvas'); c.width = 1588; c.height = 2400; return c; };
-          window.jspdf = {jsPDF: function(o){ window.__pdfFormat = o && o.format; this.internal = {pageSize: {getWidth: () => 595.28, getHeight: () => 841.89}}; this.pages = 1; this.addPage = () => { this.pages++; }; this.addImage = () => {}; this.output = () => new Blob(['%PDF'], {type: 'application/pdf'}); window.__pdf = this; }};
+          window.jspdf = {jsPDF: function(o){ window.__pdfFormat = JSON.stringify(o && o.format); this.internal = {pageSize: {getWidth: () => 595.28, getHeight: () => 841.89}}; this.pages = 1; this.addPage = () => { this.pages++; }; this.addImage = () => {}; this.output = () => new Blob(['%PDF'], {type: 'application/pdf'}); window.__pdf = this; }};
         }""", LIBS)
         try:
             async with pg.expect_download(timeout=8000) as dl:
@@ -361,14 +398,15 @@ async def main():
             print('TOASTS', await pg.inner_text('#toasts')); print(errs[-5:]); raise
         assert d.suggested_filename == no.replace(' ', '') .join(['Deeva-', '.pdf']) or d.suggested_filename == 'Deeva-' + no + '.pdf', d.suggested_filename
         rc = await pg.evaluate('window.__receipt')
-        for need in ['Deeva Diamonds — Raipur', 'MADE TO ORDER', 'Nitu Pansari', 'Diamond 1 · Solitaire', 'Round — Portuguese cut', 'VVS2', 'Ruby', 'Final bill', '₹51,000', 'Booked @ ₹8,544/g (14KT)', 'Balance', 'Customer signature', 'For Deeva Diamonds', 'data:image/png', 'Net gold 3.480 g', 'Diamonds 0.5 ct (0.100 g)', 'Gross 3.620 g', '0.20 ct · 2 mm']:
+        for need in ['Deeva Diamonds — Raipur', 'MADE TO ORDER', 'Nitu Pansari', 'Diamond 1 · Solitaire', 'Round — Portuguese cut', 'VVS2', 'Ruby', 'Final bill', '₹51,000', 'Booked @ ₹8,544/g (14KT)', 'Balance', 'Customer signature', 'For Deeva Diamonds', 'data:image/png', 'Net gold 3.476 g', 'Diamonds 0.52 ct (0.104 g)', 'Gross 3.620 g', '0.2 ct · 2 mm',
+                     'Estimate (at order)', 'Diamond 1 · Solitaire — 0.4 ct × ₹22,000', 'Making — net 3.610 g × ₹2,000', 'Final bill (actual weight)', 'Total (actual)', 'Diamond 1 · Solitaire:</b> 0.42 ct', 'Diamond 1 · Solitaire — 0.42 ct × ₹22,000', 'Gold — net 3.476 g × ₹8,544', 'HUID AB1234', 'Certified</b> IGI123']:
             assert need in rc, need
-        assert 'Making' not in rc and '₹8,800' not in rc, 'client receipt is short: no internal price breakdown'
-        assert await pg.evaluate('window.__pdfFormat') == 'a5'
+        assert '14,848' not in rc and 'Fine' not in rc, 'factory cost never goes to the client'
+        assert (await pg.evaluate('window.__pdfFormat')).startswith('[419.53,'), 'one A5-wide page'
         assert rc.count('data:image/png') >= 3, 'seal + client signature + Deeva signature'
         if SHOTS:
             rp = await ctx.new_page()
-            await rp.set_viewport_size({'width': 560, 'height': 794})
+            await rp.set_viewport_size({'width': 560, 'height': 1100})
             await rp.goto('file://' + str(ROOT / 'web' / '_harness.html'))
             await rp.evaluate("(h) => { document.body.innerHTML = h; document.body.style.background = '#fff'; }", rc)
             await rp.wait_for_timeout(300)
