@@ -154,7 +154,8 @@ async def main():
         assert await pg.input_value('#f-spec-dia2Ct') == '0.10', 'removing diamond 3 must keep diamond 2'
         await chip('spec.gem1Type', 'Ruby')
         await pg.wait_for_selector('#gem1-detail:not([hidden])')
-        await chip('spec.gem1Color', 'Red'); await chip('spec.gem1Shape', 'Round'); await pg.fill('#f-spec-gem1Ct', '2 mm'); await pg.fill('#f-spec-gem1Pcs', '4')
+        await chip('spec.gem1Color', 'Red'); await chip('spec.gem1Shape', 'Round'); await pg.fill('#f-spec-gem1Ct', '0.20'); await pg.fill('#f-spec-gem1Size', '2 mm'); await pg.fill('#f-spec-gem1Pcs', '4')
+        assert (await pg.inner_text('#ctg-gem1')) == '= 0.040 g (40 mg)', await pg.inner_text('#ctg-gem1')
         await pg.fill('#f-spec-stoneNote', 'Center stone thoda uncha')
         await pg.fill('#f-spec-design', 'Design ref image jaisa hi, par drop nahi lagana')
         await pg.set_input_files('#f-media input[data-pick="image"]', str(TMP / 'ref.png'))
@@ -177,15 +178,19 @@ async def main():
         assert 'Diamond 1 · Solitaire' in await pg.inner_text('#lbl-d1Rate') and 'Diamond 2 · Side' in await pg.inner_text('#lbl-d2Rate')
         for k, v in [('grossWt', '3.75'), ('d1Rate', '22000'), ('d2Rate', '15000'), ('gemAmt', '1500')]:
             await pg.fill(f'#f-price-calc-{k}', v)
+        assert (await pg.inner_text('#ctg-dia1')) == '= 0.080 g (80 mg)'
+        wt = await pg.inner_text('#wt-out')
+        # stones: dia 0.40 + 0.10 + ruby 0.20 = 0.70 ct = 0.140 g -> net gold 3.750 − 0.140 = 3.610 g
+        for x in ['Gross weight', '3.750 g', 'Diamond 1 · Solitaire', '0.40 ct = 0.080 g', 'Diamond 2 · Side', '0.10 ct = 0.020 g', 'Gemstone 1 · Ruby', '0.20 ct = 0.040 g', 'Net gold weight', '3.610 g']:
+            assert x in wt, (x, wt)
         calc_txt = await pg.inner_text('#calc-out')
-        # stones 0.50ct = 0.10g -> net gold 3.65g; 3.65*8544 = 31185.6; dia 8800 + 1500; gem 1500; making 3.65*2000 = 7300
-        # value 50285.6; GST 1508.57; total 51794.17
-        for x in ['net gold 3.65g', '₹31,185.6', 'Diamond 1 · Solitaire (0.4ct × ₹22,000)', '₹8,800', 'Diamond 2 · Side (0.1ct × ₹15,000)', '₹7,300', '₹50,285.6', '₹51,794.17']:
+        # gold 3.61*8544 = 30843.84; dia 8800 + 1500; gem 1500; making 3.61*2000 = 7220; value 49863.84; GST 1495.92; total 51359.76
+        for x in ['Net gold 3.610 g = gross 3.750 g − stones 0.7 ct (0.140 g)', 'Gold — net 3.610 g × ₹8,544', '₹30,843.84', 'Diamond 1 · Solitaire — 0.4 ct × ₹22,000', '₹8,800', 'Diamond 2 · Side — 0.1 ct × ₹15,000', 'Making — net 3.610 g × ₹2,000', '₹7,220', '₹49,863.84', '₹51,359.76']:
             assert x in calc_txt, (x, calc_txt)
         await pg.click('[data-act="calc-apply"]')
-        assert await pg.input_value('#f-price-est') == '51794'
+        assert await pg.input_value('#f-price-est') == '51360'
         await pg.fill('#f-price-est', '52000')
-        print('ok  estimate: today\'s rate auto, net gold = gross − diamonds, 2 diamond rows × ₹/ct, making on net = 51,794; deal 52,000')
+        print('ok  estimate: diamonds + gemstone ct → g (1 ct = 0.200 g), net gold = gross − stones, gold + making on net = 51,360; deal 52,000')
         await pg.fill('#f-advance-amount', '26000'); await chip('advance.mode', 'UPI')
         await pg.set_input_files('#f-imedia input[data-pick="image"]', str(TMP / 'ref.png'))
         await pg.wait_for_function("document.querySelector('#f-imedia').innerText.includes('✓ Upload')")
@@ -213,7 +218,7 @@ async def main():
         assert len(st['media']) == 2 and any(m.get('voiceUrl') for m in st['media'].values()), st['media']
         pv = await priv_doc()
         assert pv['storeId'] == raipur and pv['client']['name'] == 'Nitu Pansari' and pv['price']['est'] == 52000 and pv['price']['goldRate'] == 8544
-        assert abs(pv['price']['calc']['final'] - 51794.168) < 0.01 and abs(pv['price']['calc']['net'] - 3.65) < 1e-9 and pv['ack']['signData'].startswith('data:image/png')
+        assert abs(pv['price']['calc']['final'] - 51359.7552) < 0.01 and abs(pv['price']['calc']['net'] - 3.61) < 1e-9 and pv['ack']['signData'].startswith('data:image/png')
         assert st['spec']['dia2Type'] == 'Side' and st['spec']['dia3Ct'] == '', st['spec']
         assert any(m.get('receipt') for m in pv['media'].values()), pv['media']
         print(f'ok  order {no} submitted (4Cs, gemstone, deal amount, booked rate, receipt, signature)')
@@ -326,8 +331,9 @@ async def main():
         assert await pg.input_value('#fb-grossWt') == '3.62'
         assert await pg.get_attribute('#fb-goldRate', 'readonly') is not None
         fb = await pg.input_value('#fb-final')
-        # net 3.52g: 3.52*8544 = 30074.88; + 8800 + 1500 + 1500 + 3.52*2000 = 7040 -> 48914.88; +3% = 50382.33
-        assert fb == '50382', fb
+        # net 3.62 − 0.14 = 3.48 g: 3.48*8544 = 29733.12; + 8800 + 1500 + 1500 + 3.48*2000 = 6960 -> 48493.12; +3% = 49947.91
+        assert fb == '49948', fb
+        assert 'Net gold weight' in await pg.inner_text('#fb-wt') and '3.480 g' in await pg.inner_text('#fb-wt')
         await pg.fill('#fb-final', '51000')
         await pg.click('[data-act="final-do"]')
         await pg.wait_for_function("document.body.innerText.includes('Final bill')")
@@ -355,7 +361,7 @@ async def main():
             print('TOASTS', await pg.inner_text('#toasts')); print(errs[-5:]); raise
         assert d.suggested_filename == no.replace(' ', '') .join(['Deeva-', '.pdf']) or d.suggested_filename == 'Deeva-' + no + '.pdf', d.suggested_filename
         rc = await pg.evaluate('window.__receipt')
-        for need in ['Deeva Diamonds — Raipur', 'MADE TO ORDER', 'Nitu Pansari', 'Diamond 1 · Solitaire', 'Round — Portuguese cut', 'VVS2', 'Ruby', 'Final bill', '₹51,000', 'Booked @ ₹8,544/g (14KT)', 'Balance', 'Customer signature', 'For Deeva Diamonds', 'data:image/png', 'Approx. weight: 3.62 g gross']:
+        for need in ['Deeva Diamonds — Raipur', 'MADE TO ORDER', 'Nitu Pansari', 'Diamond 1 · Solitaire', 'Round — Portuguese cut', 'VVS2', 'Ruby', 'Final bill', '₹51,000', 'Booked @ ₹8,544/g (14KT)', 'Balance', 'Customer signature', 'For Deeva Diamonds', 'data:image/png', 'Net gold 3.480 g', 'Diamonds 0.5 ct (0.100 g)', 'Gross 3.620 g', '0.20 ct · 2 mm']:
             assert need in rc, need
         assert 'Making' not in rc and '₹8,800' not in rc, 'client receipt is short: no internal price breakdown'
         assert await pg.evaluate('window.__pdfFormat') == 'a5'

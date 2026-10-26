@@ -160,6 +160,12 @@ main{max-width:680px;margin:0 auto;padding-block:14px 130px;padding-left:max(16p
 .sig-wrap canvas{display:block;width:100%;height:170px;border-radius:12px}
 .sig-wrap span{position:absolute;left:12px;bottom:8px;font-size:12.5px;color:#8a8f88;pointer-events:none}
 .calc{border:1px solid var(--line);background:var(--card2);border-radius:12px;padding:12px;margin-bottom:12px}
+.wbox{border:1px solid var(--line);background:var(--card2);border-radius:12px;padding:10px 12px;margin:-4px 0 14px;font-variant-numeric:tabular-nums}
+.wbox .wr{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:14px}
+.wbox .wr span:first-child{min-width:0}
+.wbox .wr small{color:var(--ink2);margin-left:4px}
+.wbox .wr span:last-child{font-family:var(--num);white-space:nowrap}
+.wbox .wr.net{border-top:1px solid var(--line2);margin-top:4px;padding-top:7px;font-size:15.5px;color:var(--acc)}
 .calc .two{gap:8px}
 .calc-out{font-family:var(--num);font-size:13.5px;border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
 .calc-out div{display:flex;justify-content:space-between;padding:2px 0}
@@ -516,15 +522,20 @@ const EDIT_FIELDS = [
   ['spec.metalColor','Metal colour','main'], ['spec.purity','Purity','main'], ['spec.size','Size / Length','main'],
   ...DIA_N.flatMap(n => [['Type', 'remark'], ['Ct', 'carat'], ['Pcs', 'pieces'], ['Shape', 'shape'], ['Color', 'colour'], ['Clarity', 'clarity'], ['Cut', 'cut'], ['Cert', 'certificate']]
     .map(([k, l]) => ['spec.dia' + n + k, 'Diamond ' + n + ' ' + l, 'main'])),
-  ['spec.gem1Type','Gemstone 1','main'], ['spec.gem1Color','Gemstone 1 colour','main'], ['spec.gem1Shape','Gemstone 1 shape','main'], ['spec.gem1Ct','Gemstone 1 size/ct','main'], ['spec.gem1Pcs','Gemstone 1 pieces','main'],
-  ['spec.gem2Type','Gemstone 2','main'], ['spec.gem2Color','Gemstone 2 colour','main'], ['spec.gem2Shape','Gemstone 2 shape','main'], ['spec.gem2Ct','Gemstone 2 size/ct','main'], ['spec.gem2Pcs','Gemstone 2 pieces','main'],
+  ['spec.gem1Type','Gemstone 1','main'], ['spec.gem1Color','Gemstone 1 colour','main'], ['spec.gem1Shape','Gemstone 1 shape','main'], ['spec.gem1Ct','Gemstone 1 carat','main'], ['spec.gem1Size','Gemstone 1 size','main'], ['spec.gem1Pcs','Gemstone 1 pieces','main'],
+  ['spec.gem2Type','Gemstone 2','main'], ['spec.gem2Color','Gemstone 2 colour','main'], ['spec.gem2Shape','Gemstone 2 shape','main'], ['spec.gem2Ct','Gemstone 2 carat','main'], ['spec.gem2Size','Gemstone 2 size','main'], ['spec.gem2Pcs','Gemstone 2 pieces','main'],
   ['spec.stoneNote','Diamond / gemstone remark','main'], ['spec.engraving','Engraving','main'], ['spec.design','Design details','main'],
   ['deliveryDay','Client delivery date','main'], ['priority','Priority','main'],
   ['price.est','Client से तय amount','priv'], ['price.goldRateBooked','Gold rate booked','priv'], ['price.goldRate','Gold rate','priv'],
   ['internalNote','Internal note','priv']
 ];
-const CALC_IN = ['grossWt', 'goldRate', 'making', 'd1Rate', 'd2Rate', 'd3Rate', 'd4Rate', 'gemWt', 'gemAmt', 'other', 'gst'];
-const EMPTY_CALC = () => ({grossWt: '', goldRate: '', making: '', d1Rate: '', d2Rate: '', d3Rate: '', d4Rate: '', gemWt: '', gemAmt: '', other: '', gst: '3'});
+const CALC_IN = ['grossWt', 'goldRate', 'making', 'd1Rate', 'd2Rate', 'd3Rate', 'd4Rate', 'gemAmt', 'other', 'gst'];
+const EMPTY_CALC = () => ({grossWt: '', goldRate: '', making: '', d1Rate: '', d2Rate: '', d3Rate: '', d4Rate: '', gemAmt: '', other: '', gst: '3'});
+const GEM_KEYS = ['Type', 'Color', 'Shape', 'Ct', 'Size', 'Pcs'];
+/* weights: 3 decimals in grams, and milligrams for small stones */
+const fmtG = g => (Math.round(g * 1000) / 1000).toFixed(3) + ' g';
+const ctToG = ct => num(ct) * CT_TO_G;
+const ctG = ct => { const g = ctToG(ct); return fmtG(g) + (g < 1 ? ' (' + Math.round(g * 1000) + ' mg)' : ''); };
 const LABEL = Object.fromEntries(EDIT_FIELDS.map(f => [f[0], f[1]]));
 
 /* ---------- state ---------- */
@@ -928,7 +939,7 @@ function specRows(s){
     add('Diamond ' + n + (s[p + 'Type'] ? ' · ' + s[p + 'Type'] : ''), [ct + ' ct', s[p + 'Pcs'] && s[p + 'Pcs'] !== '1' ? s[p + 'Pcs'] + ' pcs' : '', s[p + 'Shape'], s[p + 'Color'] ? 'Colour ' + s[p + 'Color'] : '', s[p + 'Clarity'] ? 'Clarity ' + s[p + 'Clarity'] : '', s[p + 'Cut'] && s[p + 'Cut'] !== 'NA' ? 'Cut ' + s[p + 'Cut'] : '', s[p + 'Cert']].filter(Boolean).join(' · '), DIA_KEYS.map(k => 'spec.' + p + k));
   });
   if (!anyDia && s.dia1Ct) add('Diamond', 'NA', ['spec.dia1Ct']);
-  [1, 2].forEach(n => { if (s['gem' + n + 'Type']) add('Gemstone ' + n, [s['gem' + n + 'Type'], s['gem' + n + 'Color'], s['gem' + n + 'Shape'], s['gem' + n + 'Ct'], s['gem' + n + 'Pcs'] ? s['gem' + n + 'Pcs'] + ' pcs' : ''].filter(Boolean).join(' · '), ['Type', 'Color', 'Shape', 'Ct', 'Pcs'].map(k => 'spec.gem' + n + k)); });
+  [1, 2].forEach(n => { const g = 'gem' + n; if (s[g + 'Type']) add('Gemstone ' + n, [s[g + 'Type'], s[g + 'Color'], s[g + 'Shape'], num(s[g + 'Ct']) ? s[g + 'Ct'] + ' ct' : '', s[g + 'Size'], s[g + 'Pcs'] ? s[g + 'Pcs'] + ' pcs' : ''].filter(Boolean).join(' · '), GEM_KEYS.map(k => 'spec.' + g + k)); });
   add('Engraving', s.engraving, ['spec.engraving']);
   return R;
 }
@@ -1207,7 +1218,8 @@ function priceBlock(o, p){
   const total = num(pr.final) || num(pr.est);
   const paid = paidTotal(p);
   let h = `<div class="card" id="price-card"><h3>💰 Estimate & Payment <span class="tag muted small">🔒 factory को नहीं दिखता</span></h3>`;
-  if (pr.calc && pr.calc.final) h += `<div class="calc-out" style="border-top:none;margin-top:0;padding-top:0">${calcOutHtml(pr.calc, o.spec)}</div>`;
+  const showCalc = pr.finalCalc || pr.calc;
+  if (showCalc && showCalc.final) h += `${pr.finalCalc ? '<div class="lbl">Final bill का हिसाब</div>' : ''}<div class="wbox" style="margin:0 0 8px">${weightHtml(showCalc, o.spec)}</div><div class="calc-out" style="border-top:none;margin-top:0;padding-top:0">${calcOutHtml(showCalc, o.spec)}</div>`;
   h += `<div class="kv" style="margin-top:8px">`;
   h += kvRow('Client से तय amount', pr.est ? money(pr.est) : '', 'price.est');
   if (pr.final) h += kvRow('Final bill', money(pr.final), 'price.final');
@@ -1425,7 +1437,7 @@ function sheetDispatch(id){
   openSheet('🚚 Dispatch करें', `
     <div class="lbl">कैसे भेजा?</div><div class="chips" id="dp-mode" style="margin-bottom:12px">${['Hand delivery','Courier','Staff ने लिया','Other'].map((m, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="dp-mode" data-v="${esc(m)}">${esc(m)}</button>`).join('')}</div>
     <div class="fld"><label for="dp-ref">Courier / Tracking no. / किसको दिया</label><input class="in" id="dp-ref"></div>
-    <div class="two"><div class="fld"><label for="dp-wt">Final कुल (gross) weight g</label><input class="in" id="dp-wt" inputmode="decimal" placeholder="3.62"></div><div class="fld"><label for="dp-dia">Final diamond ct (कुल)</label><input class="in" id="dp-dia" inputmode="decimal"></div></div>
+    <div class="two"><div class="fld"><label for="dp-wt">Final gross weight g (stones समेत)</label><input class="in" id="dp-wt" inputmode="decimal" placeholder="3.62"></div><div class="fld"><label for="dp-dia">Final diamond ct (कुल)</label><input class="in" id="dp-dia" inputmode="decimal"></div></div>
     <div class="fld"><label for="dp-note">Note</label>${textArea('dp-note', 'जैसे: hallmark done, screw back', '')}</div>
     <div class="lbl">बने हुए piece की photo/video</div><div id="dp-media"></div>
     <button class="btn gold big" data-act="dispatch-do">🚚 Dispatch — अभी का time punch होगा</button>`, {id, mode: 'Hand delivery'});
@@ -1522,11 +1534,11 @@ function sheetFinal(id){
   const dRows = DIA_N.filter(n => hasDia(s['dia' + n + 'Ct'])).map(n => f('d' + n + 'Rate', 'Diamond ' + n + (s['dia' + n + 'Type'] ? ' · ' + s['dia' + n + 'Type'] : '') + ' (' + s['dia' + n + 'Ct'] + 'ct) ₹/ct')).join('');
   const gross = o.dispatch && (o.dispatch.grossWt || o.dispatch.goldWt);
   openSheet('🧮 Final bill (delivery के समय)', `<p class="small muted" style="margin-top:-6px">${gross ? 'Factory ने final gross weight ' + esc(gross) + 'g बताया है. ' : ''}${booked ? 'Gold rate book है — वही rate लगेगा.' : 'Gold rate book नहीं है — आज का rate लगेगा' + (S.rates && S.rates.day === today() ? ' (भर दिया है).' : '.')}</p>
-    <div class="two">${f('grossWt', 'Final कुल (gross) weight g')}${f('goldRate', booked ? 'Booked rate ₹/g' : 'आज का rate ₹/g', booked)}</div>
+    <div class="two">${f('grossWt', 'Final gross weight g')}${f('goldRate', booked ? 'Booked rate ₹/g' : 'आज का rate ₹/g', booked)}</div>
     <div class="two">${f('making', 'Making ₹/g')}${f('gst', 'GST %')}</div>
     ${dRows}
-    <div class="two">${f('gemWt', 'Gemstone weight (ct)', false, !(s.gem1Type || s.gem2Type))}${f('gemAmt', 'Gemstone ₹', false, !(s.gem1Type || s.gem2Type))}</div>
-    <div class="two">${f('other', 'Other ₹')}<div></div></div>
+    <div class="two">${f('gemAmt', 'Gemstone ₹', false, !(s.gem1Type || s.gem2Type))}${f('other', 'Other ₹')}</div>
+    <div class="wbox" id="fb-wt"></div>
     <div class="calc"><div class="calc-out" id="fb-out" style="border-top:none;margin-top:0;padding-top:0"></div></div>
     <div class="fld"><label for="fb-final">Final amount ₹ <span class="req">*</span></label><input class="in" id="fb-final" inputmode="decimal" value="${esc(pr.final || '')}"><div class="hint">ऊपर के हिसाब से भरा जाता है — discount हो तो बदल दें. Client से तय amount: ${money(pr.est || 0)}</div></div>
     <button class="btn primary big" data-act="final-do">Final bill save करें</button>`, {id, calc: c, spec: o.spec});
@@ -1536,13 +1548,14 @@ function updateFinalCalc(first){
   const sh = S.sheet; if (!sh || !sh.calc) return;
   const v = calcValues(sh.calc, sh.spec);
   const out = $('#fb-out'); if (out) out.innerHTML = calcOutHtml(sh.calc, sh.spec);
+  const wt = $('#fb-wt'); if (wt) wt.innerHTML = weightHtml(sh.calc, sh.spec);
   const fi = $('#fb-final'); if (fi && (!first || !fi.value) && v.final) fi.value = String(Math.round(v.final));
 }
 async function doFinal(){
   const id = S.sheet.id, v = $('#fb-final').value.trim(), amt = v ? num(v) : '';
   if (!amt) return toast('Final amount डालें.', 'bad');
   const fc = calcSaved(S.sheet.calc, S.sheet.spec);
-  const ok = await write('orders/' + id + '/private/info', {price: {final: amt, finalCalc: fc}, log: {[logKey()]: logEntry('price', 'Final bill: ' + money(amt) + (fc ? ' (gross ' + fc.gross + 'g, net gold ' + r3(fc.net) + 'g)' : ''))}});
+  const ok = await write('orders/' + id + '/private/info', {price: {final: amt, finalCalc: fc}, log: {[logKey()]: logEntry('price', 'Final bill: ' + money(amt) + (fc ? ' (gross ' + fmtG(fc.gross) + ', net gold ' + fmtG(fc.net) + ')' : ''))}});
   if (ok) { closeSheet(); toast('Final bill save हो गया.'); }
 }
 function sheetCancel(id){
@@ -1626,7 +1639,7 @@ function receiptHtml(o, p, seal){
     </div>
     <div style="padding:10px 0;border-bottom:1px solid ${LINE}">${lab('Your jewellery')}
       <div style="font-weight:700;font-size:14.5px">${esc(item)}</div>${stones}
-      ${v && v.gross ? `<div style="margin-top:2px;color:${MUTE}">Approx. weight: ${r3(v.gross)} g gross${v.diaCt ? ' · diamonds ' + r3(v.diaCt) + ' ct' : ''}</div>` : ''}
+      ${v && v.gross ? `<div style="margin-top:3px;color:${MUTE}">${pr.finalCalc ? 'Weight' : 'Approx. weight'}: <b style="color:${INK}">Net gold ${fmtG(v.net)}</b>${v.diaCt ? ' · Diamonds ' + r3(v.diaCt) + ' ct (' + fmtG(v.diaCt * CT_TO_G) + ')' : ''}${v.gemCt ? ' · Gemstones ' + r3(v.gemCt) + ' ct' : ''} · Gross ${fmtG(v.gross)}</div>` : ''}
       ${design ? `<div style="margin-top:3px;color:${MUTE}">${esc(design)}</div>` : ''}
     </div>
     <table style="width:100%;border-collapse:collapse;margin:8px 0 4px;font-size:13.5px">
@@ -1890,7 +1903,8 @@ let FORMKEY = null;
 const DRAFT = 'do.draft';
 function emptyForm(){
   const spec = {jtype: '', jtypeOther: '', qty: '1', metalColor: '', purity: '', size: '', engraving: '', design: '',
-    gem1Type: '', gem1Color: '', gem1Shape: '', gem1Ct: '', gem1Pcs: '', gem2Type: '', gem2Color: '', gem2Shape: '', gem2Ct: '', gem2Pcs: '', stoneNote: ''};
+    stoneNote: ''};
+  [1, 2].forEach(n => GEM_KEYS.forEach(k => { spec['gem' + n + k] = ''; }));
   DIA_N.forEach(n => DIA_KEYS.forEach(k => { spec['dia' + n + k] = ''; }));
   spec.dia1Pcs = '1';
   return {
@@ -1994,7 +2008,8 @@ function renderForm(){
      <div id="gem${n}-detail" ${s['gem' + n + 'Type'] ? '' : 'hidden'}>
        ${chipFld('spec.gem' + n + 'Color', 'Colour', GEM_COLORS, 1)}
        ${chipFld('spec.gem' + n + 'Shape', 'Shape', GEM_SHAPES, 1)}
-       <div class="two">${fld('spec.gem' + n + 'Ct', 'Size / Carat', {ph: '4 mm / 0.50 ct', mic: false})}${fld('spec.gem' + n + 'Pcs', 'Pieces', {mode: 'numeric', mic: false})}</div>
+       <div class="two">${fld('spec.gem' + n + 'Ct', 'Carat (ct) — कुल', {req: 1, mode: 'decimal', ph: '0.30', mic: false, hint: `<span id="ctg-gem${n}">${num(s['gem' + n + 'Ct']) ? '= ' + ctG(s['gem' + n + 'Ct']) : '1 ct = 0.200 g'}</span>`})}${fld('spec.gem' + n + 'Pcs', 'Pieces', {mode: 'numeric', mic: false})}</div>
+       ${fld('spec.gem' + n + 'Size', 'Size (optional)', {ph: '2 mm / 6×4 mm', mic: false})}
      </div>`;
   h += sec(4, 'Gemstone', 'Factory को जाएगा',
     gemBlock(1) +
@@ -2010,7 +2025,8 @@ function renderForm(){
     const booked = F.price.goldRateBooked === 'yes';
     let pb = `<div class="fld" id="w-f-price-goldRateBooked"><span class="lbl">Gold Rate Booked<span class="req">*</span></span><div class="chips" data-chips="price.goldRateBooked">${[['yes','Yes — rate book है'],['no','No']].map(x => `<button type="button" class="chip ${F.price.goldRateBooked === x[0] ? 'on' : ''}" data-act="chip" data-f="price.goldRateBooked" data-v="${x[0]}">${x[1]}</button>`).join('')}</div><div class="hint" id="rate-hint">${rateHint()}</div></div>`;
     pb += `<div class="two">${fld('price.calc.goldRate', booked ? 'Booked gold rate ₹/g' : 'आज का gold rate ₹/g', {req: 1, mode: 'decimal', mic: false, ph: '8544'})}${fld('price.calc.making', 'Making ₹/g', {req: 1, mode: 'decimal', mic: false, ph: '2000'})}</div>`;
-    pb += `<div class="two">${fld('price.calc.grossWt', 'कुल (gross) weight g', {req: 1, mode: 'decimal', mic: false, ph: '3.75', hint: 'Diamond / stone का weight इसमें से अपने-आप घटेगा'})}${fld('price.calc.gemWt', 'Gemstone weight (ct)', {mode: 'decimal', mic: false, hidden: !(s.gem1Type || s.gem2Type)})}</div>`;
+    pb += fld('price.calc.grossWt', 'Gross weight g (diamond / stone समेत पूरा piece)', {req: 1, mode: 'decimal', mic: false, ph: '5.000'});
+    pb += `<div class="wbox" id="wt-out">${weightHtml(F.price.calc, s)}</div>`;
     pb += `<div class="lbl" id="dia-rates-lbl" ${DIA_N.some(n => hasDia(s['dia' + n + 'Ct'])) ? '' : 'hidden'}>Diamond rate — weight × ₹ per carat</div>`;
     pb += DIA_N.map(n => `<div class="fld" id="w-f-price-calc-d${n}Rate" ${hasDia(s['dia' + n + 'Ct']) ? '' : 'hidden'}><label for="f-price-calc-d${n}Rate" id="lbl-d${n}Rate">${esc(diaRateLabel(n))}<span class="req">*</span></label><div class="inp"><input id="f-price-calc-d${n}Rate" data-f="price.calc.d${n}Rate" inputmode="decimal" value="${esc(F.price.calc['d' + n + 'Rate'] || '')}" placeholder="₹ per carat"></div></div>`).join('');
     pb += `<div class="two">${fld('price.calc.gemAmt', 'Gemstone ₹ (कुल)', {mode: 'decimal', mic: false, hidden: !(s.gem1Type || s.gem2Type)})}${fld('price.calc.other', 'Other ₹', {mode: 'decimal', mic: false})}</div>`;
@@ -2059,7 +2075,7 @@ function diaSectionHtml(){
     return `<div class="diab" id="diab-${n}" ${n <= F.diaCount ? '' : 'hidden'} style="${n > 1 ? 'border-top:1px dashed var(--line2);padding-top:12px;margin-top:4px' : ''}">
       <div class="row" style="margin-bottom:8px"><span class="lbl" style="font-size:15.5px;margin:0">💎 Diamond ${n}</span><span class="grow"></span>${n > 1 ? `<button type="button" class="btn ghost sm" data-act="dia-del" data-n="${n}">✕ हटाएँ</button>` : ''}</div>
       ${fld(p + 'Type', 'Remark — कौन सा diamond', {req: 1, ph: n === 1 ? 'Solitaire' : 'Side / Cluster', hint: DIA_TYPES.map(x => `<button type="button" class="chip" style="min-height:30px;padding:3px 9px;font-size:13.5px;margin:4px 4px 0 0" data-act="fill" data-for="f-${p.replace(/\./g, '-')}Type" data-v="${esc(x)}">${esc(x)}</button>`).join('')})}
-      <div class="two">${fld(p + 'Ct', 'Carat (ct)' + (n === 1 ? '' : ''), {req: n === 1, mode: 'decimal', ph: n === 1 ? '0.40' : '0.10', mic: false})}${fld(p + 'Pcs', 'Pieces', {mode: 'numeric', mic: false, ph: '1'})}</div>
+      <div class="two">${fld(p + 'Ct', 'Carat (ct) — कुल', {req: n === 1, mode: 'decimal', ph: n === 1 ? '0.40' : '0.10', mic: false, hint: `<span id="ctg-dia${n}">${hasDia(s['dia' + n + 'Ct']) ? '= ' + ctG(s['dia' + n + 'Ct']) : '1 ct = 0.200 g'}</span>`})}${fld(p + 'Pcs', 'Pieces', {mode: 'numeric', mic: false, ph: '1'})}</div>
       ${n === 1 ? `<div class="chips" style="margin:-6px 0 12px"><button type="button" class="chip" data-act="dia-na" data-for="f-spec-dia1Ct">Diamond नहीं है (NA)</button></div>` : ''}
       <div id="dia${n}-detail" ${hasDia(s['dia' + n + 'Ct']) ? '' : 'hidden'}>
         ${chipFld(p + 'Shape', 'Shape', SHAPES, 1)}
@@ -2108,27 +2124,49 @@ function syncFormVis(){
   const da = $('#dia-add'); if (da) { da.hidden = F.diaCount >= 4; da.textContent = '＋ और diamond (' + F.diaCount + '/4)'; }
   vis('#gem1-detail', !!s.gem1Type); vis('#gem2-detail', !!s.gem2Type);
   vis('#gem2-block', F.gem2On); vis('#gem2-add', !F.gem2On);
-  vis('#w-f-price-calc-gemAmt', !!(s.gem1Type || s.gem2Type)); vis('#w-f-price-calc-gemWt', !!(s.gem1Type || s.gem2Type));
+  vis('#w-f-price-calc-gemAmt', !!(s.gem1Type || s.gem2Type));
   const gl = $('#w-f-price-calc-goldRate label');
   if (gl) gl.innerHTML = (F.price.goldRateBooked === 'yes' ? 'Booked gold rate ₹/g' : 'आज का gold rate ₹/g') + '<span class="req">*</span>';
   const rh = $('#rate-hint'); if (rh) rh.textContent = rateHint();
 }
+/* Estimate — everything on NET gold weight:
+   every diamond line and gemstone: carat × 0.200 g (1 ct = 200 mg);
+   net gold g = gross weight g − all stones in g; gold = net × gold rate; making = net × making ₹/g;
+   each diamond line = its ct × its ₹ per carat. */
 function calcValues(c, spec){
   c = c || {}; spec = spec || {};
   const gross = num(c.grossWt);
   const dias = DIA_N.filter(n => hasDia(spec['dia' + n + 'Ct'])).map(n => {
     const ct = num(spec['dia' + n + 'Ct']), rate = num(c['d' + n + 'Rate']);
-    return {n, type: spec['dia' + n + 'Type'] || '', ct, rate, amt: ct * rate};
+    return {n, type: spec['dia' + n + 'Type'] || '', ct, g: ct * CT_TO_G, rate, amt: ct * rate};
   });
+  const gems = [1, 2].filter(n => spec['gem' + n + 'Type'] && num(spec['gem' + n + 'Ct']) > 0).map(n => {
+    const ct = num(spec['gem' + n + 'Ct']); return {n, type: spec['gem' + n + 'Type'], ct, g: ct * CT_TO_G};
+  });
+  if (!gems.length && num(c.gemWt)) gems.push({n: 1, type: 'Gemstone', ct: num(c.gemWt), g: num(c.gemWt) * CT_TO_G});   /* older orders */
   const diaCt = dias.reduce((a, d) => a + d.ct, 0);
-  const stoneCt = diaCt + num(c.gemWt);
+  const gemCt = gems.reduce((a, d) => a + d.ct, 0);
+  const stoneCt = diaCt + gemCt;
   const stoneG = stoneCt * CT_TO_G;
   const net = Math.max(0, gross - stoneG);
   const gold = net * num(c.goldRate), mk = net * num(c.making);
   const diaTotal = dias.reduce((a, d) => a + d.amt, 0);
   const value = gold + diaTotal + mk + num(c.gemAmt) + num(c.other);
   const gstAmt = value * num(c.gst) / 100;
-  return {gross, diaCt, stoneCt, stoneG, net, gold, dias, diaTotal, mk, gem: num(c.gemAmt), oth: num(c.other), value, gstPct: num(c.gst), gstAmt, final: value + gstAmt};
+  return {gross, dias, gems, diaCt, gemCt, stoneCt, stoneG, net, gold, diaTotal, mk, gem: num(c.gemAmt), oth: num(c.other), value, gstPct: num(c.gst), gstAmt, final: value + gstAmt};
+}
+/* the weight working: gross − each stone (ct → g) = net gold */
+function weightHtml(c, spec){
+  const v = calcValues(c, spec);
+  if (!v.gross && !v.stoneCt) return `<div class="small muted">Gross weight डालें — diamond / gemstone का carat gram में बदलकर घटेगा (1 ct = 0.200 g) और <b>net gold weight</b> यहाँ दिखेगा. सारा हिसाब net weight पर होगा.</div>`;
+  const row = (l, val, cls) => `<div class="wr ${cls || ''}"><span>${l}</span><span>${val}</span></div>`;
+  let h = row('Gross weight', esc(fmtG(v.gross)));
+  const ctTxt = ct => (Math.round(ct * 1000) / 1000).toFixed(2) + ' ct = ' + fmtG(ct * CT_TO_G);
+  v.dias.forEach(d => { h += row('− Diamond ' + d.n + (d.type ? ' · ' + esc(d.type) : ''), '− ' + esc(ctTxt(d.ct))); });
+  v.gems.forEach(d => { h += row('− Gemstone ' + d.n + ' · ' + esc(d.type), '− ' + esc(ctTxt(d.ct))); });
+  h += row('<b>Net gold weight</b>', '<b>' + esc(fmtG(v.net)) + '</b>', 'net');
+  if (v.gross && v.stoneG >= v.gross) h += `<div class="small" style="color:var(--bad);margin-top:4px">⚠️ Stones का weight gross से ज़्यादा है — gross weight जाँचें.</div>`;
+  return h;
 }
 const r3 = v => Math.round(v * 1000) / 1000;
 const EMON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -2136,11 +2174,11 @@ const fmtDayEn = s => { if (!s) return ''; const d = parseDay(s); return d.getDa
 function calcLines(c, spec, en){
   const v = calcValues(c, spec || (F && F.spec));
   const L = [];
-  if (v.gross) L.push([(en ? 'Gross ' : 'कुल weight ') + r3(v.gross) + 'g − ' + (en ? 'stones ' : 'stone ') + r3(v.stoneCt) + 'ct (' + r3(v.stoneG) + 'g) = ' + (en ? 'net gold ' : 'net gold ') + r3(v.net) + 'g', '', 'note']);
-  L.push(['Gold' + (v.net ? ' (' + r3(v.net) + 'g × ' + money(c.goldRate || 0) + ')' : ''), money2(v.gold)]);
-  v.dias.forEach(d => L.push(['Diamond ' + d.n + (d.type ? ' · ' + d.type : '') + ' (' + d.ct + 'ct × ' + money(d.rate) + ')', money2(d.amt)]));
+  if (v.gross) L.push([(en ? 'Net gold ' : 'Net gold ') + fmtG(v.net) + ' = gross ' + fmtG(v.gross) + ' − stones ' + r3(v.stoneCt) + ' ct (' + fmtG(v.stoneG) + ')', '', 'note']);
+  L.push(['Gold' + (v.net ? ' — net ' + fmtG(v.net) + ' × ' + money(c.goldRate || 0) : ''), money2(v.gold)]);
+  v.dias.forEach(d => L.push(['Diamond ' + d.n + (d.type ? ' · ' + d.type : '') + ' — ' + d.ct + ' ct × ' + money(d.rate), money2(d.amt)]));
   if (v.gem) L.push(['Gemstone', money2(v.gem)]);
-  L.push(['Making' + (v.net ? ' (' + r3(v.net) + 'g × ' + money(c.making || 0) + ')' : ''), money2(v.mk)]);
+  L.push(['Making' + (v.net ? ' — net ' + fmtG(v.net) + ' × ' + money(c.making || 0) : ''), money2(v.mk)]);
   if (v.oth) L.push(['Other', money2(v.oth)]);
   L.push(['Value', money2(v.value)]);
   if (v.gstAmt) L.push(['GST ' + (v.gstPct || 0) + '%', money2(v.gstAmt)]);
@@ -2149,6 +2187,11 @@ function calcLines(c, spec, en){
 }
 function calcOutHtml(c, spec){ return calcLines(c, spec).map(l => l[2] === 'note' ? `<div class="small muted" style="padding:0 0 4px">${esc(l[0])}</div>` : `<div class="${l[2] || ''}"><span>${esc(l[0])}</span><span>${esc(l[1])}</span></div>`).join(''); }
 function updateCalc(){
+  const w = $('#wt-out'); if (w && F) w.innerHTML = weightHtml(F.price.calc, F.spec);
+  if (F) {
+    DIA_N.forEach(n => { const e = $('#ctg-dia' + n); if (e) e.textContent = hasDia(F.spec['dia' + n + 'Ct']) ? '= ' + ctG(F.spec['dia' + n + 'Ct']) : '1 ct = 0.200 g'; });
+    [1, 2].forEach(n => { const e = $('#ctg-gem' + n); if (e) e.textContent = num(F.spec['gem' + n + 'Ct']) ? '= ' + ctG(F.spec['gem' + n + 'Ct']) : '1 ct = 0.200 g'; });
+  }
   const out = $('#calc-out'); if (!out) return;
   const v = calcValues(F.price.calc, F.spec);
   out.innerHTML = v.value ? calcOutHtml(F.price.calc, F.spec) : '<div><span class="muted">ऊपर rate और weight डालें — gold, diamond, making का हिसाब यहाँ दिखेगा</span></div>';
@@ -2201,16 +2244,16 @@ function missingFields(){
     need('spec.dia' + n + 'Color', 'Diamond ' + n + ' — Colour', s['dia' + n + 'Color']);
     need('spec.dia' + n + 'Clarity', 'Diamond ' + n + ' — Clarity', s['dia' + n + 'Clarity']);
   });
-  [1, 2].forEach(n => { if (s['gem' + n + 'Type']) { need('spec.gem' + n + 'Color', 'Gemstone ' + n + ' — Colour', s['gem' + n + 'Color']); need('spec.gem' + n + 'Shape', 'Gemstone ' + n + ' — Shape', s['gem' + n + 'Shape']); } });
+  [1, 2].forEach(n => { if (s['gem' + n + 'Type']) { need('spec.gem' + n + 'Color', 'Gemstone ' + n + ' — Colour', s['gem' + n + 'Color']); need('spec.gem' + n + 'Shape', 'Gemstone ' + n + ' — Shape', s['gem' + n + 'Shape']); need('spec.gem' + n + 'Ct', 'Gemstone ' + n + ' — Carat (weight के लिए)', num(s['gem' + n + 'Ct']) > 0); } });
   need('spec.design', 'Design details / Remark', s.design.trim());
   if (staff()) {
     const c = F.price.calc;
     need('price.goldRateBooked', 'Gold Rate Booked (Yes/No)', F.price.goldRateBooked);
     need('price.calc.goldRate', F.price.goldRateBooked === 'yes' ? 'Booked gold rate' : 'Gold rate', num(c.goldRate) > 0);
     need('price.calc.making', 'Making ₹/g', num(c.making) > 0);
-    need('price.calc.grossWt', 'कुल (gross) weight', num(c.grossWt) > 0);
+    need('price.calc.grossWt', 'Gross weight', num(c.grossWt) > 0);
     DIA_N.forEach(n => { if (n <= F.diaCount && hasDia(s['dia' + n + 'Ct'])) need('price.calc.d' + n + 'Rate', 'Diamond ' + n + ' rate ₹/ct', num(c['d' + n + 'Rate']) > 0); });
-    if (num(c.grossWt) > 0 && calcValues(c, s).net <= 0) need('price.calc.grossWt', 'कुल weight diamond के weight से ज़्यादा होना चाहिए', false);
+    if (num(c.grossWt) > 0 && calcValues(c, s).net <= 0) need('price.calc.grossWt', 'Gross weight, diamond + gemstone के weight से ज़्यादा होना चाहिए', false);
     need('price.est', 'Client से तय amount', num(F.price.est) > 0);
     if (isNew) {
       need('advance.amount', 'Advance Paid (0 भी चलेगा)', String(F.advance.amount).trim() !== '');
@@ -2247,7 +2290,7 @@ function onFormInput(t){
   if (path === 'price.calc.goldRate') F.price.rateAuto = false;
   if (path === 'deliveryDay') { const dl = $('#f-days-left'); if (dl) dl.textContent = F.deliveryDay ? diffDays(F.deliveryDay, today()) + ' दिन बाद' : ''; }
   if (/^spec\.dia\dCt$|^spec\.dia\dType$/.test(path)) syncFormVis();
-  if (path.startsWith('price.calc') || /^spec\.dia\dCt$/.test(path)) updateCalc();
+  if (path.startsWith('price.calc') || /^spec\.(dia|gem)\dCt$/.test(path)) updateCalc();
   const w = t.closest('.fld'); if (w) w.classList.remove('miss');
   renderFormBar(); saveDraft();
 }
@@ -2313,7 +2356,7 @@ async function submitNew(){
     if (FIP) FIP.done().forEach(m => { const d = Object.assign({}, m, {receipt: true}); delete d.factory; delete d.id; pmedia[m.id] = d; });
     const spec = clone(F.spec); Object.keys(spec).forEach(k => { spec[k] = String(spec[k] == null ? '' : spec[k]).trim(); });
     if (!spec.qty) spec.qty = '1';
-    if (!F.gem2On) ['Type', 'Color', 'Shape', 'Ct', 'Pcs'].forEach(k => { spec['gem2' + k] = ''; });
+    if (!F.gem2On) GEM_KEYS.forEach(k => { spec['gem2' + k] = ''; });
     DIA_N.forEach(n => { if (n > F.diaCount) DIA_KEYS.forEach(k => { spec['dia' + n + k] = ''; }); });
     const ym = ymOf(new Date());
     const priv = {
@@ -2361,7 +2404,7 @@ async function saveEdit(){
   const id = F.id, o = F.orig.o, p = F.orig.p;
   const fresh = getOrder(id);
   if (!canEdit(fresh)) { toast('ये order अब edit नहीं हो सकता.', 'bad'); return go('#/o/' + id); }
-  if (!F.gem2On) ['Type', 'Color', 'Shape', 'Ct', 'Pcs'].forEach(k => { F.spec['gem2' + k] = ''; });
+  if (!F.gem2On) GEM_KEYS.forEach(k => { F.spec['gem2' + k] = ''; });
   DIA_N.forEach(n => { if (n > F.diaCount) DIA_KEYS.forEach(k => { F.spec['dia' + n + k] = ''; }); });
   const main = {}, priv = {}, mainTxt = [], privTxt = [], edited = {};
   const cur = {client: F.client, spec: F.spec, deliveryDay: F.deliveryDay, priority: F.priority, price: Object.assign({}, F.price, {goldRate: F.price.calc.goldRate}), internalNote: F.internalNote};

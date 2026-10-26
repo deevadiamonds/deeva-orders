@@ -54,7 +54,8 @@ window.__demoPdfPreview = true;
   const nextNo = ms => { const ym = ymAt(ms); counters[ym] = (counters[ym] || 0) + 1; F.store['counters/' + ym] = {n: counters[ym]}; return {ym, seq: counters[ym], no: 'DD-' + ym + '-' + pad(counters[ym]).padStart(3, '0')}; };
   const baseSpec = {jtype: '', jtypeOther: '', qty: '1', metalColor: '', purity: '', size: '', engraving: '', design: '', gem1Type: '', gem1Color: '', gem1Shape: '', gem1Ct: '', gem1Pcs: '', gem2Type: '', gem2Color: '', gem2Shape: '', gem2Ct: '', gem2Pcs: '', stoneNote: ''};
   [1, 2, 3, 4].forEach(i => ['Type', 'Ct', 'Pcs', 'Shape', 'Color', 'Clarity', 'Cut', 'Cert'].forEach(k => { baseSpec['dia' + i + k] = ''; }));
-  const calcOf = (c, spec) => { const n = v => parseFloat(v) || 0; const gross = n(c.grossWt); const dias = [1, 2, 3, 4].filter(i => n(spec['dia' + i + 'Ct']) > 0).map(i => ({n: i, type: spec['dia' + i + 'Type'] || '', ct: n(spec['dia' + i + 'Ct']), rate: n(c['d' + i + 'Rate']), amt: n(spec['dia' + i + 'Ct']) * n(c['d' + i + 'Rate'])})); const diaCt = dias.reduce((a, d) => a + d.ct, 0); const stoneCt = diaCt + n(c.gemWt), stoneG = stoneCt * 0.2, net = Math.max(0, gross - stoneG); const gold = net * n(c.goldRate), mk = net * n(c.making), diaTotal = dias.reduce((a, d) => a + d.amt, 0); const value = gold + diaTotal + mk + n(c.gemAmt) + n(c.other); const gstAmt = value * n(c.gst) / 100; return Object.assign({}, c, {gross, diaCt, stoneCt, stoneG, net, gold, dias, diaTotal, mk, gem: n(c.gemAmt), oth: n(c.other), value, gstPct: n(c.gst), gstAmt, final: value + gstAmt}); };
+  [1, 2].forEach(i => ['Type', 'Color', 'Shape', 'Ct', 'Size', 'Pcs'].forEach(k => { baseSpec['gem' + i + k] = ''; }));
+  const calcOf = (c, spec) => { const n = v => parseFloat(v) || 0; const gross = n(c.grossWt); const dias = [1, 2, 3, 4].filter(i => n(spec['dia' + i + 'Ct']) > 0).map(i => ({n: i, type: spec['dia' + i + 'Type'] || '', ct: n(spec['dia' + i + 'Ct']), rate: n(c['d' + i + 'Rate']), amt: n(spec['dia' + i + 'Ct']) * n(c['d' + i + 'Rate'])})); const gems = [1, 2].filter(i => spec['gem' + i + 'Type'] && n(spec['gem' + i + 'Ct']) > 0).map(i => ({n: i, type: spec['gem' + i + 'Type'], ct: n(spec['gem' + i + 'Ct']), g: n(spec['gem' + i + 'Ct']) * 0.2})); const diaCt = dias.reduce((a, d) => a + d.ct, 0), gemCt = gems.reduce((a, d) => a + d.ct, 0); const stoneCt = diaCt + gemCt, stoneG = stoneCt * 0.2, net = Math.max(0, gross - stoneG); const gold = net * n(c.goldRate), mk = net * n(c.making), diaTotal = dias.reduce((a, d) => a + d.amt, 0); const value = gold + diaTotal + mk + n(c.gemAmt) + n(c.other); const gstAmt = value * n(c.gst) / 100; return Object.assign({}, c, {gross, dias, gems, diaCt, gemCt, stoneCt, stoneG, net, gold, diaTotal, mk, gem: n(c.gemAmt), oth: n(c.other), value, gstPct: n(c.gst), gstAmt, final: value + gstAmt}); };
   const ITEMS = [
     ['Ring', 'Rose Gold', '18KT', 'Ring 12', '0.50', 'Oval', 'E-F', 'VVS1', 3.1],
     ['Pendant with chain', 'Yellow Gold', '14KT', '18 inch', '0.40', 'Round — Portuguese cut', 'F-G', 'VS1', 3.75],
@@ -71,7 +72,7 @@ window.__demoPdfPreview = true;
     const nn = nextNo(createdAt);
     const spec = Object.assign({}, baseSpec, {jtype: item[0], metalColor: item[1], purity: item[2], size: item[3], dia1Type: 'Solitaire', dia1Ct: item[4], dia1Pcs: '1', dia1Shape: item[5], dia1Color: item[6], dia1Clarity: item[7], dia1Cut: item[5].startsWith('Round') ? 'Excellent' : '', dia1Cert: 'IGI', design: 'Client ke reference jaisa design.'}, extra.spec || {});
     const rate = {'14KT': 8544, '18KT': 10950, '22KT': 13400}[item[2]] || 8544;
-    const calc = calcOf({grossWt: String(item[8]), goldRate: String(rate), making: '2000', d1Rate: '22000', d2Rate: '15000', d3Rate: '', d4Rate: '', gemWt: '', gemAmt: spec.gem1Type ? '1500' : '', other: '', gst: '3'}, spec);
+    const calc = calcOf({grossWt: String(item[8]), goldRate: String(rate), making: '2000', d1Rate: '22000', d2Rate: '15000', d3Rate: '', d4Rate: '', gemAmt: spec.gem1Type ? '1500' : '', other: '', gst: '3'}, spec);
     const est = Math.round(calc.final / 100) * 100;
     const approvedAt = createdAt + (0.4 + rr()) * D;
     const makeDays = 7 + Math.round(rr() * 9);
@@ -104,7 +105,7 @@ window.__demoPdfPreview = true;
       log: {k90: L(now - 3 * D, 'u_darshana', 'Darshana', 'admin', 'approved', 'Approve करके factory को भेजा · CAD approval ज़रूरी'), k91: L(now - 3 * H, 'u_factory', 'Factory (Raju)', 'factory', 'stage', 'CAD approval के लिए भेजा\n📎 1 photo')}}
   });
   makeOrder('o2', now - 2 * H, 'review', 's_rpr', ITEMS[1], 'Riya Agrawal', {
-    spec: {gem1Type: 'Ruby', gem1Color: 'Red', gem1Shape: 'Round', gem1Ct: '2 mm', gem1Pcs: '4', design: 'Design customer ki ref image jaisa hi, par neeche ka drop nahi lagana.'},
+    spec: {gem1Type: 'Ruby', gem1Color: 'Red', gem1Shape: 'Round', gem1Ct: '0.20', gem1Size: '2 mm', gem1Pcs: '4', design: 'Design customer ki ref image jaisa hi, par neeche ka drop nahi lagana.'},
     o: {factoryVisible: false, approvedAt: null, factoryDue: '', cad: {}, deliveryDay: day(15), media: {m3: {kind: 'image', url: pendant, path: 'demo', desc: 'Reference — drop nahi chahiye', by: 'u_nishant', byName: 'Nishant', at: now - 2 * H}}}
   });
   makeOrder('o3', now - 14 * D, 'dispatched', 's_rpr', ITEMS[2], 'Pooja Sharma', {
