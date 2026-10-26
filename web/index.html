@@ -1,0 +1,2126 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deeva Orders</title>
+<meta name="description" content="Deeva Diamonds — made-to-order jewellery orders: store, approval, factory tracking">
+<meta name="theme-color" content="#0d3b25">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Deeva Orders">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700&family=Montserrat:wght@500;600;700&family=Playfair+Display:wght@600;700&display=swap">
+<style>
+:root{
+  --bg:#f4efe4; --card:#ffffff; --card2:#faf6ec; --ink:#1b2620; --ink2:#535e57; --line:#e2dac8; --line2:#cfc4aa;
+  --g7:#0f5330; --g8:#0d3b25; --g9:#0a271b; --gold:#e7b150; --gold-ink:#875810; --gold-soft:#fbf0d6; --cream:#f6eedc;
+  --ok:#17663b; --ok-soft:#e1f1e6; --warn:#8a4e00; --warn-soft:#fdebc9; --bad:#ad261c; --bad-soft:#fbe3df; --mute:#5f6660; --mute-soft:#ebe7dc;
+  --shadow:0 1px 2px rgba(10,39,27,.06),0 6px 18px rgba(10,39,27,.07);
+  --r:14px; --font:"Mukta","Montserrat",system-ui,sans-serif; --num:"Montserrat","Mukta",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0b1510; --card:#13211a; --card2:#182a21; --ink:#efe9dc; --ink2:#b4bdb5; --line:#26392e; --line2:#34503f;
+    --gold-ink:#f0c46e; --gold-soft:#3a2e14; --ok:#86d8a7; --ok-soft:#173a26; --warn:#f3b863; --warn-soft:#3b2a10;
+    --bad:#ff9a8f; --bad-soft:#3d1a17; --mute:#aab2ab; --mute-soft:#1f2d25; --shadow:none; color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit}
+[hidden]{display:none!important}
+img{max-width:100%}
+
+/* ---------- top bar ---------- */
+.top{position:sticky;top:0;z-index:30;background:linear-gradient(120deg,var(--g7),var(--g9));color:var(--cream);padding:calc(env(safe-area-inset-top) + 8px) 14px 8px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.brand{display:flex;align-items:center;gap:9px;text-decoration:none;min-width:0}
+.brand img{width:30px;height:auto;flex:none}
+.brand b{font-family:"Playfair Display",Georgia,serif;font-weight:700;font-size:19px;letter-spacing:.2px;white-space:nowrap}
+.brand small{display:block;font-family:var(--num);font-size:9.5px;letter-spacing:2.2px;color:var(--gold);font-weight:600;margin-top:-2px}
+.top .sp{flex:1}
+.who{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(231,177,80,.45);border-radius:999px;padding:4px 10px 4px 4px;cursor:pointer;color:var(--cream);max-width:52vw}
+.who .av{width:26px;height:26px;border-radius:50%;background:var(--gold);color:var(--g9);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.who span{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who em{font-style:normal;font-size:11px;color:var(--gold);font-family:var(--num);font-weight:600}
+.net{background:var(--warn-soft);color:var(--warn);text-align:center;font-size:13.5px;padding:5px 10px}
+
+/* ---------- tabs ---------- */
+.tabs{position:sticky;top:calc(env(safe-area-inset-top) + 50px);z-index:25;display:flex;gap:4px;background:var(--card);border-bottom:1px solid var(--line);padding:0 8px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;text-decoration:none;text-align:center;padding:11px 12px 9px;font-weight:600;font-size:15px;color:var(--ink2);border-bottom:3px solid transparent;white-space:nowrap}
+.tab.on{color:var(--g7);border-bottom-color:var(--gold)}
+@media (prefers-color-scheme: dark){.tab.on{color:var(--gold)}}
+.tab i{font-style:normal;display:inline-block;min-width:20px;padding:0 6px;margin-left:5px;border-radius:999px;background:var(--bad);color:#fff;font-size:12px;font-family:var(--num);line-height:20px}
+
+main{max-width:680px;margin:0 auto;padding:14px 14px 130px}
+.view-title{font-family:"Playfair Display",Georgia,serif;font-size:22px;margin:4px 2px 12px;font-weight:700}
+.muted{color:var(--ink2)}
+.small{font-size:13.5px}
+.center{text-align:center}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+
+/* ---------- cards & buttons ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.card h3 .tag{margin-left:auto}
+.btn{appearance:none;border:1px solid var(--line2);background:var(--card);color:var(--ink);border-radius:12px;padding:10px 14px;font-weight:600;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;min-height:44px;line-height:1.2}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--g7);border-color:var(--g7);color:var(--cream)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:var(--g9)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--g7)}
+@media (prefers-color-scheme: dark){.btn.ghost{color:var(--gold)}}
+.btn.big{width:100%;padding:14px;font-size:17px;border-radius:14px}
+.btn.sm{min-height:34px;padding:6px 10px;font-size:14px;border-radius:10px}
+.btn.wa{background:#1f8a4c;border-color:#1f8a4c;color:#fff}
+.btn[disabled]{opacity:.55;pointer-events:none}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns .btn{flex:1 1 auto}
+
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;font-family:var(--font)}
+.pill.gold{background:var(--gold-soft);color:var(--gold-ink)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.ok2{background:var(--ok-soft);color:var(--ok);border:1px solid var(--ok)}
+.pill.dark{background:var(--g8);color:var(--cream)}
+.pill.mute{background:var(--mute-soft);color:var(--mute)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+
+.cnt{display:inline-flex;align-items:center;gap:5px;font-weight:700;font-size:13.5px;border-radius:9px;padding:3px 9px;font-family:var(--font);white-space:nowrap}
+.cnt b{font-family:var(--num);font-size:15px}
+.cnt.ok{background:var(--ok-soft);color:var(--ok)}
+.cnt.gold{background:var(--gold-soft);color:var(--gold-ink)}
+.cnt.warn{background:var(--warn-soft);color:var(--warn)}
+.cnt.bad{background:var(--bad-soft);color:var(--bad)}
+.cnt.mute{background:var(--mute-soft);color:var(--mute)}
+
+/* ---------- home list ---------- */
+.filters{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 10px;margin:0 -2px;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.fchip{flex:none;border:1px solid var(--line2);background:var(--card);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:600;cursor:pointer;display:flex;gap:6px;align-items:center;color:var(--ink2)}
+.fchip b{font-family:var(--num);font-size:12.5px;background:var(--mute-soft);color:var(--ink);border-radius:999px;padding:0 7px;line-height:20px}
+.fchip.on{background:var(--g7);border-color:var(--g7);color:var(--cream)}
+.fchip.on b{background:var(--gold);color:var(--g9)}
+.fchip.alert b{background:var(--bad);color:#fff}
+.search{width:100%;border:1px solid var(--line2);background:var(--card);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:15px}
+.ocard{display:block;text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:12px 13px;margin-bottom:10px;position:relative}
+.ocard.hot{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-soft),var(--shadow)}
+.oc-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ono{font-family:var(--num);font-weight:700;font-size:15px;letter-spacing:.3px;margin-right:auto}
+.oc-name{font-weight:700;font-size:16.5px;margin-top:4px}
+.oc-item{color:var(--ink2);font-size:14.5px;margin-top:1px}
+.oc-foot{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
+.oc-stage{font-size:13.5px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:6px;margin-right:auto}
+.bar{display:inline-block;width:66px;height:6px;border-radius:9px;background:var(--mute-soft);overflow:hidden;vertical-align:middle}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--g7))}
+.empty{text-align:center;color:var(--ink2);padding:34px 10px}
+.empty b{display:block;font-size:17px;color:var(--ink);margin-bottom:4px}
+
+/* ---------- forms ---------- */
+.sec{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 14px 6px;margin-bottom:12px;box-shadow:var(--shadow)}
+.sec-h{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+.sec-h .n{width:28px;height:28px;border-radius:50%;background:var(--g7);color:var(--gold);display:grid;place-items:center;font-family:var(--num);font-weight:700;font-size:14px;flex:none}
+.sec-h b{font-size:17px}
+.sec-h small{display:block;font-size:13px;color:var(--ink2);font-weight:400;line-height:1.3}
+.fld{margin-bottom:13px}
+.fld>label,.lbl{display:block;font-weight:600;font-size:14.5px;margin-bottom:5px}
+.req{color:var(--bad);margin-left:2px}
+.inp{display:flex;align-items:stretch;gap:6px}
+.inp input,.inp textarea,.inp select,input.in,textarea.in,select.in{flex:1;min-width:0;width:100%;border:1px solid var(--line2);background:var(--card2);border-radius:11px;padding:10px 12px;font-size:16px;outline:none}
+.inp textarea,textarea.in{min-height:84px;resize:vertical}
+.inp input:focus,.inp textarea:focus,input.in:focus,textarea.in:focus,select.in:focus{border-color:var(--g7);box-shadow:0 0 0 3px rgba(15,83,48,.14)}
+.fld.miss .inp input,.fld.miss .inp textarea,.fld.miss .chips,.fld.miss>input.in,.check.miss,#w-sig.miss .sig-wrap{outline:2px solid var(--bad);outline-offset:2px;border-radius:11px}
+.hint{font-size:13px;color:var(--ink2);margin-top:4px}
+.mic{flex:none;width:46px;border-radius:11px;border:1px solid var(--line2);background:var(--card);display:grid;place-items:center;cursor:pointer;font-size:19px}
+.mic.on{background:var(--bad);border-color:var(--bad);color:#fff;animation:pulse 1.1s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(173,38,28,.45)}70%{box-shadow:0 0 0 10px rgba(173,38,28,0)}100%{box-shadow:0 0 0 0 rgba(173,38,28,0)}}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{border:1px solid var(--line2);background:var(--card2);border-radius:10px;padding:7px 12px;font-size:15px;cursor:pointer;font-weight:500;min-height:38px}
+.chip.on{background:var(--g7);border-color:var(--g7);color:var(--cream);font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two .fld{min-width:0}
+.check{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line2);border-radius:11px;background:var(--card2);cursor:pointer;margin-bottom:10px}
+.check input{width:22px;height:22px;margin:1px 0 0;accent-color:var(--g7);flex:none}
+.terms{margin:0 0 12px;padding:0;list-style:none;counter-reset:t}
+.terms li{counter-increment:t;display:flex;gap:9px;font-size:14px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.terms li::before{content:counter(t);font-family:var(--num);font-weight:700;color:var(--gold-ink);min-width:16px}
+.sig-wrap{position:relative;border:1.5px dashed var(--line2);border-radius:12px;background:#fff;touch-action:none;margin-bottom:6px}
+.sig-wrap canvas{display:block;width:100%;height:170px;border-radius:12px}
+.sig-wrap span{position:absolute;left:12px;bottom:8px;font-size:12.5px;color:#8a8f88;pointer-events:none}
+.calc{border:1px solid var(--line);background:var(--card2);border-radius:12px;padding:12px;margin-bottom:12px}
+.calc .two{gap:8px}
+.calc-out{font-family:var(--num);font-size:13.5px;border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
+.calc-out div{display:flex;justify-content:space-between;padding:2px 0}
+.calc-out .fin{font-weight:700;font-size:15.5px;color:var(--g7)}
+@media (prefers-color-scheme: dark){.calc-out .fin{color:var(--gold)}}
+.stick{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--card);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 18px rgba(0,0,0,.08)}
+.stick .in2{max-width:680px;margin:0 auto;display:flex;gap:8px;align-items:center}
+.stick .btn{flex:1}
+.prog{font-family:var(--num);font-size:12.5px;font-weight:700;color:var(--ink2);white-space:nowrap}
+
+/* ---------- media ---------- */
+.mbtns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.mbtns .btn{flex-direction:column;gap:2px;padding:9px 4px;font-size:13.5px;min-height:62px}
+.mbtns .btn span{font-size:21px;line-height:1}
+.mbtns .btn.rec{background:var(--bad);border-color:var(--bad);color:#fff}
+.mitem{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:8px;margin-bottom:8px;background:var(--card2)}
+.mthumb{width:76px;height:76px;border-radius:9px;background:var(--mute-soft);flex:none;overflow:hidden;display:grid;place-items:center;font-size:26px;position:relative}
+.mthumb img,.mthumb video{width:100%;height:100%;object-fit:cover}
+.mthumb .pr{position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(0,0,0,.25)}
+.mthumb .pr i{display:block;height:100%;background:var(--gold)}
+.mbody{flex:1;min-width:0}
+.mbody audio{width:100%;height:36px;margin-bottom:4px}
+.mbody input{width:100%;border:1px solid var(--line2);background:var(--card);border-radius:9px;padding:7px 9px;font-size:15px}
+.mmeta{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:13px;color:var(--ink2);flex-wrap:wrap}
+.mmeta label{display:flex;align-items:center;gap:5px;cursor:pointer}
+.mmeta input[type=checkbox]{width:18px;height:18px;accent-color:var(--g7)}
+.mdel{flex:none;border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink2);padding:2px 4px}
+.gal{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.gi{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card2)}
+.gi.wide{grid-column:1/-1}
+.gi img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;cursor:zoom-in;background:var(--mute-soft)}
+.gi video{display:block;width:100%;max-height:340px;background:#000}
+.gi audio{display:block;width:100%;margin:10px 0 0}
+.gi .cap{padding:7px 9px;font-size:14px}
+.gi .cap small{display:block;color:var(--ink2);font-size:12px}
+.lock{font-size:12px;font-weight:600;color:var(--gold-ink);background:var(--gold-soft);border-radius:6px;padding:1px 6px;display:inline-block;margin-bottom:3px}
+
+/* ---------- detail ---------- */
+.dhead{background:linear-gradient(120deg,var(--g7),var(--g9));color:var(--cream);border-radius:var(--r);padding:15px;margin-bottom:12px;box-shadow:var(--shadow)}
+.dhead .no{font-family:"Playfair Display",Georgia,serif;font-size:26px;font-weight:700;letter-spacing:.5px}
+.dhead .sub{font-size:14px;opacity:.85}
+.dhead .row{margin-top:8px}
+.dues{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.due{background:rgba(255,255,255,.07);border:1px solid rgba(231,177,80,.35);border-radius:12px;padding:8px 10px}
+.due small{display:block;font-size:12px;color:var(--gold);font-weight:600;letter-spacing:.3px}
+.due b{display:block;font-size:15.5px}
+.due .cnt{margin-top:4px}
+.alertbox{border-radius:var(--r);padding:13px 14px;margin-bottom:12px;border:1.5px solid}
+.alertbox.bad{background:var(--bad-soft);border-color:var(--bad)}
+.alertbox.gold{background:var(--gold-soft);border-color:var(--gold)}
+.alertbox.ok{background:var(--ok-soft);border-color:var(--ok)}
+.alertbox h4{margin:0 0 4px;font-size:16px}
+.alertbox p{margin:0 0 10px;white-space:pre-wrap}
+.kv{display:grid;grid-template-columns:42% 1fr;border-top:1px solid var(--line)}
+.kv>div{padding:8px 2px;border-bottom:1px solid var(--line);font-size:15px;min-width:0;overflow-wrap:anywhere}
+.kv>div:nth-child(odd){color:var(--ink2);font-size:14px}
+.kv>div:nth-child(even){font-weight:600}
+.kv .full{grid-column:1/-1;font-weight:500!important;color:var(--ink)!important;white-space:pre-wrap;font-size:15px!important}
+.edited{font-size:11.5px;font-weight:600;color:var(--warn);background:var(--warn-soft);border-radius:6px;padding:0 5px;margin-left:5px;white-space:nowrap}
+.steps{list-style:none;margin:0;padding:0}
+.steps li{display:flex;gap:10px;align-items:center;padding:5px 0;font-size:14.5px;color:var(--ink2);position:relative}
+.steps li .d{width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);flex:none;display:grid;place-items:center;font-size:12px;background:var(--card)}
+.steps li.done{color:var(--ink)}
+.steps li.done .d{background:var(--g7);border-color:var(--g7);color:var(--gold)}
+.steps li.cur{color:var(--ink);font-weight:700}
+.steps li.cur .d{border-color:var(--gold);background:var(--gold);color:var(--g9)}
+.steps li small{margin-left:auto;font-size:12.5px;color:var(--ink2);font-weight:400}
+.money{font-family:var(--num);font-weight:700}
+.pay{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14.5px}
+.tot{display:flex;justify-content:space-between;padding:6px 0;font-size:15.5px}
+.tot.big{font-size:17px;font-weight:700}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.tl .ic{width:30px;height:30px;border-radius:50%;background:var(--mute-soft);display:grid;place-items:center;flex:none;font-size:15px}
+.tl .tx{flex:1;min-width:0;font-size:14.5px;white-space:pre-wrap;overflow-wrap:anywhere}
+.tl .tx small{display:block;color:var(--ink2);font-size:12.5px;margin-top:1px}
+.sigimg{max-width:220px;background:#fff;border:1px solid var(--line);border-radius:10px;display:block;margin-top:6px}
+
+/* ---------- sheet (dialog) ---------- */
+.sheet-bg{position:fixed;inset:0;background:rgba(5,15,10,.55);z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:680px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:6px 16px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -10px 30px rgba(0,0,0,.25);animation:up .18s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+.sheet .grab{width:44px;height:5px;border-radius:9px;background:var(--line2);margin:6px auto 8px}
+.sheet h2{font-size:19px;margin:4px 0 12px;display:flex;align-items:center;gap:8px}
+.sheet h2 button{margin-left:auto}
+.lightbox{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.92);display:grid;place-items:center;padding:12px}
+.lightbox img{max-width:100%;max-height:88vh;border-radius:8px}
+.lightbox p{color:#fff;text-align:center;margin:10px 0 0}
+.lightbox button{position:absolute;top:calc(env(safe-area-inset-top) + 10px);right:12px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:22px;width:44px;height:44px;border-radius:50%}
+.miss-list{margin:0 0 12px;padding:0;list-style:none}
+.miss-list li{padding:9px 12px;border:1px solid var(--bad);background:var(--bad-soft);color:var(--bad);border-radius:10px;margin-bottom:6px;cursor:pointer;font-weight:600}
+.sum{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px 12px;margin-bottom:12px}
+.sum h5{margin:10px 0 2px;font-size:13px;color:var(--gold-ink);letter-spacing:.5px;text-transform:uppercase;font-family:var(--num)}
+.cred{background:var(--g8);color:var(--cream);border-radius:14px;padding:14px;margin:10px 0;font-size:15.5px}
+.cred b{color:var(--gold)}
+
+/* ---------- auth ---------- */
+.auth{max-width:420px;margin:6vh auto 0;padding:0 16px}
+.auth .logo{text-align:center;margin-bottom:18px}
+.auth .logo img{width:220px;max-width:70%}
+.auth .card{padding:18px}
+.err{background:var(--bad-soft);color:var(--bad);border-radius:10px;padding:8px 11px;font-size:14.5px;margin-bottom:10px}
+.ok-msg{background:var(--ok-soft);color:var(--ok);border-radius:10px;padding:8px 11px;font-size:14.5px;margin-bottom:10px}
+.splash{min-height:70vh;display:grid;place-items:center;text-align:center;color:var(--ink2)}
+.splash img{width:90px;opacity:.9;animation:breathe 1.6s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.06);opacity:1}}
+
+/* ---------- team ---------- */
+.urow{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.urow .av{width:38px;height:38px;border-radius:50%;background:var(--g7);color:var(--gold);display:grid;place-items:center;font-weight:700;flex:none}
+.urow .nm{flex:1;min-width:0}
+.urow .nm b{display:block}
+.urow .nm small{color:var(--ink2);font-size:13px}
+.urow.off{opacity:.55}
+
+.toasts{position:fixed;left:0;right:0;bottom:calc(84px + env(safe-area-inset-bottom));z-index:80;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;padding:0 14px}
+.toast{background:var(--g9);color:var(--cream);border-left:4px solid var(--gold);border-radius:12px;padding:10px 14px;font-size:15px;max-width:520px;box-shadow:0 6px 20px rgba(0,0,0,.25);pointer-events:auto;transition:opacity .3s,transform .3s}
+.toast.bad{border-left-color:#ff7a6e}
+.toast.out{opacity:0;transform:translateY(8px)}
+.banner{display:flex;gap:10px;align-items:center;background:var(--gold-soft);border:1px solid var(--gold);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14.5px}
+.banner .btn{flex:none}
+@media (min-width:560px){ .gal{grid-template-columns:repeat(3,1fr)} }
+@media (max-width:360px){ .two{grid-template-columns:1fr} .mbtns .btn{font-size:12.5px} }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top" id="top" hidden>
+    <a class="brand" href="#/"><img src="icons/mark.png" alt=""><div><b>Deeva Orders</b><small>MADE TO ORDER</small></div></a>
+    <span class="sp"></span>
+    <button class="who" id="who" data-act="go" data-to="#/account" aria-label="Account"></button>
+  </header>
+  <div class="net" id="net" hidden>Internet नहीं है — बदलाव phone में save रहेंगे, Internet आते ही sync होंगे.</div>
+  <nav class="tabs" id="tabs" hidden></nav>
+  <main id="view"><div class="splash"><div><img src="icons/mark.png" alt=""><p>Deeva Orders खुल रहा है…</p></div></div></main>
+  <div id="stickbar"></div>
+  <div id="sheet"></div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+</div>
+
+<!--FIREBASE-SDK-->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<!--/FIREBASE-SDK-->
+<script>
+/* Firebase web config of the "Deeva Orders" project (public, safe to commit). */
+window.DO_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+
+/* Firebase adapter: the app talks only to window.DO_BACKEND */
+(function(){
+  if (window.DO_BACKEND || !window.firebase || !window.DO_CONFIG.apiKey) return;
+  const cfg = window.DO_CONFIG;
+  firebase.initializeApp(cfg);
+  const auth = firebase.auth();
+  const fs = firebase.firestore();
+  try { fs.enablePersistence({synchronizeTabs: true}).catch(() => {}); } catch (e) {}
+  const st = firebase.storage();
+  let sec = null;
+  const secondary = () => (sec = sec || firebase.initializeApp(cfg, 'do-secondary'));
+  const toUser = u => u ? {uid: u.uid, email: u.email} : null;
+  const flatten = (obj, pre, out) => {
+    out = out || {};
+    for (const k of Object.keys(obj)) {
+      const v = obj[k], key = pre ? pre + '.' + k : k;
+      if (v && typeof v === 'object' && !Array.isArray(v) && Object.getPrototypeOf(v) === Object.prototype && Object.keys(v).length) flatten(v, key, out);
+      else out[key] = v;
+    }
+    return out;
+  };
+  const q = (col, filters, opts) => {
+    let r = fs.collection(col);
+    (filters || []).forEach(f => { r = r.where(f[0], f[1], f[2]); });
+    if (opts && opts.orderBy) r = r.orderBy(opts.orderBy[0], opts.orderBy[1] || 'asc');
+    if (opts && opts.limit) r = r.limit(opts.limit);
+    return r;
+  };
+  const docs = snap => snap.docs.map(d => ({id: d.id, data: d.data()}));
+  window.DO_BACKEND = {
+    projectId: cfg.projectId,
+    auth: {
+      onChange: cb => auth.onAuthStateChanged(u => cb(toUser(u))),
+      current: () => toUser(auth.currentUser),
+      signIn: (email, pw) => auth.signInWithEmailAndPassword(email, pw).then(c => toUser(c.user)),
+      signUpSelf: (email, pw) => auth.createUserWithEmailAndPassword(email, pw).then(c => toUser(c.user)),
+      signOut: () => auth.signOut(),
+      createUser: async (email, pw) => {
+        const a = secondary().auth();
+        await a.setPersistence(firebase.auth.Auth.Persistence.NONE);
+        const c = await a.createUserWithEmailAndPassword(email, pw);
+        const uid = c.user.uid;
+        await a.signOut();
+        return uid;
+      },
+      changePassword: async (cur, nw) => {
+        const u = auth.currentUser;
+        if (!u) throw {code: 'auth/no-user'};
+        await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, cur));
+        await u.updatePassword(nw);
+      },
+      sendReset: email => auth.sendPasswordResetEmail(email)
+    },
+    storage: {
+      upload: (path, blob, contentType, onProgress) => new Promise((resolve, reject) => {
+        const ref = st.ref(path);
+        const task = ref.put(blob, {contentType: contentType || blob.type || 'application/octet-stream'});
+        task.on('state_changed',
+          s => { if (onProgress && s.totalBytes) onProgress(s.bytesTransferred / s.totalBytes); },
+          reject,
+          () => ref.getDownloadURL().then(url => resolve({url, path}), reject));
+      })
+    },
+    db: {
+      newId: col => fs.collection(col).doc().id,
+      get: path => fs.doc(path).get().then(s => ({exists: s.exists, data: s.exists ? s.data() : null})),
+      set: (path, data) => fs.doc(path).set(data),
+      update: (path, data) => fs.doc(path).update(flatten(data)),
+      batch: ops => {
+        const b = fs.batch();
+        ops.forEach(o => {
+          const r = fs.doc(o.path);
+          if (o.op === 'set') b.set(r, o.data); else if (o.op === 'update') b.update(r, flatten(o.data)); else b.delete(r);
+        });
+        return b.commit();
+      },
+      /* Reads counter doc, writes counter+1 and the docs built from the new number — all in one transaction. */
+      counterTx: (counterPath, build) => fs.runTransaction(async tx => {
+        const cref = fs.doc(counterPath);
+        const s = await tx.get(cref);
+        const n = (s.exists ? (s.data().n || 0) : 0) + 1;
+        tx.set(cref, {n});
+        build(n).forEach(o => tx.set(fs.doc(o.path), o.data));
+        return n;
+      }),
+      watchDoc: (path, cb, err) => fs.doc(path).onSnapshot(s => cb({exists: s.exists, data: s.exists ? s.data() : null}), err),
+      watchQuery: (col, filters, cb, err, opts) => q(col, filters, opts).onSnapshot(snap => {
+        cb(docs(snap), snap.docChanges().map(c => ({type: c.type, id: c.doc.id, pending: c.doc.metadata.hasPendingWrites})), {fromCache: snap.metadata.fromCache});
+      }, err),
+      getQuery: (col, filters, opts) => q(col, filters, opts).get().then(docs)
+    }
+  };
+})();
+</script>
+<script>
+(function(){
+'use strict';
+const B = window.DO_BACKEND;
+const NATIVE = window.DeevaApp || null;
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const pad = n => String(n).padStart(2, '0');
+const dayOf = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const today = () => dayOf(new Date());
+const parseDay = s => { const p = String(s).split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+const addDays = (s, n) => { const d = parseDay(s); d.setDate(d.getDate() + n); return dayOf(d); };
+const diffDays = (a, b) => Math.round((parseDay(a) - parseDay(b)) / 86400000);
+const HMON = ['जन','फ़र','मार्च','अप्रैल','मई','जून','जुलाई','अग','सित','अक्टू','नव','दिस'];
+const fmtDay = s => { if (!s) return ''; const d = parseDay(s); return d.getDate() + ' ' + HMON[d.getMonth()] + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : ''); };
+const fmtTime = ms => { const d = new Date(ms); let h = d.getHours(); const ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return h + ':' + pad(d.getMinutes()) + ' ' + ap; };
+const fmtWhen = ms => { if (!ms) return ''; const s = dayOf(new Date(ms)), t = today(); if (s === t) return 'आज ' + fmtTime(ms); if (s === addDays(t, -1)) return 'कल ' + fmtTime(ms); return fmtDay(s) + ', ' + fmtTime(ms); };
+const num = v => { const n = parseFloat(String(v == null ? '' : v).replace(/[,₹\s]/g, '')); return isFinite(n) ? n : 0; };
+const money = v => '₹' + Math.round(num(v)).toLocaleString('en-IN');
+const money2 = v => '₹' + (Math.round(num(v) * 100) / 100).toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+const initial = s => (Array.from(String(s || '?').trim())[0] || '?').toUpperCase();
+const digits = s => String(s || '').replace(/\D/g, '');
+const phone10 = s => digits(s).slice(-10);
+const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const get = (o, path) => path.split('.').reduce((a, k) => (a == null ? undefined : a[k]), o);
+const setp = (o, path, v) => { const ks = path.split('.'); let x = o; for (let i = 0; i < ks.length - 1; i++) { if (typeof x[ks[i]] !== 'object' || x[ks[i]] === null) x[ks[i]] = {}; x = x[ks[i]]; } x[ks[ks.length - 1]] = v; };
+const clone = o => JSON.parse(JSON.stringify(o == null ? null : o));
+
+/* ---------- business constants ---------- */
+const JTYPES = ['Ring','Pendant','Pendant with chain','Earrings','Necklace','Necklace set','Bracelet','Bangle / Kada','Mangalsutra','Nose pin','Chain','Other'];
+const COLORS = ['Yellow Gold','Rose Gold','White Gold','Two-tone','Tri-colour'];
+const PURITY = ['9KT','14KT','18KT','22KT','Silver','Platinum'];
+const SHAPES = ['Mix','Round','Oval','Pear','Princess','Marquise','Emerald','Cushion','Heart','Baguette'];
+const PAYMODES = ['UPI','Cash','Card','Bank transfer','Cheque','Old gold'];
+const STAGES = [
+  ['new','नया order (factory ने अभी नहीं देखा)'], ['received','Factory को मिला'], ['cad','CAD बन रहा'], ['cad_approval','CAD approval'],
+  ['casting','Casting'], ['filing','Filing / Ghat'], ['setting','Diamond setting'], ['polish','Polish / Rhodium'],
+  ['qc','QC / Hallmark'], ['ready','Dispatch के लिए ready'], ['dispatched','Dispatched']
+];
+const STAGE_SHORT = {new:'नया', received:'Factory को मिला', cad:'CAD', cad_approval:'CAD approval', casting:'Casting', filing:'Filing', setting:'Setting', polish:'Polish', qc:'QC / Hallmark', ready:'Ready', dispatched:'Dispatched'};
+const stageIdx = k => STAGES.findIndex(s => s[0] === k);
+const STATUS = {
+  review: ['Approval बाकी', 'gold'], query: ['Query', 'bad'], factory: ['Factory में', 'ok'],
+  dispatched: ['Dispatched', 'dark'], received: ['Store पर आया', 'ok2'], delivered: ['Delivered', 'mute'], cancelled: ['Cancelled', 'mute']
+};
+const ACTIVE = ['review','query','factory','dispatched','received'];
+const ROLES = {admin: 'Admin', store: 'Store', factory: 'Factory'};
+const TERMS = [
+  'The jewellery will be produced exactly as per the approved reference.',
+  'Minor variations in finishing, weight or handmade detailing may occur.',
+  'Once production starts, the order cannot be cancelled.',
+  'Advance amount paid is non-refundable.',
+  'If gold rate is not booked, final billing will be as per market rate on delivery date.',
+  'If you want to book gold rate then you have to pay at least 50% of estimated value.',
+  'If product is as per the image or reference given by client then product will not be returned.'
+];
+/* Fields that are compared when an order is edited (path, label, where it lives) */
+const EDIT_FIELDS = [
+  ['client.name','Client का नाम','priv'], ['client.phone','Contact No.','priv'], ['client.city','City / Area','priv'],
+  ['spec.jtype','Jewellery type','main'], ['spec.jtypeOther','Type (Other)','main'], ['spec.qty','Qty','main'],
+  ['spec.metalColor','Metal colour','main'], ['spec.purity','Purity','main'], ['spec.size','Size / Length','main'],
+  ['spec.dia1Ct','Dia Ct. 1','main'], ['spec.dia1Shape','Dia 1 shape','main'], ['spec.dia2Ct','Dia Ct. 2','main'], ['spec.dia2Shape','Dia 2 shape','main'],
+  ['spec.gem1','Gemstone 1','main'], ['spec.gem2','Gemstone 2','main'], ['spec.engraving','Engraving','main'], ['spec.design','Design details','main'],
+  ['deliveryDay','Client delivery date','main'], ['priority','Priority','main'],
+  ['price.est','Est. Amount','priv'], ['price.goldRateBooked','Gold rate booked','priv'], ['price.goldRate','Booked gold rate','priv'],
+  ['internalNote','Internal note','priv']
+];
+const LABEL = Object.fromEntries(EDIT_FIELDS.map(f => [f[0], f[1]]));
+
+/* ---------- state ---------- */
+const S = {
+  authUser: null, me: null, users: {}, orders: {}, priv: {}, extra: {}, extraPriv: {}, history: null, histLoading: false,
+  route: {v: 'loading'}, filter: 'all', q: '', firstOrders: true, unsubs: [], privUnsubs: {}, viewUnsubs: [], viewId: null,
+  needSetup: false, settingUp: false, booted: false, micFor: null
+};
+const role = () => (S.me && S.me.role) || '';
+const isAdmin = () => role() === 'admin';
+const isStore = () => role() === 'store';
+const isFactory = () => role() === 'factory';
+const staff = () => isAdmin() || isStore();
+const myName = () => (S.me && S.me.name) || '';
+const getOrder = id => S.orders[id] || S.extra[id] || null;
+const getPriv = id => S.priv[id] || S.extraPriv[id] || null;
+const uname = uid => (S.users[uid] && S.users[uid].name) || '';
+
+/* ---------- writes ---------- */
+async function commit(p){
+  let failed = false;
+  const guarded = p.then(() => 'ok', e => { failed = true; handleWriteErr(e); return 'err'; });
+  const r = await Promise.race([guarded, sleep(3000).then(() => 'queued')]);
+  if (r === 'queued' && !failed) toast('Internet धीमा है. बदलाव phone में save है, Internet आते ही sync होगा.');
+  return r !== 'err';
+}
+const write = (path, data) => commit(B.db.update(path, data));
+const batch = ops => commit(B.db.batch(ops));
+function errText(e){
+  const c = (e && e.code) || '';
+  if (/permission-denied|unauthorized/.test(c)) return 'Permission नहीं है. (Firebase rules ठीक से paste हुए हैं, ये देखें.)';
+  if (/unavailable|failed-precondition|network/.test(c)) return 'Internet नहीं है. Internet चालू करके दोबारा कोशिश करें.';
+  if (/quota|resource-exhausted/.test(c)) return 'Firebase की सीमा पूरी हो गई है.';
+  return 'कुछ गड़बड़ हुई (' + (c || (e && e.message) || 'error') + '). दोबारा कोशिश करें.';
+}
+function handleWriteErr(e){ console.error(e); toast('Save नहीं हुआ — ' + errText(e), 'bad'); }
+function logEntry(type, text, extra){
+  return Object.assign({at: Date.now(), by: S.authUser.uid, name: myName(), role: role(), type, text: text || ''}, extra || {});
+}
+const logKey = () => 'k' + Date.now() + Math.random().toString(36).slice(2, 6);
+function stamp(o){ o.updatedAt = Date.now(); o.updatedBy = S.authUser.uid; return o; }
+
+/* ---------- alerts ---------- */
+let actx = null;
+document.addEventListener('pointerdown', () => {
+  try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); else if (actx.state === 'suspended') actx.resume().catch(() => {}); } catch (e) {}
+}, {passive: true});
+function chime(){
+  try {
+    if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+    if (!actx || actx.state !== 'running') return;
+    const t0 = actx.currentTime;
+    [988, 1319].forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain(), s = t0 + i * 0.13;
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(0.12, s + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.35);
+      o.connect(g); g.connect(actx.destination); o.start(s); o.stop(s + 0.4);
+    });
+  } catch (e) {}
+}
+function systemNotify(title, body){
+  if (NATIVE || !('Notification' in window) || Notification.permission !== 'granted') return;
+  const opts = {body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: 'do-' + Date.now(), lang: 'hi'};
+  const fallback = () => { try { new Notification(title, opts); } catch (e) {} };
+  if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) navigator.serviceWorker.getRegistration().then(r => r ? r.showNotification(title, opts) : fallback()).catch(fallback);
+  else fallback();
+}
+function alertUser(title, body){
+  toast(title + ': ' + body);
+  chime();
+  let bg = document.hidden;
+  try { if (NATIVE && NATIVE.isForeground && !NATIVE.isForeground()) bg = true; } catch (e) {}
+  if (!bg) return;
+  if (NATIVE && NATIVE.notifyUser) { try { NATIVE.notifyUser(title, body); } catch (e) {} }
+  else systemNotify(title, body);
+}
+function toast(msg, kind){
+  const el = document.createElement('div');
+  el.className = 'toast ' + (kind || ''); el.textContent = msg;
+  const box = $('#toasts'); box.appendChild(el);
+  while (box.children.length > 3) box.firstElementChild.remove();
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 320); }, 4800);
+}
+
+/* ---------- render plumbing ---------- */
+let rq = false;
+function render(){ if (rq) return; rq = true; requestAnimationFrame(() => { rq = false; try { doRender(); } catch (e) { console.error(e); } }); }
+function patch(el, html){
+  if (!el || el._h === html) return;
+  const keep = {};
+  el.querySelectorAll('textarea[id],input[id],select[id]').forEach(i => { if (i.type !== 'checkbox' && i.type !== 'radio' && i.type !== 'file') keep[i.id] = i.value; });
+  const act = document.activeElement;
+  const aid = act && el.contains(act) ? act.id : null;
+  let sel = null; if (aid) { try { sel = [act.selectionStart, act.selectionEnd]; } catch (e) {} }
+  const media = {};
+  el.querySelectorAll('audio[id],video[id]').forEach(m => { if (!m.paused) media[m.id] = m; });
+  el.innerHTML = html; el._h = html;
+  for (const id in keep) { const i = el.querySelector('#' + CSS.escape(id)); if (i) i.value = keep[id]; }
+  for (const id in media) { const n = el.querySelector('#' + CSS.escape(id)); if (n) n.replaceWith(media[id]); }
+  if (aid) { const n = el.querySelector('#' + CSS.escape(aid)); if (n) { n.focus({preventScroll: true}); if (sel && sel[0] != null) { try { n.setSelectionRange(sel[0], sel[1]); } catch (e) {} } } }
+}
+function parseRoute(){
+  const h = (location.hash || '#/').replace(/^#/, '');
+  const p = h.split('/').filter(Boolean);
+  if (p[0] === 'o' && p[1]) return {v: 'order', id: p[1]};
+  if (p[0] === 'new') return {v: 'form', mode: 'new'};
+  if (p[0] === 'edit' && p[1]) return {v: 'form', mode: 'edit', id: p[1]};
+  if (p[0] === 'team') return {v: 'team'};
+  if (p[0] === 'account') return {v: 'account'};
+  return {v: 'home'};
+}
+const go = h => { if (location.hash === h) { S.route = parseRoute(); render(); } else location.hash = h; };
+
+function doRender(){
+  const view = $('#view');
+  const logged = !!(S.authUser && S.me);
+  $('#top').hidden = !logged;
+  $('#tabs').hidden = !logged;
+  if (!S.booted) return;
+  if (!S.authUser) {
+    $('#stickbar').innerHTML = '';
+    if (S.needSetup) { if (S.route.v !== 'setup') { S.route = {v: 'setup'}; renderSetup(); } return; }
+    if (S.route.v !== 'login') { S.route = {v: 'login'}; renderLogin(); }
+    return;
+  }
+  if (!S.me) { patch(view, '<div class="splash"><div><img src="icons/mark.png" alt=""><p>Account खुल रहा है…</p></div></div>'); return; }
+  renderTop();
+  const r = S.route;
+  if (r.v !== 'form') closeFormIfOpen();
+  if (r.v === 'order') { watchView(r.id); renderOrder(r.id); }
+  else { watchView(null); }
+  if (r.v === 'home') renderHome();
+  else if (r.v === 'form') renderFormRoute(r);
+  else if (r.v === 'team') { if (!isAdmin()) return go('#/'); renderTeam(); }
+  else if (r.v === 'account') renderAccount();
+  if (r.v !== 'order' && r.v !== 'form') $('#stickbar').innerHTML = '';
+}
+
+/* ---------- top & tabs ---------- */
+function attentionCount(){
+  const r = role(); let n = 0;
+  for (const id in S.orders) {
+    const o = S.orders[id];
+    if (r === 'admin' && (o.status === 'review' || o.stage === 'cad_approval')) n++;
+    else if (r === 'store' && (o.status === 'query' || o.stage === 'cad_approval' || o.status === 'dispatched')) n++;
+    else if (r === 'factory' && o.status === 'factory' && (o.stage === 'new' || o.factoryAck === false)) n++;
+  }
+  return n;
+}
+function renderTop(){
+  patch($('#who'), `<span class="av">${esc(initial(myName()))}</span><span>${esc(myName())}</span><em>${esc(ROLES[role()] || '')}</em>`);
+  const v = S.route.v; const att = attentionCount();
+  const tabs = [['#/', 'Orders' + (att ? `<i>${att}</i>` : ''), v === 'home' || v === 'order']];
+  if (staff()) tabs.push(['#/new', '＋ नया Order', v === 'form' && S.route.mode === 'new']);
+  if (isAdmin()) tabs.push(['#/team', 'Team', v === 'team']);
+  patch($('#tabs'), tabs.map(t => `<a class="tab ${t[2] ? 'on' : ''}" href="${t[0]}">${t[1]}</a>`).join(''));
+}
+
+/* ---------- auth screens ---------- */
+function authShell(inner){ return `<div class="auth"><div class="logo"><img src="icons/wordmark.png" alt="Deeva"></div>${inner}</div>`; }
+function renderSetup(){
+  $('#view').innerHTML = authShell(`<div class="card"><h3>पहली बार setup — Admin account</h3>
+    <p class="muted small" style="margin-top:-4px">ये सिर्फ एक बार होगा. जो पहले setup करेगा वही Admin बनेगा. अपना असली Gmail डालें (password भूलने पर reset link उसी पर आएगा).</p>
+    <div class="err" id="s-err" hidden></div>
+    <form id="setup-form">
+      <div class="fld"><label for="s-name">आपका नाम</label><input class="in" id="s-name" autocomplete="name" required></div>
+      <div class="fld"><label for="s-email">Email (Gmail)</label><input class="in" id="s-email" type="email" autocomplete="email" required></div>
+      <div class="fld"><label for="s-pw">Password (कम से कम 6 अक्षर)</label><input class="in" id="s-pw" type="password" autocomplete="new-password" minlength="6" required></div>
+      <div class="fld"><label for="s-pw2">Password दोबारा</label><input class="in" id="s-pw2" type="password" autocomplete="new-password" minlength="6" required></div>
+      <button class="btn primary big" id="s-submit" type="submit">Admin account बनाएँ</button>
+    </form></div>`);
+}
+function renderLogin(){
+  $('#view').innerHTML = authShell(`<div class="card"><h3>Login</h3>
+    <div class="err" id="l-err" hidden></div><div class="ok-msg" id="l-ok" hidden></div>
+    <form id="login-form">
+      <div class="fld"><label for="l-id">Login ID (या Admin का Email)</label><input class="in" id="l-id" autocapitalize="none" autocomplete="username" required></div>
+      <div class="fld"><label for="l-pw">Password</label><input class="in" id="l-pw" type="password" autocomplete="current-password" required></div>
+      <button class="btn primary big" id="l-submit" type="submit">Login करें</button>
+    </form>
+    <p class="small muted center" style="margin:12px 0 0">Password भूल गए? Admin से नया password बनवाएँ. Admin अपने Email से <button class="btn ghost sm" data-act="reset-pw" type="button">reset link</button> मँगा सकते हैं.</p></div>`);
+}
+function showErr(sel, msg){ const el = $(sel); if (!el) return; el.textContent = msg || ''; el.hidden = !msg; }
+function authErr(e){
+  const c = (e && e.code) || '';
+  if (/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c)) return 'Login ID या password गलत है.';
+  if (/too-many-requests/.test(c)) return 'बहुत बार गलत password. थोड़ी देर बाद कोशिश करें.';
+  if (/email-already-in-use/.test(c)) return 'ये Email पहले से इस्तेमाल हो रहा है.';
+  if (/weak-password/.test(c)) return 'Password कम से कम 6 अक्षर का रखें.';
+  if (/invalid-email/.test(c)) return 'Email सही नहीं है.';
+  if (/network/.test(c)) return 'Internet नहीं है.';
+  return errText(e);
+}
+async function doSetup(){
+  const name = $('#s-name').value.trim(), email = $('#s-email').value.trim(), pw = $('#s-pw').value, pw2 = $('#s-pw2').value;
+  if (!name) return showErr('#s-err', 'नाम डालें.');
+  if (pw !== pw2) return showErr('#s-err', 'दोनों password एक जैसे नहीं हैं.');
+  const btn = $('#s-submit'); btn.disabled = true; showErr('#s-err', '');
+  S.settingUp = true;
+  try {
+    const u = await B.auth.signUpSelf(email, pw);
+    await B.db.batch([
+      {op: 'set', path: 'users/' + u.uid, data: {name, role: 'admin', loginId: email, phone: '', active: true, at: Date.now(), by: u.uid}},
+      {op: 'set', path: 'config/admin', data: {uid: u.uid, at: Date.now()}}
+    ]);
+    S.needSetup = false; S.settingUp = false; S.booted = true;
+    if (!S.authUser) startSession(u);
+    S.route = parseRoute(); render();
+  } catch (e) {
+    S.settingUp = false; btn.disabled = false;
+    showErr('#s-err', authErr(e));
+    try { if (B.auth.current()) await B.auth.signOut(); } catch (x) {}
+  }
+}
+async function doLogin(){
+  const id = $('#l-id').value.trim().toLowerCase(), pw = $('#l-pw').value;
+  const btn = $('#l-submit'); btn.disabled = true; showErr('#l-err', '');
+  try {
+    let email = id;
+    if (!id.includes('@')) {
+      const l = await B.db.get('logins/' + id);
+      if (!l.exists) throw {code: 'auth/invalid-login'};
+      email = l.data.email;
+    }
+    await B.auth.signIn(email, pw);
+  } catch (e) { showErr('#l-err', authErr(e)); }
+  btn.disabled = false;
+}
+async function sendResetLink(){
+  const id = ($('#l-id') && $('#l-id').value.trim()) || '';
+  if (!id.includes('@')) { showErr('#l-err', 'ऊपर Admin का Email लिखें, फिर reset link दबाएँ.'); return; }
+  try { await B.auth.sendReset(id); showErr('#l-err', ''); const ok = $('#l-ok'); ok.textContent = 'Reset link ' + id + ' पर भेज दिया.'; ok.hidden = false; }
+  catch (e) { showErr('#l-err', authErr(e)); }
+}
+
+/* ---------- session & listeners ---------- */
+function stopAll(){
+  S.unsubs.forEach(u => { try { u(); } catch (e) {} }); S.unsubs = [];
+  Object.values(S.privUnsubs).forEach(u => { try { u(); } catch (e) {} }); S.privUnsubs = {};
+  S.viewUnsubs.forEach(u => { try { u(); } catch (e) {} }); S.viewUnsubs = []; S.viewId = null;
+  Object.assign(S, {me: null, users: {}, orders: {}, priv: {}, extra: {}, extraPriv: {}, history: null, firstOrders: true});
+}
+let dataStarted = false;
+function startSession(u){
+  S.authUser = u;
+  const unsubMe = B.db.watchDoc('users/' + u.uid, snap => {
+    if (!snap.exists || !snap.data.active) {
+      if (S.settingUp) return;
+      toast(snap.exists ? (snap.data.replacedBy ? 'आपका password बदल दिया गया है — नए password से login करें.' : 'आपका account बंद कर दिया गया है.') : 'ये account इस app में नहीं है.', 'bad');
+      logout();
+      return;
+    }
+    const first = !S.me;
+    S.me = snap.data;
+    if (first) startData();
+    render();
+  }, e => { console.error(e); toast(errText(e), 'bad'); });
+  S.unsubs.push(unsubMe);
+}
+function startData(){
+  S.unsubs.push(B.db.watchQuery('users', [], list => { S.users = Object.fromEntries(list.map(x => [x.id, x.data])); render(); }, e => console.error(e)));
+  const onErr = e => { console.error(e); toast('Orders load नहीं हुए — ' + errText(e), 'bad'); };
+  if (isFactory()) {
+    /* two-field query; if Firebase still builds its index, fall back to one field + filter here */
+    let cur = null;
+    const subscribe = (filters, keep) => {
+      cur = B.db.watchQuery('orders', filters, list => onOrders(keep ? list.filter(keep) : list), e => {
+        if (filters.length > 1 && /failed-precondition/.test((e && e.code) || '')) subscribe([['factoryVisible', '==', true]], x => ['factory', 'dispatched'].includes(x.data.status));
+        else onErr(e);
+      });
+    };
+    subscribe([['factoryVisible', '==', true], ['status', 'in', ['factory', 'dispatched']]]);
+    S.unsubs.push(() => { try { if (cur) cur(); } catch (e) {} });
+  } else {
+    S.unsubs.push(B.db.watchQuery('orders', [['status', 'in', ACTIVE]], onOrders, onErr));
+  }
+}
+function onOrders(list){
+  const next = {}; list.forEach(x => { next[x.id] = x.data; });
+  if (!S.firstOrders) detectEvents(S.orders, next);
+  /* an order that just left the live list (delivered / cancelled) stays on screen until its own watch takes over */
+  const v = S.viewId;
+  if (v && S.orders[v] && !next[v]) { S.extra[v] = S.orders[v]; if (S.priv[v]) S.extraPriv[v] = S.priv[v]; }
+  S.orders = next; S.firstOrders = false;
+  syncPriv(); render();
+}
+function syncPriv(){
+  if (!staff()) return;
+  for (const id in S.orders) {
+    if (S.privUnsubs[id]) continue;
+    S.privUnsubs[id] = B.db.watchDoc('orders/' + id + '/private/info', s => { S.priv[id] = s.exists ? s.data : null; render(); }, e => console.error(e));
+  }
+  for (const id in S.privUnsubs) {
+    if (!S.orders[id]) { try { S.privUnsubs[id](); } catch (e) {} delete S.privUnsubs[id]; delete S.priv[id]; }
+  }
+}
+function watchView(id){
+  if (S.viewId !== id) { S.viewUnsubs.forEach(u => { try { u(); } catch (e) {} }); S.viewUnsubs = []; S.viewId = id; }
+  if (!id || S.orders[id] || S.viewUnsubs.length) return;
+  S.viewUnsubs.push(B.db.watchDoc('orders/' + id, s => { if (s.exists) S.extra[id] = s.data; else S.extra[id] = {missing: true}; render(); }, e => { S.extra[id] = {missing: true, err: errText(e)}; render(); }));
+  if (staff()) S.viewUnsubs.push(B.db.watchDoc('orders/' + id + '/private/info', s => { S.extraPriv[id] = s.exists ? s.data : null; render(); }, () => {}));
+}
+async function logout(){
+  closeSheet(); $('#toasts').innerHTML = '';
+  try { localStorage.removeItem('do.lastRoute'); } catch (e) {}
+  stopAll(); S.authUser = null;
+  try { await B.auth.signOut(); } catch (e) {}
+  location.hash = '#/';
+  render();
+}
+function detectEvents(prev, next){
+  const r = role(), me = S.authUser.uid, evs = [];
+  for (const id in next) {
+    const n = next[id], o = prev[id];
+    if (n.updatedBy === me) continue;
+    if (!o) {
+      if (r === 'admin' && n.status === 'review') evs.push(['नया Order', n.no + ' — ' + itemLine(n)]);
+      if (r === 'factory') evs.push(['नया Order आया', n.no + ' — ' + itemLine(n)]);
+      continue;
+    }
+    if (o.status !== n.status) {
+      if (n.status === 'query' && r === 'store') evs.push(['Query आई', n.no + ': ' + ((n.query && n.query.text) || '')]);
+      if (n.status === 'review' && o.status === 'query' && r === 'admin') evs.push(['Query का जवाब आया', n.no]);
+      if (n.status === 'factory' && o.status !== 'factory' && r === 'store') evs.push(['Approve हो गया', n.no + ' factory को चला गया']);
+      if (n.status === 'dispatched' && r !== 'factory') evs.push(['Dispatched', n.no + ' factory से निकल गया']);
+      continue;
+    }
+    if (o.stage !== n.stage && n.stage === 'cad_approval' && r !== 'factory') evs.push(['CAD approval चाहिए', n.no]);
+    if (r === 'factory' && o.factoryAck !== false && n.factoryAck === false) evs.push(['Order में बदलाव', n.no + ' — details देखें']);
+    if (r === 'factory' && o.stage === 'cad_approval' && n.stage !== o.stage) evs.push([n.stage === 'cad' ? 'CAD में बदलाव चाहिए' : 'CAD OK हो गया', n.no]);
+  }
+  evs.slice(0, 3).forEach(e => alertUser(e[0], e[1]));
+}
+
+/* ---------- order helpers ---------- */
+function jtypeOf(s){ s = s || {}; return s.jtype === 'Other' ? (s.jtypeOther || 'Other') : (s.jtype || ''); }
+function itemLine(o){
+  const s = (o && o.spec) || {};
+  const parts = [jtypeOf(s), [s.purity, s.metalColor].filter(Boolean).join(' ')];
+  if (s.dia1Ct && s.dia1Ct !== 'NA') parts.push('Dia ' + s.dia1Ct + 'ct' + (s.dia1Shape ? ' ' + s.dia1Shape : ''));
+  if (s.size && s.size !== 'NA') parts.push(s.size);
+  return parts.filter(Boolean).join(' · ');
+}
+function dueChip(day, doneAt){
+  if (!day) return '';
+  if (doneAt) {
+    const late = diffDays(dayOf(new Date(doneAt)), day);
+    return late > 0 ? `<span class="cnt bad">${late} दिन late</span>` : `<span class="cnt ok">समय पर ✓</span>`;
+  }
+  const d = diffDays(day, today());
+  if (d < 0) return `<span class="cnt bad"><b>${-d}</b> दिन late</span>`;
+  if (d === 0) return `<span class="cnt bad">आज due</span>`;
+  if (d <= 2) return `<span class="cnt warn"><b>${d}</b> दिन बाकी</span>`;
+  if (d <= 5) return `<span class="cnt gold"><b>${d}</b> दिन बाकी</span>`;
+  return `<span class="cnt ok"><b>${d}</b> दिन बाकी</span>`;
+}
+function dispatchedAt(o){ return o.dispatch && o.dispatch.at; }
+function isLate(o){
+  const day = isFactory() ? o.factoryDue : (o.status === 'factory' ? (o.factoryDue || o.deliveryDay) : o.deliveryDay);
+  if (!day) return false;
+  if (['dispatched','received','delivered','cancelled'].includes(o.status)) return false;
+  return diffDays(day, today()) < 0;
+}
+function stagePct(o){
+  if (['dispatched','received','delivered'].includes(o.status)) return 100;
+  if (o.status !== 'factory') return 0;
+  const i = Math.max(0, stageIdx(o.stage));
+  return Math.round(i / (STAGES.length - 1) * 100);
+}
+function statusPill(o){ const s = STATUS[o.status] || [o.status, 'mute']; return `<span class="pill ${s[1]}">${esc(s[0])}</span>`; }
+function mediaList(map){ return Object.entries(map || {}).map(([id, m]) => Object.assign({id}, m)).filter(m => !m.deleted && m.url).sort((a, b) => (a.at || 0) - (b.at || 0)); }
+function paidTotal(p){ return Object.values((p && p.payments) || {}).filter(x => !x.deleted).reduce((a, x) => a + num(x.amount), 0); }
+function waLink(phone, text){ const p = phone10(phone); return 'https://wa.me/' + (p ? '91' + p : '') + '?text=' + encodeURIComponent(text); }
+function appLink(id){ return location.origin + location.pathname + '#/o/' + id; }
+function usersWith(r){ return Object.entries(S.users).filter(([, u]) => u.active && u.role === r).map(([uid, u]) => Object.assign({uid}, u)); }
+
+/* ---------- home ---------- */
+function homeFilters(){
+  if (isFactory()) return [
+    ['all', 'सभी', () => true],
+    ['new', 'नए / बदलाव', o => o.status === 'factory' && (o.stage === 'new' || o.factoryAck === false)],
+    ['work', 'काम चल रहा', o => o.status === 'factory' && o.stage !== 'new'],
+    ['cad', 'CAD approval', o => o.stage === 'cad_approval'],
+    ['late', 'Late', o => isLate(o)],
+    ['disp', 'Dispatched', o => o.status === 'dispatched']
+  ];
+  return [
+    ['all', 'सभी', () => true],
+    ['review', 'Approval बाकी', o => o.status === 'review'],
+    ['query', 'Query', o => o.status === 'query'],
+    ['factory', 'Factory में', o => o.status === 'factory'],
+    ['cad', 'CAD approval', o => o.stage === 'cad_approval' && o.status === 'factory'],
+    ['late', 'Late', o => isLate(o)],
+    ['disp', 'Dispatched', o => o.status === 'dispatched' || o.status === 'received']
+  ];
+}
+function needsMe(o){
+  const r = role();
+  if (r === 'admin') return o.status === 'review' || (o.status === 'factory' && o.stage === 'cad_approval');
+  if (r === 'store') return o.status === 'query' || (o.status === 'factory' && o.stage === 'cad_approval') || o.status === 'dispatched';
+  return o.status === 'factory' && (o.stage === 'new' || o.factoryAck === false);
+}
+function sortKey(o){
+  const day = isFactory() ? o.factoryDue : (o.status === 'factory' ? (o.factoryDue || o.deliveryDay) : o.deliveryDay);
+  return (needsMe(o) ? '0' : '1') + (day || '9999');
+}
+function orderCard(id, o, p){
+  const name = p && p.client ? p.client.name : '';
+  let stage = '';
+  if (o.status === 'factory') stage = `<span class="oc-stage"><span class="bar"><i style="width:${stagePct(o)}%"></i></span>${esc(STAGE_SHORT[o.stage] || '')}</span>`;
+  else if (o.status === 'query') stage = `<span class="oc-stage">❓ ${esc((o.query && o.query.text || '').slice(0, 40))}</span>`;
+  else if (o.status === 'review') stage = `<span class="oc-stage">Approval का इंतज़ार</span>`;
+  else if (o.status === 'dispatched') stage = `<span class="oc-stage">🚚 ${esc(fmtWhen(dispatchedAt(o)))}</span>`;
+  else stage = `<span class="oc-stage">${esc(fmtWhen(o.updatedAt))}</span>`;
+  const day = isFactory() ? o.factoryDue : (o.status === 'factory' ? (o.factoryDue || o.deliveryDay) : o.deliveryDay);
+  const done = ['dispatched','received','delivered'].includes(o.status) ? (isFactory() ? dispatchedAt(o) : (o.delivered && o.delivered.at) || null) : null;
+  const flag = isFactory() && o.factoryAck === false && o.stage !== 'new' ? '<span class="pill warn">बदलाव</span>' : '';
+  const label = isFactory() ? 'Factory due' : (o.status === 'factory' ? 'Factory due' : 'Delivery');
+  return `<a class="ocard ${needsMe(o) ? 'hot' : ''}" href="#/o/${esc(id)}">
+    <div class="oc-top"><span class="ono">${esc(o.no)}</span>${o.priority === 'urgent' ? '<span class="pill bad">Urgent</span>' : ''}${flag}${statusPill(o)}</div>
+    ${name ? `<div class="oc-name">${esc(name)}</div>` : ''}
+    <div class="oc-item">${esc(itemLine(o))}</div>
+    <div class="oc-foot">${stage}${day && o.status !== 'cancelled' ? `<span class="small muted">${label} ${esc(fmtDay(day))}</span>${o.status === 'delivered' ? '' : dueChip(day, done)}` : ''}</div>
+  </a>`;
+}
+function renderHome(){
+  const fl = homeFilters();
+  if (!fl.some(f => f[0] === S.filter)) S.filter = 'all';
+  const all = Object.entries(S.orders);
+  const q = S.q.trim().toLowerCase();
+  const match = (id, o) => {
+    if (!q) return true;
+    const p = getPriv(id) || {};
+    const hay = [o.no, itemLine(o), p.client && p.client.name, p.client && p.client.phone].join(' ').toLowerCase();
+    return hay.includes(q);
+  };
+  let h = '';
+  if (!NATIVE && 'Notification' in window && Notification.permission === 'default' && !notifLater()) {
+    h += `<div class="banner"><span class="grow">🔔 नए order और updates की आवाज़/notification के लिए</span><button class="btn sm primary" data-act="notif-on">चालू करें</button><button class="btn sm ghost" data-act="notif-later">बाद में</button></div>`;
+  }
+  if (staff()) h += `<a class="btn big primary" href="#/new" style="margin-bottom:12px">＋ नया Order बनाएँ</a>`;
+  h += `<div class="filters">` + fl.map(f => {
+    const c = all.filter(([, o]) => f[2](o)).length;
+    const alert = (f[0] === 'late' || f[0] === 'query' || f[0] === 'review' || f[0] === 'new' || f[0] === 'cad') && c > 0;
+    return `<button class="fchip ${S.filter === f[0] ? 'on' : ''} ${alert ? 'alert' : ''}" data-act="filter" data-v="${f[0]}">${esc(f[1])}<b>${c}</b></button>`;
+  }).join('') + `</div>`;
+  h += `<input class="search" id="q" type="search" placeholder="${staff() ? 'Order no., client का नाम या phone से खोजें' : 'Order no. या item से खोजें'}" value="${esc(S.q)}">`;
+  const f = fl.find(x => x[0] === S.filter);
+  const list = all.filter(([id, o]) => f[2](o) && match(id, o)).sort((a, b) => sortKey(a[1]) < sortKey(b[1]) ? -1 : 1);
+  if (S.firstOrders) h += `<div class="empty">Orders load हो रहे हैं…</div>`;
+  else if (!list.length) h += `<div class="empty"><b>${all.length ? 'इस filter में कोई order नहीं' : 'अभी कोई चालू order नहीं'}</b>${staff() && !all.length ? 'ऊपर "नया Order बनाएँ" दबाएँ.' : ''}</div>`;
+  else h += list.map(([id, o]) => orderCard(id, o, getPriv(id))).join('');
+  h += `<div style="margin-top:18px">`;
+  if (!S.history) h += `<button class="btn big" data-act="hist-load" ${S.histLoading ? 'disabled' : ''}>${S.histLoading ? 'Load हो रहा है…' : 'पुराने Orders देखें (' + (isFactory() ? 'Delivered' : 'Delivered / Cancelled') + ')'}</button>`;
+  else {
+    const hl = S.history.filter(x => match(x.id, x.data));
+    h += `<div class="view-title" style="font-size:18px">पुराने Orders (${hl.length})</div>` + (hl.length ? hl.map(x => orderCard(x.id, x.data, getPriv(x.id) || x.priv)).join('') : '<div class="empty">कोई पुराना order नहीं.</div>');
+  }
+  h += `</div>`;
+  patch($('#view'), h);
+}
+async function loadHistory(){
+  S.histLoading = true; render();
+  try {
+    const filters = isFactory() ? [['factoryVisible', '==', true], ['status', 'in', ['received', 'delivered', 'cancelled']]] : [['status', 'in', ['delivered', 'cancelled']]];
+    let list;
+    try { list = await B.db.getQuery('orders', filters); }
+    catch (e) {
+      if (!isFactory() || !/failed-precondition/.test((e && e.code) || '')) throw e;
+      list = (await B.db.getQuery('orders', [['factoryVisible', '==', true]])).filter(x => ['received', 'delivered', 'cancelled'].includes(x.data.status));
+    }
+    list.sort((a, b) => (b.data.updatedAt || 0) - (a.data.updatedAt || 0));
+    if (staff()) {
+      await Promise.all(list.slice(0, 200).map(async x => { try { const p = await B.db.get('orders/' + x.id + '/private/info'); x.priv = p.data; S.extraPriv[x.id] = p.data; } catch (e) {} }));
+    }
+    S.history = list;
+  } catch (e) { toast(errText(e), 'bad'); }
+  S.histLoading = false; render();
+}
+
+/* ---------- order detail ---------- */
+function kvRow(label, val, editedKey, o){
+  if (val == null || val === '') return '';
+  const at = o && o.edited && o.edited[editedKey.replace(/\./g, '_')];
+  const ed = at && !(isFactory() && o.approvedAt && at < o.approvedAt) ? `<span class="edited">✏️ बदला</span>` : '';
+  return `<div>${esc(label)}</div><div>${esc(val)}${ed}</div>`;
+}
+function specBlock(o){
+  const s = o.spec || {};
+  const dia = (ct, sh) => ct ? (ct === 'NA' ? 'NA' : ct + ' ct' + (sh ? ' (' + sh + ')' : '')) : '';
+  let h = `<div class="kv">`;
+  h += kvRow('Jewellery type', jtypeOf(s), 'spec.jtype', o);
+  h += kvRow('Qty', s.qty && s.qty !== '1' ? s.qty : '', 'spec.qty', o);
+  h += kvRow('Metal colour', s.metalColor, 'spec.metalColor', o);
+  h += kvRow('Purity', s.purity, 'spec.purity', o);
+  h += kvRow('Size / Length', s.size, 'spec.size', o);
+  h += kvRow('Dia Ct. 1', dia(s.dia1Ct, s.dia1Shape), 'spec.dia1Ct', o);
+  h += kvRow('Dia Ct. 2', dia(s.dia2Ct, s.dia2Shape), 'spec.dia2Ct', o);
+  h += kvRow('Gemstone 1', s.gem1, 'spec.gem1', o);
+  h += kvRow('Gemstone 2', s.gem2, 'spec.gem2', o);
+  h += kvRow('Engraving', s.engraving, 'spec.engraving', o);
+  const dEd = o.edited && o.edited.spec_design && !(isFactory() && o.approvedAt && o.edited.spec_design < o.approvedAt);
+  if (s.design) h += `<div class="full"><span class="lbl" style="margin:0 0 3px">Design details ${dEd ? '<span class="edited">✏️ बदला</span>' : ''}</span>${esc(s.design)}</div>`;
+  if (o.factoryNote) h += `<div class="full"><span class="lbl" style="margin:0 0 3px">Factory के लिए note (Approve करते समय)</span>${esc(o.factoryNote)}</div>`;
+  return h + `</div>`;
+}
+function galleryHtml(items, internal){
+  if (!items.length) return '';
+  return `<div class="gal">` + items.map(m => {
+    const cap = `<div class="cap">${internal ? '<span class="lock">🔒 सिर्फ store/admin</span><br>' : ''}${esc(m.desc || '')}<small>${esc(m.byName || '')} · ${esc(fmtWhen(m.at))}${m.stage ? ' · ' + esc(STAGE_SHORT[m.stage] || m.stage) : ''}</small></div>`;
+    if (m.kind === 'image') return `<div class="gi"><img src="${esc(m.url)}" alt="" loading="lazy" data-act="zoom" data-src="${esc(m.url)}" data-cap="${esc(m.desc || '')}">${cap}</div>`;
+    if (m.kind === 'video') return `<div class="gi wide"><video id="v-${esc(m.id)}" src="${esc(m.url)}" controls playsinline preload="metadata"></video>${cap}</div>`;
+    return `<div class="gi wide" style="padding:0 9px"><audio id="a-${esc(m.id)}" src="${esc(m.url)}" controls preload="none"></audio>${cap.replace('class="cap"', 'class="cap" style="padding:6px 0 8px"')}</div>`;
+  }).join('') + `</div>`;
+}
+function stepsHtml(o){
+  const cur = o.status === 'factory' ? stageIdx(o.stage) : (['dispatched','received','delivered'].includes(o.status) ? STAGES.length - 1 : -1);
+  return `<ul class="steps">` + STAGES.map((s, i) => {
+    const at = o.stageAt && o.stageAt[s[0]];
+    const cls = i < cur ? 'done' : (i === cur ? (s[0] === 'dispatched' ? 'done' : 'cur') : '');
+    return `<li class="${cls}"><span class="d">${i < cur || (i === cur && s[0] === 'dispatched') ? '✓' : (i === cur ? '●' : '')}</span>${esc(s[1])}${at && i <= cur ? `<small>${esc(fmtWhen(at))}</small>` : ''}</li>`;
+  }).join('') + `</ul>`;
+}
+const LOGICON = {created:'📝', edited:'✏️', query:'❓', reply:'💬', approved:'✅', stage:'🔧', note:'🗒️', cad_ok:'👍', cad_change:'↩️', factory_seen:'👀', dispatched:'🚚', received:'🏬', delivered:'🎁', cancelled:'✖️', reopened:'↺', payment:'💰', price:'₹', media:'📎'};
+function timelineHtml(o, p){
+  let items = Object.values(o.log || {}).concat(Object.values((p && p.log) || {}).map(x => Object.assign({priv: true}, x)));
+  if (isFactory()) items = items.filter(x => !['query','reply','created','price','payment'].includes(x.type) && (!o.approvedAt || x.at >= o.approvedAt));
+  items.sort((a, b) => (b.at || 0) - (a.at || 0));
+  if (!items.length) return '<p class="muted small">अभी कुछ नहीं.</p>';
+  return `<ul class="tl">` + items.map(x => `<li><span class="ic">${LOGICON[x.type] || '•'}</span><div class="tx">${x.priv ? '<span class="lock">🔒</span> ' : ''}${esc(x.text)}<small>${esc(x.name || '')}${x.role ? ' (' + esc(ROLES[x.role] || x.role) + ')' : ''} · ${esc(fmtWhen(x.at))}</small></div></li>`).join('') + `</ul>`;
+}
+function canEdit(o){ return (isAdmin() && !['delivered','cancelled'].includes(o.status)) || (isStore() && ['review','query'].includes(o.status)); }
+function renderOrder(id){
+  const o = getOrder(id);
+  const view = $('#view');
+  if (!o) { patch(view, '<div class="empty">Order load हो रहा है…</div>'); $('#stickbar').innerHTML = ''; return; }
+  if (o.missing) { patch(view, `<div class="empty"><b>Order नहीं मिला</b>${esc(o.err || 'ये order आपको नहीं दिखता या हटा दिया गया है.')}<br><br><a class="btn" href="#/">← Orders</a></div>`); $('#stickbar').innerHTML = ''; return; }
+  const p = getPriv(id);
+  const r = role();
+  let h = `<a class="btn ghost sm" href="#/" style="margin:-4px 0 6px -6px">← सभी Orders</a>`;
+  /* header */
+  h += `<div class="dhead"><div class="row" style="margin:0"><span class="no">${esc(o.no)}</span><span class="grow"></span>${o.priority === 'urgent' ? '<span class="pill bad">Urgent</span>' : ''}${statusPill(o)}</div>
+    <div class="sub">${esc(itemLine(o))}</div>
+    <div class="sub">Order ${esc(fmtDay(o.orderDay))} · ${esc(o.createdByName || '')}</div>`;
+  const dues = [];
+  if (!isFactory() && o.deliveryDay) dues.push(['Client delivery', o.deliveryDay, (o.delivered && o.delivered.at) || null]);
+  if (o.factoryDue) dues.push(['Factory due (dispatch)', o.factoryDue, dispatchedAt(o) || null]);
+  if (dues.length) h += `<div class="dues">` + dues.map(d => `<div class="due"><small>${esc(d[0])}</small><b>${esc(fmtDay(d[1]))}</b>${o.status === 'cancelled' ? '' : dueChip(d[1], d[2])}</div>`).join('') + `</div>`;
+  h += `</div>`;
+
+  /* alert boxes */
+  if (o.status === 'cancelled') h += `<div class="alertbox bad"><h4>Order cancel हुआ</h4><p>${esc((o.cancel && o.cancel.reason) || '')}</p>${isAdmin() ? '<button class="btn sm" data-act="reopen">वापस खोलें</button>' : ''}</div>`;
+  if (o.status === 'query') {
+    h += `<div class="alertbox bad"><h4>❓ Query — ${esc((o.query && o.query.by) || '')}</h4><p>${esc((o.query && o.query.text) || '')}</p>`;
+    if (staff()) h += `<div class="btns"><button class="btn primary" data-act="reply-open">जवाब दें</button>${canEdit(o) ? `<a class="btn" href="#/edit/${esc(id)}">Details बदलें</a>` : ''}</div>`;
+    h += `</div>`;
+  }
+  if (o.status === 'review') {
+    if (isAdmin()) h += `<div class="alertbox gold"><h4>Approval बाकी</h4><p>पूरी details देखें. सही है तो Approve करें — order factory को चला जाएगा. कुछ कमी है तो Query भेजें.</p><div class="btns"><button class="btn primary" data-act="approve-open">✅ Approve → Factory</button><button class="btn" data-act="query-open">❓ Query भेजें</button></div></div>`;
+    else if (isStore()) h += `<div class="alertbox gold"><h4>Approval का इंतज़ार</h4><p>Darshana / Admin के approve करते ही order factory को चला जाएगा. तब तक details बदल सकते हैं.</p><div class="btns">${pingBtns(id, o, 'admin')}</div></div>`;
+  }
+  if (o.status === 'factory' && o.stage === 'cad_approval') {
+    if (staff()) h += `<div class="alertbox gold"><h4>CAD approval चाहिए</h4><p>Factory ने CAD भेजा है (नीचे photos देखें). Client से पूछकर OK करें या बदलाव लिखें.</p><div class="btns"><button class="btn primary" data-act="cad-ok">👍 CAD OK</button><button class="btn" data-act="cad-change-open">↩️ बदलाव चाहिए</button></div></div>`;
+    else h += `<div class="alertbox gold"><h4>CAD approval का इंतज़ार</h4><p>Store / Admin से CAD OK होने के बाद casting शुरू करें.</p></div>`;
+  }
+  if (isFactory() && o.status === 'factory' && o.stage === 'new') h += `<div class="alertbox ok"><h4>नया order</h4><p>Details पढ़ लें, photos/video/voice note देख-सुन लें, फिर "Order मिला" दबाएँ.</p><button class="btn primary big" data-act="stage-quick" data-k="received">✓ Order मिला — काम शुरू</button></div>`;
+  if (isFactory() && o.factoryAck === false && o.stage !== 'new' && o.status === 'factory') {
+    const ch = Object.values(o.log || {}).filter(x => x.type === 'edited' && x.at > (o.factoryAckAt || 0)).sort((a, b) => b.at - a.at);
+    h += `<div class="alertbox bad"><h4>⚠️ Order में बदलाव हुआ है</h4><p>${esc(ch.map(x => x.text).join('\n') || 'Details देखें.')}</p><button class="btn primary" data-act="seen">👀 देख लिया</button></div>`;
+  }
+  if (staff() && o.status === 'dispatched') h += `<div class="alertbox ok"><h4>🚚 Factory से निकल गया</h4><p>${esc(dispatchText(o))}</p><button class="btn primary" data-act="recv">🏬 Store पर मिल गया</button></div>`;
+  if (staff() && o.status === 'received') h += `<div class="alertbox ok"><h4>Store पर आ गया</h4><p>Client को देने के बाद Delivered करें.</p><button class="btn primary" data-act="deliv-open">🎁 Client को दे दिया</button></div>`;
+  if (isFactory() && o.status === 'dispatched') h += `<div class="alertbox ok"><h4>🚚 Dispatched</h4><p>${esc(dispatchText(o))}</p></div>`;
+
+  /* client */
+  if (staff() && p) {
+    const c = p.client || {};
+    h += `<div class="card"><h3>👤 Client</h3><div class="kv">${kvRow('नाम', c.name, 'client.name')}${kvRow('Contact No.', c.phone, 'client.phone')}${kvRow('City / Area', c.city, 'client.city')}</div>
+      <div class="btns" style="margin-top:10px">${c.phone ? `<a class="btn sm" href="tel:+91${esc(phone10(c.phone))}">📞 Call</a><a class="btn sm wa" href="${esc(waLink(c.phone, clientMsg(o, p)))}" target="_blank" rel="noopener">WhatsApp पर order confirmation</a>` : ''}</div>
+      ${p.ack ? `<p class="small muted" style="margin:10px 0 0">${p.ack.remote ? 'Phone/WhatsApp order — शर्तें client को बताईं' : 'Client ने शर्तें मानीं'} · ${esc(fmtWhen(p.ack.at))}</p>${p.ack.signUrl ? `<img class="sigimg" src="${esc(p.ack.signUrl)}" alt="Client signature">` : ''}` : ''}</div>`;
+  }
+  /* product */
+  h += `<div class="card"><h3>💎 Product details</h3>${specBlock(o)}</div>`;
+  /* media */
+  const fm = mediaList(o.media), im = staff() && p ? mediaList(p.media) : [];
+  h += `<div class="card"><h3>📷 Photos · Video · Voice note <span class="tag muted small">${fm.length + im.length}</span></h3>${fm.length || im.length ? galleryHtml(fm, false) + (im.length ? '<div style="height:10px"></div>' + galleryHtml(im, true) : '') : '<p class="muted small">कोई photo/video नहीं.</p>'}
+    ${o.status !== 'cancelled' && o.status !== 'delivered' ? `<button class="btn sm" style="margin-top:10px" data-act="note-open">＋ Photo / Video / Voice note / Note जोड़ें</button>` : ''}</div>`;
+  /* tracker */
+  if (o.status !== 'review' && o.status !== 'query' && o.status !== 'cancelled') h += `<div class="card"><h3>🔧 Factory tracker</h3>${stepsHtml(o)}${o.cadRequired ? `<p class="small muted" style="margin:8px 0 0">CAD approval ज़रूरी: ${o.cad && o.cad.ok ? '✓ OK (' + esc(o.cad.by || '') + ')' : 'अभी बाकी'}</p>` : ''}</div>`;
+  /* price */
+  if (staff() && p) h += priceBlock(o, p);
+  if (staff() && p && p.internalNote) h += `<div class="card"><h3>🔒 Internal note <span class="tag muted small">सिर्फ store/admin</span></h3><p style="margin:0;white-space:pre-wrap">${esc(p.internalNote)}</p></div>`;
+  /* timeline */
+  h += `<div class="card"><h3>🕑 पूरी history</h3>${timelineHtml(o, staff() ? p : null)}</div>`;
+  if (isAdmin() && ACTIVE.includes(o.status)) h += `<div class="center"><button class="btn ghost sm danger" data-act="cancel-open">Order cancel करें</button></div>`;
+  patch(view, h);
+  renderOrderBar(id, o, p);
+}
+function dispatchText(o){
+  const d = o.dispatch || {};
+  return [fmtWhen(d.at), d.mode, d.ref ? 'Ref: ' + d.ref : '', d.note, d.byName ? '— ' + d.byName : ''].filter(Boolean).join(' · ');
+}
+function priceBlock(o, p){
+  const pr = p.price || {};
+  const pays = Object.entries(p.payments || {}).map(([k, x]) => Object.assign({k}, x)).filter(x => !x.deleted).sort((a, b) => (a.at || 0) - (b.at || 0));
+  const total = num(pr.final) || num(pr.est);
+  const paid = paidTotal(p);
+  let h = `<div class="card"><h3>💰 Price & Payment <span class="tag muted small">🔒 factory को नहीं दिखता</span></h3><div class="kv">`;
+  h += kvRow('Est. Amount', pr.est ? money(pr.est) : '', 'price.est');
+  if (pr.final) h += kvRow('Final Amount', money(pr.final), 'price.final');
+  h += kvRow('Gold rate booked', pr.goldRateBooked === 'yes' ? 'Yes' + (pr.goldRate ? ' @ ' + money(pr.goldRate) + '/g' : '') : (pr.goldRateBooked === 'no' ? 'No' : ''), 'price.goldRateBooked');
+  h += `</div>`;
+  const c = pr.calc;
+  if (c && c.final) {
+    h += `<details style="margin-top:8px"><summary class="small" style="cursor:pointer;font-weight:600">हिसाब देखें</summary><div class="calc-out">${calcLines(c).map(l => `<div class="${l[2] || ''}"><span>${esc(l[0])}</span><span>${esc(l[1])}</span></div>`).join('')}</div></details>`;
+  }
+  h += `<div style="margin-top:10px">` + (pays.length ? pays.map(x => `<div class="pay"><span>${esc(fmtDay(x.day))} · ${esc(x.mode || '')}${x.note ? ' · ' + esc(x.note) : ''}<br><small class="muted">${esc(x.name || '')}</small></span><span class="money">${money(x.amount)}</span></div>`).join('') : '<p class="muted small">अभी कोई payment नहीं.</p>') + `</div>`;
+  h += `<div class="tot"><span>कुल मिला</span><span class="money">${money(paid)}</span></div>`;
+  if (total) h += `<div class="tot big"><span>बाकी</span><span class="money" style="color:${total - paid > 0 ? 'var(--bad)' : 'var(--ok)'}">${money(Math.max(0, total - paid))}</span></div>`;
+  if (pr.goldRateBooked === 'yes' && num(pr.est) && paid < num(pr.est) * 0.5) h += `<p class="small" style="color:var(--warn);margin:4px 0 0">⚠️ Gold rate booked है, पर payment 50% से कम है.</p>`;
+  if (o.status !== 'cancelled') h += `<div class="btns" style="margin-top:10px"><button class="btn sm primary" data-act="pay-open">＋ Payment जोड़ें</button><button class="btn sm" data-act="final-open">Final amount</button></div>`;
+  return h + `</div>`;
+}
+function pingBtns(id, o, toRole){
+  return usersWith(toRole).filter(u => u.phone && u.uid !== S.authUser.uid).map(u =>
+    `<a class="btn sm wa" target="_blank" rel="noopener" href="${esc(waLink(u.phone, pingText(id, o, toRole)))}">WhatsApp: ${esc(u.name)}</a>`).join('');
+}
+function pingText(id, o, toRole){
+  const s = o.spec || {};
+  let t = '';
+  if (toRole === 'admin') t = 'नया order approve के लिए: ' + o.no;
+  else if (toRole === 'factory') t = 'नया order: ' + o.no + (o.factoryDue ? ' (dispatch ' + fmtDay(o.factoryDue) + ' तक)' : '');
+  else t = 'Order ' + o.no + ' पर update';
+  return t + '\n' + itemLine(o) + (s.design ? '\n' + s.design.slice(0, 160) : '') + '\n\nApp में देखें: ' + appLink(id);
+}
+function clientMsg(o, p){
+  const pr = (p && p.price) || {}, c = (p && p.client) || {};
+  const paid = paidTotal(p), total = num(pr.final) || num(pr.est);
+  return [
+    'Namaste ' + (c.name || '') + ' ji 🙏', 'Deeva Diamonds — आपका order confirm है.', '',
+    'Order No: ' + o.no, 'Item: ' + itemLine(o),
+    total ? 'Est. Amount: ' + money(total) : null, paid ? 'Advance/Paid: ' + money(paid) : null, total ? 'Balance: ' + money(Math.max(0, total - paid)) : null,
+    o.deliveryDay ? 'Expected delivery: ' + fmtDay(o.deliveryDay) : null, '',
+    'Terms: Advance non-refundable; production शुरू होने के बाद cancel नहीं होगा; gold rate booked न हो तो billing delivery date के rate पर होगी.',
+    'Deeva Diamonds, 1st Floor, Currency Tower, VIP Road, Raipur'
+  ].filter(x => x !== null).join('\n');
+}
+function renderOrderBar(id, o){
+  const r = role(); let b = '';
+  if (isFactory() && o.status === 'factory') {
+    const i = stageIdx(o.stage);
+    let next = STAGES[i + 1] && STAGES[i + 1][0] !== 'dispatched' ? STAGES[i + 1] : null;
+    if (next && next[0] === 'cad_approval' && !o.cadRequired) next = STAGES[i + 2];
+    const blocked = o.stage === 'cad_approval';
+    if (o.stage === 'ready') b = `<button class="btn gold" data-act="dispatch-open">🚚 Dispatch करें</button><button class="btn" data-act="stage-open">Stage</button>`;
+    else if (o.stage !== 'new') b = `${next && !blocked ? `<button class="btn primary" data-act="stage-quick" data-k="${next[0]}">आगे: ${esc(STAGE_SHORT[next[0]])}</button>` : ''}<button class="btn" data-act="stage-open">Stage / Photo</button>`;
+  } else if (isAdmin()) {
+    if (o.status === 'review') b = `<button class="btn primary" data-act="approve-open">✅ Approve</button><button class="btn" data-act="query-open">❓ Query</button><a class="btn" href="#/edit/${esc(id)}">✏️ Edit</a>`;
+    else if (o.status === 'query') b = `<a class="btn" href="#/edit/${esc(id)}">✏️ Edit</a><button class="btn" data-act="approve-open">✅ Approve</button>`;
+    else if (o.status === 'factory') b = `<a class="btn" href="#/edit/${esc(id)}">✏️ Edit</a><button class="btn" data-act="stage-open">Stage</button>${o.stage === 'ready' ? '<button class="btn gold" data-act="dispatch-open">🚚 Dispatch</button>' : ''}`;
+    else if (['dispatched','received'].includes(o.status)) b = `<button class="btn" data-act="pay-open">＋ Payment</button>`;
+  } else if (isStore()) {
+    if (['review','query'].includes(o.status)) b = `<a class="btn" href="#/edit/${esc(id)}">✏️ Details बदलें</a>${o.status === 'query' ? '<button class="btn primary" data-act="reply-open">💬 जवाब दें</button>' : ''}`;
+    else if (o.status === 'factory') b = `<button class="btn" data-act="note-open">＋ Note / Photo</button><button class="btn" data-act="pay-open">＋ Payment</button>`;
+    else if (['dispatched','received'].includes(o.status)) b = `<button class="btn" data-act="pay-open">＋ Payment</button>`;
+  }
+  patch($('#stickbar'), b ? `<div class="stick"><div class="in2">${b}</div></div>` : '');
+}
+
+/* ---------- sheets ---------- */
+function openSheet(title, html, ctx){
+  S.sheet = ctx || {};
+  $('#sheet').innerHTML = `<div class="sheet-bg" data-act="sheet-bg"><div class="sheet" role="dialog" aria-label="${esc(title)}"><div class="grab"></div><h2>${esc(title)}<button class="btn ghost sm" data-act="sheet-close" aria-label="बंद करें">✕</button></h2><div id="sheet-body">${html}</div></div></div>`;
+  document.body.style.overflow = 'hidden';
+}
+function closeSheet(){
+  if (S.sheet && S.sheet.picker) S.sheet.picker.stopRec();
+  S.sheet = null; $('#sheet').innerHTML = ''; document.body.style.overflow = '';
+}
+function micBtn(forId){ return `<button type="button" class="mic" data-act="mic" data-for="${forId}" aria-label="बोलकर लिखें">🎤</button>`; }
+function textArea(id, ph, val){ return `<div class="inp"><textarea id="${id}" placeholder="${esc(ph || '')}">${esc(val || '')}</textarea>${micBtn(id)}</div>`; }
+
+function sheetApprove(id){
+  const o = getOrder(id);
+  const def = o.deliveryDay ? addDays(o.deliveryDay, -3) : addDays(today(), 12);
+  const fd = def < today() ? today() : def;
+  openSheet('Approve करके Factory को भेजें', `
+    <div class="fld"><label for="ap-due">Factory को कब तक dispatch करना है? <span class="req">*</span></label><input class="in" type="date" id="ap-due" value="${fd}" min="${today()}">
+      <div class="hint">Client delivery: ${esc(fmtDay(o.deliveryDay))}. Factory को यही date दिखेगी, उसी से उनका दिन counter चलेगा.</div></div>
+    <label class="check"><input type="checkbox" id="ap-cad" checked><span><b>CAD approval ज़रूरी</b><br><span class="small muted">Factory CAD बनाकर भेजेगा, OK होने के बाद ही casting.</span></span></label>
+    <div class="fld"><label for="ap-note">Factory के लिए note (अगर कुछ ख़ास है)</label>${textArea('ap-note', 'जैसे: drop नहीं लगाना, chain 18 inch light weight', '')}</div>
+    <button class="btn primary big" data-act="approve-do">✅ Approve — Factory को भेजें</button>`, {id});
+}
+async function doApprove(){
+  const id = S.sheet.id, o = getOrder(id);
+  const due = $('#ap-due').value; if (!due) return toast('Factory due date डालें.', 'bad');
+  const cad = $('#ap-cad').checked, note = $('#ap-note').value.trim();
+  const now = Date.now();
+  const ok = await write('orders/' + id, stamp({
+    status: 'factory', factoryVisible: true, stage: 'new', stageAt: {new: now}, approvedAt: now, approvedBy: myName(),
+    factoryDue: due, cadRequired: cad, factoryNote: note, factoryAck: true, query: {open: false},
+    log: {[logKey()]: logEntry('approved', 'Approve करके factory को भेजा. Factory due: ' + fmtDay(due) + (cad ? ' · CAD approval ज़रूरी' : '') + (note ? '\nNote: ' + note : ''))}
+  }));
+  if (!ok) return;
+  const f = usersWith('factory').filter(u => u.phone);
+  if (f.length) {
+    openSheet('Factory को बताएँ', `<p>Order factory के app में पहुँच गया है. चाहें तो WhatsApp पर भी बता दें:</p><div class="btns">${pingBtns(id, Object.assign({}, o, {factoryDue: due}), 'factory')}</div><button class="btn big" style="margin-top:10px" data-act="sheet-close">ठीक है</button>`, {id});
+  } else { closeSheet(); toast('Approve हो गया — order factory को चला गया.'); }
+}
+function sheetQuery(id){
+  openSheet('Query भेजें (Nishant / Store को)', `<p class="small muted" style="margin-top:-6px">क्या missing है या क्या साफ़ नहीं है — लिखें या बोलें.</p>
+    <div class="fld">${textArea('qr-text', 'जैसे: chain की length 16 है या 18? form और message में अलग है', '')}</div>
+    <button class="btn primary big" data-act="query-do">❓ Query भेजें</button>`, {id});
+}
+async function doQuery(){
+  const id = S.sheet.id, t = $('#qr-text').value.trim();
+  if (!t) return toast('Query लिखें.', 'bad');
+  const ok = await write('orders/' + id, stamp({status: 'query', query: {open: true, text: t, by: myName(), at: Date.now()}, log: {[logKey()]: logEntry('query', 'Query: ' + t)}}));
+  if (!ok) return;
+  const o = getOrder(id);
+  const st = usersWith('store').filter(u => u.phone);
+  if (st.length) openSheet('Store को बताएँ', `<p>Query भेज दी. WhatsApp पर भी बता दें:</p><div class="btns">${st.map(u => `<a class="btn sm wa" target="_blank" rel="noopener" href="${esc(waLink(u.phone, 'Order ' + o.no + ' पर query: ' + t + '\n\nApp में जवाब दें: ' + appLink(id)))}">WhatsApp: ${esc(u.name)}</a>`).join('')}</div><button class="btn big" style="margin-top:10px" data-act="sheet-close">ठीक है</button>`, {id});
+  else { closeSheet(); toast('Query भेज दी.'); }
+}
+function sheetReply(id){
+  const o = getOrder(id);
+  openSheet('Query का जवाब', `<div class="alertbox bad" style="margin-bottom:10px"><p style="margin:0">${esc((o.query && o.query.text) || '')}</p></div>
+    <div class="fld">${textArea('rp-text', 'जवाब लिखें या बोलें', '')}</div>
+    <p class="small muted">Details में बदलाव करना है तो "Details बदलें" से करें — बदलाव history में दिखेगा.</p>
+    <button class="btn primary big" data-act="reply-do">💬 जवाब भेजें</button>`, {id});
+}
+async function doReply(){
+  const id = S.sheet.id, t = $('#rp-text').value.trim();
+  if (!t) return toast('जवाब लिखें.', 'bad');
+  const ok = await write('orders/' + id, stamp({status: 'review', query: {open: false, reply: t, replyAt: Date.now()}, log: {[logKey()]: logEntry('reply', 'जवाब: ' + t)}}));
+  if (ok) { closeSheet(); toast('जवाब भेज दिया — अब approval में है.'); }
+}
+function sheetStage(id){
+  const o = getOrder(id);
+  const cur = stageIdx(o.stage);
+  const cadBlock = o.cadRequired && !(o.cad && o.cad.ok);
+  const opts = STAGES.filter(s => s[0] !== 'dispatched' && s[0] !== 'new').map(s => {
+    const blocked = isFactory() && cadBlock && stageIdx(s[0]) > stageIdx('cad_approval');
+    return `<button class="chip ${s[0] === o.stage ? 'on' : ''}" data-act="stage-pick" data-k="${s[0]}" ${blocked ? 'disabled style="opacity:.45"' : ''}>${esc(STAGE_SHORT[s[0]])}</button>`;
+  }).join('');
+  openSheet('Stage update', `<p class="small muted" style="margin-top:-6px">अभी: <b>${esc(STAGE_SHORT[o.stage] || '')}</b>${cadBlock && isFactory() ? ' · CAD OK होने तक casting से आगे नहीं जा सकते' : ''}</p>
+    <div class="lbl">नया stage चुनें</div><div class="chips" id="st-chips" style="margin-bottom:12px">${opts}</div>
+    <div class="fld"><label for="st-note">Note (optional)</label>${textArea('st-note', 'जैसे: casting हो गया, weight 3.6g', '')}</div>
+    <div class="lbl">Photo / Video (जैसे CAD design, बना हुआ piece)</div><div id="st-media"></div>
+    <button class="btn primary big" data-act="stage-do">Update करें</button>`, {id, stage: o.stage === 'new' ? 'received' : o.stage});
+  S.sheet.picker = makePicker('st-media', id, {allowInternal: false, stage: () => S.sheet && S.sheet.stage});
+  S.sheet.picker.render();
+  if (cur < 1) $$('#st-chips .chip').forEach(c => c.classList.toggle('on', c.dataset.k === 'received'));
+}
+async function setStage(id, k, note, mediaItems){
+  const o = getOrder(id);
+  const now = Date.now();
+  const upd = {stage: k, stageAt: {[k]: now}, log: {}};
+  let text = 'Stage: ' + STAGE_SHORT[k] + (note ? '\n' + note : '');
+  if (k === 'cad_approval') text = 'CAD approval के लिए भेजा' + (note ? '\n' + note : '');
+  if (k === 'received' && o.stage === 'new') text = 'Factory को order मिला — काम शुरू';
+  if (mediaItems && mediaItems.length) { upd.media = {}; mediaItems.forEach(m => { upd.media[m.id] = m; }); text += '\n📎 ' + mediaItems.length + ' photo/video'; }
+  if (isFactory() && o.factoryAck === false) { upd.factoryAck = true; upd.factoryAckAt = now; }
+  upd.log[logKey()] = logEntry('stage', text);
+  return write('orders/' + id, stamp(upd));
+}
+async function doStage(){
+  const id = S.sheet.id, k = S.sheet.stage, pk = S.sheet.picker;
+  if (pk.busy()) return toast('Upload पूरा होने दें…');
+  const o = getOrder(id);
+  const items = pk.done();
+  const note = $('#st-note').value.trim();
+  if (k === o.stage && !note && !items.length) return toast('नया stage चुनें या note/photo डालें.', 'bad');
+  if (k === 'cad_approval' && !items.some(m => m.kind === 'image')) { if (!confirm('CAD की photo नहीं लगाई. फिर भी भेजें?')) return; }
+  let ok;
+  if (k === o.stage) {
+    const upd = {log: {[logKey()]: logEntry('note', (note || '') + (items.length ? '\n📎 ' + items.length + ' photo/video' : ''))}};
+    if (items.length) { upd.media = {}; items.forEach(m => { upd.media[m.id] = m; }); }
+    ok = await write('orders/' + id, stamp(upd));
+  } else ok = await setStage(id, k, note, items);
+  if (ok) { closeSheet(); toast('Update हो गया.'); }
+}
+async function doCad(okFlag){
+  const id = S.sheet ? S.sheet.id : S.route.id;
+  if (okFlag) {
+    const now = Date.now();
+    const ok = await write('orders/' + id, stamp({cad: {ok: true, by: myName(), at: now}, stage: 'casting', stageAt: {casting: now}, log: {[logKey()]: logEntry('cad_ok', 'CAD OK — casting शुरू करें')}}));
+    if (ok) { closeSheet(); toast('CAD OK — factory को बता दिया.'); }
+  } else {
+    const t = $('#cad-text').value.trim(); if (!t) return toast('क्या बदलना है, लिखें.', 'bad');
+    const ok = await write('orders/' + id, stamp({cad: {ok: false, by: myName(), at: Date.now(), note: t}, stage: 'cad', stageAt: {cad: Date.now()}, log: {[logKey()]: logEntry('cad_change', 'CAD में बदलाव: ' + t)}}));
+    if (ok) { closeSheet(); toast('CAD बदलाव factory को भेज दिया.'); }
+  }
+}
+function sheetNote(id){
+  const o = getOrder(id);
+  openSheet('Photo / Video / Voice note / Note', `
+    <div id="nt-media"></div>
+    <div class="fld"><label for="nt-text">Note</label>${textArea('nt-text', staff() ? 'जैसे: client ने कहा stone थोड़ा बड़ा चाहिए' : 'जैसे: ring size check कर लें', '')}</div>
+    ${staff() ? '<label class="check"><input type="checkbox" id="nt-int"><span><b>🔒 सिर्फ store/admin के लिए</b><br><span class="small muted">Factory को ये note और photo नहीं दिखेंगे (जैसे payment screenshot).</span></span></label>' : ''}
+    <button class="btn primary big" data-act="note-do">Save करें</button>`, {id});
+  S.sheet.picker = makePicker('nt-media', id, {allowInternal: false});
+  S.sheet.picker.render();
+}
+async function doNote(){
+  const id = S.sheet.id, pk = S.sheet.picker;
+  if (pk.busy()) return toast('Upload पूरा होने दें…');
+  const items = pk.done(), t = $('#nt-text').value.trim();
+  if (!t && !items.length) return toast('Note लिखें या photo/video/voice note डालें.', 'bad');
+  const internal = !!($('#nt-int') && $('#nt-int').checked);
+  const text = (t || '') + (items.length ? (t ? '\n' : '') + '📎 ' + items.map(m => m.kind === 'audio' ? 'voice note' : m.kind === 'video' ? 'video' : 'photo').join(', ') : '');
+  const upd = {log: {[logKey()]: logEntry(items.length ? 'media' : 'note', text)}};
+  if (items.length) { upd.media = {}; items.forEach(m => { upd.media[m.id] = m; }); }
+  const ok = internal ? await write('orders/' + id + '/private/info', upd) : await write('orders/' + id, stamp(upd));
+  if (ok) { closeSheet(); toast('Save हो गया.'); }
+}
+function sheetDispatch(id){
+  openSheet('🚚 Dispatch करें', `
+    <div class="lbl">कैसे भेजा?</div><div class="chips" id="dp-mode" style="margin-bottom:12px">${['Hand delivery','Courier','Staff ने लिया','Other'].map((m, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="dp-mode" data-v="${esc(m)}">${esc(m)}</button>`).join('')}</div>
+    <div class="fld"><label for="dp-ref">Courier / Tracking no. / किसको दिया</label><input class="in" id="dp-ref"></div>
+    <div class="fld"><label for="dp-note">Final weight / note</label>${textArea('dp-note', 'जैसे: gold 3.62g, dia 0.40ct, hallmark done', '')}</div>
+    <div class="lbl">बने हुए piece की photo/video</div><div id="dp-media"></div>
+    <button class="btn gold big" data-act="dispatch-do">🚚 Dispatch — अभी का time punch होगा</button>`, {id, mode: 'Hand delivery'});
+  S.sheet.picker = makePicker('dp-media', id, {allowInternal: false, stage: () => 'dispatched'});
+  S.sheet.picker.render();
+}
+async function doDispatch(){
+  const id = S.sheet.id, pk = S.sheet.picker;
+  if (pk.busy()) return toast('Upload पूरा होने दें…');
+  const items = pk.done(), now = Date.now();
+  const d = {at: now, by: S.authUser.uid, byName: myName(), mode: S.sheet.mode || '', ref: $('#dp-ref').value.trim(), note: $('#dp-note').value.trim()};
+  const upd = {status: 'dispatched', stage: 'dispatched', stageAt: {dispatched: now}, dispatch: d, log: {[logKey()]: logEntry('dispatched', 'Dispatched — ' + [d.mode, d.ref, d.note].filter(Boolean).join(' · ') + (items.length ? '\n📎 ' + items.length + ' photo/video' : ''))}};
+  if (items.length) { upd.media = {}; items.forEach(m => { upd.media[m.id] = m; }); }
+  const ok = await write('orders/' + id, stamp(upd));
+  if (ok) { closeSheet(); toast('Dispatch punch हो गया: ' + fmtWhen(now)); }
+}
+async function doReceived(){
+  const id = S.route.id;
+  const ok = await write('orders/' + id, stamp({status: 'received', received: {at: Date.now(), by: myName()}, log: {[logKey()]: logEntry('received', 'Store पर piece मिल गया')}}));
+  if (ok) toast('Store पर मिल गया — mark कर दिया.');
+}
+function sheetDelivered(id){
+  const p = getPriv(id) || {}; const pr = p.price || {};
+  const total = num(pr.final) || num(pr.est), paid = paidTotal(p);
+  openSheet('🎁 Client को delivered', `<p>Total ${money(total)} · मिला ${money(paid)} · <b>बाकी ${money(Math.max(0, total - paid))}</b></p>
+    <p class="small muted">बाकी payment आया है तो पहले "＋ Payment" से जोड़ दें.</p>
+    <button class="btn primary big" data-act="deliv-do">🎁 हाँ, client को दे दिया</button>`, {id});
+}
+async function doDelivered(){
+  const id = S.sheet.id;
+  const ok = await write('orders/' + id, stamp({status: 'delivered', delivered: {at: Date.now(), by: myName()}, log: {[logKey()]: logEntry('delivered', 'Client को delivered')}}));
+  if (ok) { closeSheet(); toast('Delivered ✓'); }
+}
+function sheetPay(id){
+  openSheet('＋ Payment जोड़ें', `<div class="two"><div class="fld"><label for="py-amt">Amount ₹ <span class="req">*</span></label><input class="in" id="py-amt" inputmode="decimal"></div>
+    <div class="fld"><label for="py-day">Date</label><input class="in" type="date" id="py-day" value="${today()}"></div></div>
+    <div class="lbl">Mode</div><div class="chips" id="py-mode" style="margin-bottom:12px">${PAYMODES.map((m, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="py-mode" data-v="${esc(m)}">${esc(m)}</button>`).join('')}</div>
+    <div class="fld"><label for="py-note">Note</label><input class="in" id="py-note" placeholder="जैसे: UPI ref, दूसरी किस्त"></div>
+    <button class="btn primary big" data-act="pay-do">Save करें</button>`, {id, mode: PAYMODES[0]});
+}
+async function doPay(){
+  const id = S.sheet.id, amt = num($('#py-amt').value);
+  if (!(amt > 0)) return toast('Amount डालें.', 'bad');
+  const k = 'p' + rid();
+  const pay = {amount: amt, mode: S.sheet.mode, day: $('#py-day').value || today(), note: $('#py-note').value.trim(), by: S.authUser.uid, name: myName(), at: Date.now()};
+  const ok = await write('orders/' + id + '/private/info', {payments: {[k]: pay}, log: {[logKey()]: logEntry('payment', 'Payment ' + money(amt) + ' (' + pay.mode + ')' + (pay.note ? ' · ' + pay.note : ''))}});
+  if (ok) { closeSheet(); toast('Payment जुड़ गया.'); }
+}
+function sheetFinal(id){
+  const pr = (getPriv(id) || {}).price || {};
+  openSheet('Final amount', `<p class="small muted">Delivery के समय का final bill (gold rate, weight बदलने पर). खाली छोड़ें तो Est. Amount ही चलेगा.</p>
+    <div class="fld"><label for="fn-amt">Final Amount ₹</label><input class="in" id="fn-amt" inputmode="decimal" value="${esc(pr.final || '')}"></div>
+    <button class="btn primary big" data-act="final-do">Save करें</button>`, {id});
+}
+async function doFinal(){
+  const id = S.sheet.id, v = $('#fn-amt').value.trim(), amt = v ? num(v) : '';
+  const ok = await write('orders/' + id + '/private/info', {price: {final: amt}, log: {[logKey()]: logEntry('price', amt ? 'Final amount: ' + money(amt) : 'Final amount हटाया')}});
+  if (ok) { closeSheet(); toast('Save हो गया.'); }
+}
+function sheetCancel(id){
+  openSheet('Order cancel करें', `<div class="fld"><label for="cn-why">कारण <span class="req">*</span></label>${textArea('cn-why', 'जैसे: client ने मना किया', '')}</div><button class="btn danger big" data-act="cancel-do">Order cancel करें</button>`, {id});
+}
+async function doCancel(){
+  const id = S.sheet.id, t = $('#cn-why').value.trim();
+  if (!t) return toast('कारण लिखें.', 'bad');
+  const ok = await write('orders/' + id, stamp({status: 'cancelled', cancel: {at: Date.now(), by: myName(), reason: t}, log: {[logKey()]: logEntry('cancelled', 'Cancel: ' + t)}}));
+  if (ok) { closeSheet(); toast('Order cancel हो गया.'); }
+}
+async function doReopen(){
+  const id = S.route.id, o = getOrder(id);
+  const back = o.factoryVisible ? 'factory' : 'review';
+  const ok = await write('orders/' + id, stamp({status: back, log: {[logKey()]: logEntry('reopened', 'Order वापस खोला')}}));
+  if (ok) toast('Order वापस खुल गया.');
+}
+async function doSeen(){
+  const id = S.route.id;
+  const ok = await write('orders/' + id, stamp({factoryAck: true, factoryAckAt: Date.now(), log: {[logKey()]: logEntry('factory_seen', 'Factory ने बदलाव देख लिया')}}));
+  if (ok) toast('ठीक है.');
+}
+
+/* ---------- media picker (photo / video / voice note) ---------- */
+const MAX_VIDEO = 300 * 1024 * 1024;
+function compressImage(file){
+  return new Promise(resolve => {
+    if (!/^image\/(jpeg|png|webp|heic|heif)/.test(file.type) || file.size < 350 * 1024) return resolve(file);
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const max = 1800, sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * sc); c.height = Math.round(img.naturalHeight * sc);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => resolve(b && b.size < file.size ? b : file), 'image/jpeg', 0.84);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+const extOf = (type, name) => {
+  const m = /\.([a-z0-9]{2,5})$/i.exec(name || ''); if (m) return m[1].toLowerCase();
+  if (/jpeg/.test(type)) return 'jpg'; if (/png/.test(type)) return 'png'; if (/webm/.test(type)) return 'webm'; if (/mp4/.test(type)) return /audio/.test(type) ? 'm4a' : 'mp4'; if (/ogg/.test(type)) return 'ogg';
+  return 'bin';
+};
+function makePicker(containerId, orderId, opts){
+  opts = opts || {};
+  const items = {};
+  let rec = null, recTimer = null, recStart = 0;
+  const P = {items, opts};
+  const el = () => document.getElementById(containerId);
+  P.busy = () => Object.values(items).some(m => m.status === 'up') || !!rec;
+  P.done = () => Object.values(items).filter(m => m.status === 'ok').map(m => {
+    const d = {kind: m.kind, url: m.url, path: m.path, desc: (m.desc || '').trim(), by: m.by || S.authUser.uid, byName: m.byName || myName(), at: m.at, size: m.size || 0};
+    if (opts.stage && opts.stage()) d.stage = opts.stage();
+    if (opts.allowInternal) d.factory = m.factory !== false;
+    return Object.assign({id: m.id}, d);
+  });
+  P.load = list => { (list || []).forEach(m => { items[m.id] = Object.assign({status: 'ok', progress: 1, existing: true}, m); }); };
+  P.render = () => {
+    const box = el(); if (!box) return;
+    const list = Object.values(items).sort((a, b) => a.at - b.at);
+    let h = `<div class="mbtns">
+      <label class="btn"><span>📷</span>Photo<input type="file" accept="image/*" multiple hidden data-pick="image" data-p="${containerId}"></label>
+      <label class="btn"><span>🎥</span>Video<input type="file" accept="video/*" hidden data-pick="video" data-p="${containerId}"></label>
+      <button type="button" class="btn ${rec ? 'rec' : ''}" data-act="rec" data-p="${containerId}"><span>${rec ? '⏹' : '🎙️'}</span>${rec ? 'रोकें <b id="rt-' + containerId + '">' + recClock() + '</b>' : 'Voice note'}</button></div>`;
+    h += list.map(m => {
+      let th = '';
+      if (m.kind === 'image') th = m.preview || m.url ? `<img src="${esc(m.preview || m.url)}" alt="">` : '🖼️';
+      else if (m.kind === 'video') th = '🎬';
+      else th = '🎙️';
+      const pr = m.status === 'up' ? `<span class="pr"><i style="width:${Math.round((m.progress || 0) * 100)}%"></i></span>` : '';
+      const state = m.status === 'up' ? `Upload ${Math.round((m.progress || 0) * 100)}%…` : m.status === 'err' ? '<span style="color:var(--bad)">Upload नहीं हुआ</span>' : '✓ Upload';
+      return `<div class="mitem"><div class="mthumb">${th}${pr}</div><div class="mbody">
+        ${m.kind === 'audio' && (m.preview || m.url) ? `<audio id="pa-${esc(m.id)}" src="${esc(m.preview || m.url)}" controls preload="metadata"></audio>` : ''}
+        <input id="md-${esc(m.id)}" data-desc="${esc(m.id)}" data-p="${containerId}" placeholder="${m.kind === 'audio' ? 'इसमें क्या है? जैसे: client ने design समझाया' : 'Description — जैसे: यही design, पर drop नहीं'}" value="${esc(m.desc || '')}">
+        <div class="mmeta"><span>${state}</span>${opts.allowInternal ? `<label><input type="checkbox" data-fact="${esc(m.id)}" data-p="${containerId}" ${m.factory !== false ? 'checked' : ''}>Factory को भी दिखे</label>` : ''}</div>
+      </div><button type="button" class="mdel" data-act="mdel" data-id="${esc(m.id)}" data-p="${containerId}" aria-label="हटाएँ">✕</button></div>`;
+    }).join('');
+    patch(box, h);
+  };
+  const recClock = () => { const s = Math.floor((Date.now() - recStart) / 1000); return Math.floor(s / 60) + ':' + pad(s % 60); };
+  P.add = async (file, kind) => {
+    if (kind === 'video' && file.size > MAX_VIDEO) { toast('Video बहुत बड़ा है (300 MB से ज़्यादा). छोटा video लें.', 'bad'); return; }
+    if (kind === 'video' && file.size > 120 * 1024 * 1024) toast('Video बड़ा है — upload में समय लगेगा.');
+    const id = 'm' + rid();
+    const m = items[id] = {id, kind, status: 'up', progress: 0, at: Date.now(), desc: '', factory: true, size: file.size};
+    if (kind !== 'video') m.preview = URL.createObjectURL(file);
+    P.render();
+    try {
+      const blob = kind === 'image' ? await compressImage(file) : file;
+      const type = blob.type || file.type || (kind === 'audio' ? 'audio/webm' : kind === 'video' ? 'video/mp4' : 'image/jpeg');
+      const path = 'orders/' + orderId + '/' + id + '.' + extOf(type, kind === 'image' && blob !== file ? 'x.jpg' : file.name);
+      let last = 0;
+      const res = await B.storage.upload(path, blob, type, f => { m.progress = f; if (Date.now() - last > 250) { last = Date.now(); P.render(); } });
+      m.url = res.url; m.path = res.path; m.size = blob.size; m.status = 'ok';
+    } catch (e) { console.error(e); m.status = 'err'; toast('Upload नहीं हुआ — ' + errText(e), 'bad'); }
+    P.render();
+    if (opts.onChange) opts.onChange();
+  };
+  P.del = id => { delete items[id]; P.render(); if (opts.onChange) opts.onChange(); };
+  P.toggleRec = async () => {
+    if (rec) { try { rec.stop(); } catch (e) {} return; }
+    if (!navigator.mediaDevices || !window.MediaRecorder) { toast('इस phone/browser में voice note record नहीं होता. Phone के recorder से record करके "Video/Photo" की जगह file चुनें.', 'bad'); return; }
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({audio: true}); }
+    catch (e) { toast('Mic की permission दें (phone settings में).', 'bad'); return; }
+    const types = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm'];
+    const type = types.find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+    const chunks = [];
+    rec = type ? new MediaRecorder(stream, {mimeType: type}) : new MediaRecorder(stream);
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      clearInterval(recTimer); rec = null;
+      const mt = (type || 'audio/webm').split(';')[0];
+      const blob = new Blob(chunks, {type: mt});
+      if (blob.size < 800) { toast('Voice note बहुत छोटा था.', 'bad'); P.render(); return; }
+      const f = new File([blob], 'voice.' + extOf(mt, ''), {type: mt});
+      P.add(f, 'audio');
+    };
+    recStart = Date.now();
+    rec.start(1000);
+    recTimer = setInterval(() => { const t = document.getElementById('rt-' + containerId); if (t) t.textContent = recClock(); if (Date.now() - recStart > 10 * 60 * 1000) P.toggleRec(); }, 500);
+    P.render();
+  };
+  P.stopRec = () => { if (rec) { try { rec.stop(); } catch (e) {} } };
+  PICKERS[containerId] = P;
+  return P;
+}
+const PICKERS = {};
+
+/* ---------- speech-to-text (mic on every field) ---------- */
+let REC = null;
+const micLang = () => (S.me && S.me.micLang) || 'hi-IN';
+function joinTxt(a, b){ a = a || ''; b = (b || '').trim(); if (!b) return a; return a && !/\s$/.test(a) ? a + ' ' + b : a + b; }
+function micStop(){ if (REC) { try { REC.stop(); } catch (e) {} REC = null; } $$('.mic.on').forEach(b => b.classList.remove('on')); }
+function micStart(targetId, btn){
+  const same = S.micFor === targetId && btn.classList.contains('on');
+  micStop();
+  if (same) return;
+  const el = document.getElementById(targetId); if (!el) return;
+  S.micFor = targetId;
+  if (NATIVE && NATIVE.listen) { btn.classList.add('on'); try { NATIVE.listen(micLang()); } catch (e) { btn.classList.remove('on'); } return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast('इस browser में बोलकर लिखना नहीं चलता. Chrome में खोलें या keyboard का 🎤 दबाएँ.', 'bad'); return; }
+  const r = new SR();
+  r.lang = micLang(); r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+  const base = el.value; let fin = '';
+  r.onresult = e => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) { const t = e.results[i][0].transcript; if (e.results[i].isFinal) fin += t; else interim += t; }
+    el.value = joinTxt(base, fin + interim);
+    el.dispatchEvent(new Event('input', {bubbles: true}));
+  };
+  r.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') toast('Mic की permission दें.', 'bad'); else if (e.error === 'network') toast('बोलकर लिखने के लिए Internet चाहिए.', 'bad'); };
+  r.onend = () => { btn.classList.remove('on'); if (REC === r) REC = null; };
+  REC = r; btn.classList.add('on');
+  try { r.start(); } catch (e) { btn.classList.remove('on'); REC = null; }
+}
+window.__doSpeech = text => {
+  const el = document.getElementById(S.micFor);
+  if (el && text) { el.value = joinTxt(el.value, text); el.dispatchEvent(new Event('input', {bubbles: true})); }
+  $$('.mic.on').forEach(b => b.classList.remove('on'));
+};
+
+/* ---------- new / edit order form ---------- */
+let F = null;          /* form values */
+let FP = null;         /* form media picker */
+let FORMKEY = null;
+const DRAFT = 'do.draft';
+function emptyForm(){
+  return {
+    id: B.db.newId('orders'), startedAt: Date.now(),
+    client: {name: '', phone: '', city: ''},
+    spec: {jtype: '', jtypeOther: '', qty: '1', metalColor: '', purity: '', size: '', dia1Ct: '', dia1Shape: '', dia2Ct: '', dia2Shape: '', gem1: '', gem2: '', engraving: '', design: ''},
+    deliveryDay: '', priority: 'normal',
+    price: {est: '', goldRateBooked: '', goldRate: '', calc: {goldWt: '', goldRate: '', diaRate: '', dia2Rate: '', gemAmt: '', making: '', other: '', gst: '3'}},
+    advance: {amount: '', mode: ''},
+    internalNote: '', media: [], ack: {accepted: false, remote: false}
+  };
+}
+function saveDraft(){
+  if (!F || F.mode !== 'new') return;
+  try { const d = clone(F); d.media = FP ? FP.done() : []; localStorage.setItem(DRAFT, JSON.stringify(d)); } catch (e) {}
+}
+function loadDraft(){ try { const d = JSON.parse(localStorage.getItem(DRAFT) || 'null'); return d && d.id ? d : null; } catch (e) { return null; } }
+function clearDraft(){ try { localStorage.removeItem(DRAFT); } catch (e) {} }
+function closeFormIfOpen(){ if (FORMKEY) { micStop(); if (FP) FP.stopRec(); saveDraft(); FORMKEY = null; } }
+function renderFormRoute(r){
+  const key = r.mode + ':' + (r.id || '');
+  if (FORMKEY === key) { renderFormBar(); return; }
+  if (r.mode === 'new') {
+    if (!staff()) return go('#/');
+    const d = loadDraft();
+    F = d && (d.client.name || d.spec.jtype || (d.media || []).length) ? d : emptyForm();
+    F.mode = 'new';
+    if (d && F === d) toast('पिछला अधूरा order खुल गया है. नया शुरू करना हो तो नीचे "साफ़ करें" दबाएँ.');
+  } else {
+    const o = getOrder(r.id), p = getPriv(r.id);
+    if (!o || !p) { patch($('#view'), '<div class="empty">Order load हो रहा है…</div>'); return; }
+    if (!canEdit(o)) { toast('ये order अब edit नहीं हो सकता.', 'bad'); return go('#/o/' + r.id); }
+    F = emptyForm(); F.id = r.id; F.mode = 'edit';
+    F.client = Object.assign(F.client, clone(p.client || {}));
+    F.spec = Object.assign(F.spec, clone(o.spec || {}));
+    F.deliveryDay = o.deliveryDay || ''; F.priority = o.priority || 'normal';
+    F.price = Object.assign(F.price, clone(p.price || {}));
+    F.price.calc = Object.assign(emptyForm().price.calc, clone((p.price && p.price.calc) || {}));
+    F.internalNote = p.internalNote || '';
+    F.orig = {o: clone(o), p: clone(p)};
+  }
+  FORMKEY = key;
+  renderForm();
+}
+function chipsHtml(path, list, multiOther){
+  const cur = get(F, path);
+  return `<div class="chips" data-chips="${path}">` + list.map(v => `<button type="button" class="chip ${cur === v ? 'on' : ''}" data-act="chip" data-f="${path}" data-v="${esc(v)}">${esc(v)}</button>`).join('') + `</div>`;
+}
+function fld(path, label, opts){
+  opts = opts || {};
+  const id = 'f-' + path.replace(/\./g, '-');
+  const v = get(F, path) || '';
+  const ctrl = opts.area
+    ? `<textarea id="${id}" data-f="${path}" placeholder="${esc(opts.ph || '')}">${esc(v)}</textarea>`
+    : `<input id="${id}" data-f="${path}" value="${esc(v)}" placeholder="${esc(opts.ph || '')}" ${opts.type ? 'type="' + opts.type + '"' : ''} ${opts.mode ? 'inputmode="' + opts.mode + '"' : ''} ${opts.attrs || ''}>`;
+  return `<div class="fld" id="w-${id}" ${opts.hidden ? 'hidden' : ''}><label for="${id}">${esc(label)}${opts.req ? '<span class="req">*</span>' : ''}</label><div class="inp">${ctrl}${opts.mic === false ? '' : micBtn(id)}</div>${opts.hint ? `<div class="hint">${opts.hint}</div>` : ''}</div>`;
+}
+function sec(n, title, sub, body){ return `<section class="sec" id="sec-${n}"><div class="sec-h"><span class="n">${n}</span><div><b>${esc(title)}</b>${sub ? `<small>${sub}</small>` : ''}</div></div>${body}</section>`; }
+function renderForm(){
+  const isNew = F.mode === 'new';
+  const o = isNew ? null : getOrder(F.id);
+  let h = `<div class="row" style="margin-bottom:6px"><a class="btn ghost sm" href="${isNew ? '#/' : '#/o/' + esc(F.id)}" style="margin-left:-6px">← वापस</a><span class="grow"></span>${isNew ? '<button class="btn ghost sm" data-act="f-clear">साफ़ करें</button>' : ''}</div>`;
+  h += `<div class="view-title">${isNew ? 'नया Custom Order' : 'Order बदलें — ' + esc(o.no)}</div>`;
+  if (!isNew && o.status === 'factory') h += `<div class="banner">⚠️ Order factory में है — बदलाव save करते ही factory को "बदलाव हुआ" का alert जाएगा.</div>`;
+  h += sec(1, 'Client', '🔒 नाम, phone factory को नहीं दिखेगा',
+    fld('client.name', 'नाम', {req: 1, ph: 'Client का पूरा नाम', attrs: 'autocomplete="off"'}) +
+    `<div class="two">${fld('client.phone', 'Contact No.', {req: 1, type: 'tel', mode: 'numeric', ph: '10 अंक', mic: false})}${fld('client.city', 'City / Area', {ph: 'Raipur'})}</div>`);
+  h += sec(2, 'Jewellery', 'Factory को जाएगा',
+    `<div class="fld" id="w-f-spec-jtype"><span class="lbl">Jewellery Type<span class="req">*</span></span>${chipsHtml('spec.jtype', JTYPES)}</div>` +
+    fld('spec.jtypeOther', 'Type लिखें', {req: 1, hidden: F.spec.jtype !== 'Other', ph: 'जैसे: Anklet, Brooch'}) +
+    `<div class="fld" id="w-f-spec-metalColor"><span class="lbl">Metal Color<span class="req">*</span></span>${chipsHtml('spec.metalColor', COLORS)}</div>` +
+    `<div class="fld" id="w-f-spec-purity"><span class="lbl">Purity<span class="req">*</span></span>${chipsHtml('spec.purity', PURITY)}</div>` +
+    `<div class="two">${fld('spec.size', 'Size / Length', {req: 1, ph: 'जैसे: 16 inch / Ring 12 / 2.6', hint: 'ज़रूरत न हो तो NA लिखें'})}${fld('spec.qty', 'Qty', {mode: 'numeric', mic: false})}</div>`);
+  h += sec(3, 'Diamond & Gemstone', 'Factory को जाएगा',
+    `<div class="two">${fld('spec.dia1Ct', 'Dia Ct. 1', {req: 1, mode: 'decimal', ph: '0.40', mic: false, hint: 'Diamond नहीं है तो NA'})}${fld('spec.dia2Ct', 'Dia Ct. 2', {mode: 'decimal', ph: 'NA', mic: false})}</div>` +
+    `<div class="fld"><span class="lbl">Dia 1 shape</span>${chipsHtml('spec.dia1Shape', SHAPES)}</div>` +
+    `<div class="fld" id="w-dia2shape" ${F.spec.dia2Ct && F.spec.dia2Ct !== 'NA' ? '' : 'hidden'}><span class="lbl">Dia 2 shape</span>${chipsHtml('spec.dia2Shape', SHAPES)}</div>` +
+    `<div class="two">${fld('spec.gem1', 'Gemstone 1', {ph: 'NA'})}${fld('spec.gem2', 'Gemstone 2', {ph: 'NA'})}</div>` +
+    fld('spec.engraving', 'Engraving (अगर है)', {ph: 'नाम / date'}));
+  h += sec(4, 'Design — photo, video, voice note', 'सब factory को जाएगा (जो न भेजना हो उसका tick हटा दें)',
+    fld('spec.design', 'Design details / Remark', {req: 1, area: 1, ph: 'जैसे: Design ref image जैसा ही, पर drop नहीं लगाना. Chain light weight.'}) +
+    `<div class="lbl">Reference photo / video / client से बात का voice note</div><div id="f-media"></div>`);
+  if (staff()) {
+    let pb = `<div class="fld" id="w-f-price-est"><label for="f-price-est">Est. Amount ₹<span class="req">*</span></label><div class="inp"><input id="f-price-est" data-f="price.est" inputmode="decimal" value="${esc(F.price.est)}" placeholder="49790"><button type="button" class="btn sm" data-act="calc-toggle" style="flex:none">🧮 हिसाब</button></div></div>`;
+    pb += `<div class="calc" id="calc" hidden>${calcHtml()}</div>`;
+    pb += `<div class="fld" id="w-f-price-goldRateBooked"><span class="lbl">Gold Rate Booked<span class="req">*</span></span><div class="chips" data-chips="price.goldRateBooked">${[['yes','Yes'],['no','No']].map(x => `<button type="button" class="chip ${F.price.goldRateBooked === x[0] ? 'on' : ''}" data-act="chip" data-f="price.goldRateBooked" data-v="${x[0]}">${x[1]}</button>`).join('')}</div></div>`;
+    pb += fld('price.goldRate', 'Booked gold rate (₹ / gram)', {mode: 'decimal', mic: false, hidden: F.price.goldRateBooked !== 'yes', hint: 'Rate book करने के लिए कम से कम 50% payment ज़रूरी (शर्त 6)'});
+    if (isNew) {
+      pb += `<div class="two">${fld('advance.amount', 'Advance Paid ₹', {req: 1, mode: 'decimal', mic: false, ph: '0 भी लिख सकते हैं'})}<div></div></div>`;
+      pb += `<div class="fld" id="w-f-advance-mode"><span class="lbl">Advance का mode</span>${chipsHtml('advance.mode', PAYMODES)}</div>`;
+    }
+    pb += fld('internalNote', '🔒 Internal note (सिर्फ store/admin)', {area: 1, ph: 'जैसे: client purana customer है, discount दिया'});
+    h += sec(5, 'Price & Payment', '🔒 Factory को नहीं दिखेगा', pb);
+  }
+  const minDay = isNew ? today() : '';
+  h += sec(6, 'Delivery', '',
+    `<div class="fld" id="w-f-deliveryDay"><label for="f-deliveryDay">Client को delivery की date<span class="req">*</span></label><input class="in" type="date" id="f-deliveryDay" data-f="deliveryDay" value="${esc(F.deliveryDay)}" ${minDay ? 'min="' + minDay + '"' : ''}>
+      <div class="chips" style="margin-top:7px">${[7, 10, 15, 20, 25].map(n => `<button type="button" class="chip" data-act="f-days" data-n="${n}">+${n} दिन</button>`).join('')}</div><div class="hint" id="f-days-left">${F.deliveryDay ? diffDays(F.deliveryDay, today()) + ' दिन बाद' : ''}</div></div>
+     <div class="fld"><span class="lbl">Priority</span><div class="chips" data-chips="priority">${[['normal','Normal'],['urgent','🔴 Urgent']].map(x => `<button type="button" class="chip ${F.priority === x[0] ? 'on' : ''}" data-act="chip" data-f="priority" data-v="${x[0]}">${x[1]}</button>`).join('')}</div></div>`);
+  if (isNew) {
+    h += sec(7, 'Customer Acknowledgement', 'Client को पढ़कर सुनाएँ / दिखाएँ',
+      `<ol class="terms">${TERMS.map(t => `<li>${esc(t)}</li>`).join('')}</ol>
+       <label class="check" id="w-f-ack"><input type="checkbox" id="f-ack" ${F.ack.accepted ? 'checked' : ''}><span><b>Client ने सभी शर्तें पढ़कर मान लीं</b><span class="req">*</span></span></label>
+       <label class="check"><input type="checkbox" id="f-remote" ${F.ack.remote ? 'checked' : ''}><span>Client store में नहीं है (Phone / WhatsApp order) — signature नहीं होगा</span></label>
+       <div id="w-sig" ${F.ack.remote ? 'hidden' : ''}><div class="lbl">Client signature<span class="req">*</span></div><div class="sig-wrap"><canvas id="sig"></canvas><span>यहाँ उँगली से sign करें</span></div><button type="button" class="btn ghost sm" data-act="sig-clear">मिटाएँ</button></div>`);
+  }
+  $('#view').innerHTML = h; $('#view')._h = null;
+  FP = makePicker('f-media', F.id, {allowInternal: true, onChange: saveDraft});
+  if (F.media && F.media.length) FP.load(F.media.map(m => Object.assign({}, m)));
+  if (!isNew) FP.load(mediaList(F.orig.o.media).map(m => Object.assign({}, m, {factory: true})).concat(mediaList(F.orig.p.media).map(m => Object.assign({}, m, {factory: false}))));
+  FP.render();
+  if (isNew) setupSig();
+  updateCalc();
+  renderFormBar();
+  window.scrollTo(0, 0);
+}
+function calcHtml(){
+  const c = F.price.calc;
+  const f = (k, label, ph) => `<div class="fld" style="margin-bottom:8px"><label for="c-${k}" class="small">${label}</label><input class="in" id="c-${k}" data-f="price.calc.${k}" inputmode="decimal" value="${esc(c[k] || '')}" placeholder="${ph || ''}"></div>`;
+  return `<div class="two">${f('goldWt', 'Gold weight (g)', '3.75')}${f('goldRate', 'Gold rate ₹/g', '8544')}</div>
+    <div class="two">${f('diaRate', 'Dia 1 rate ₹/ct', '22000')}${f('dia2Rate', 'Dia 2 rate ₹/ct', '')}</div>
+    <div class="two">${f('making', 'Making ₹/g', '2000')}${f('gemAmt', 'Gemstone ₹', '')}</div>
+    <div class="two">${f('other', 'Other ₹', '')}${f('gst', 'GST %', '3')}</div>
+    <div class="calc-out" id="calc-out"></div>
+    <button type="button" class="btn sm primary" data-act="calc-apply" style="margin-top:8px;width:100%">ये Final Amount — Est. Amount में डालें</button>`;
+}
+function calcValues(c, spec){
+  const wt = num(c.goldWt), d1 = spec && spec.dia1Ct !== 'NA' ? num(spec.dia1Ct) : 0, d2 = spec && spec.dia2Ct !== 'NA' ? num(spec.dia2Ct) : 0;
+  const gold = wt * num(c.goldRate), dia = d1 * num(c.diaRate), dia2 = d2 * num(c.dia2Rate), mk = wt * num(c.making);
+  const value = gold + dia + dia2 + mk + num(c.gemAmt) + num(c.other);
+  const gstAmt = value * num(c.gst) / 100;
+  return {wt, d1, d2, gold, dia, dia2, mk, gem: num(c.gemAmt), oth: num(c.other), value, gstPct: num(c.gst), gstAmt, final: value + gstAmt};
+}
+function calcLines(c){
+  const v = c.final != null && c.value != null ? c : calcValues(c, F && F.spec);
+  const L = [];
+  if (v.gold) L.push(['Gold ' + (v.wt || '') + 'g × ' + money(c.goldRate || 0), money2(v.gold)]);
+  if (v.dia) L.push(['Dia ' + (v.d1 || '') + 'ct × ' + money(c.diaRate || 0), money2(v.dia)]);
+  if (v.dia2) L.push(['Dia 2 ' + (v.d2 || '') + 'ct × ' + money(c.dia2Rate || 0), money2(v.dia2)]);
+  if (v.mk) L.push(['Making ' + (v.wt || '') + 'g × ' + money(c.making || 0), money2(v.mk)]);
+  if (v.gem) L.push(['Gemstone', money2(v.gem)]);
+  if (v.oth) L.push(['Other', money2(v.oth)]);
+  L.push(['Value', money2(v.value)]);
+  if (v.gstAmt) L.push(['GST ' + (v.gstPct || 0) + '%', money2(v.gstAmt)]);
+  L.push(['Final Amount', money2(v.final), 'fin']);
+  return L;
+}
+function updateCalc(){
+  const out = $('#calc-out'); if (!out) return;
+  const v = calcValues(F.price.calc, F.spec);
+  out.innerHTML = v.value ? calcLines(Object.assign({}, F.price.calc)).map(l => `<div class="${l[2] || ''}"><span>${esc(l[0])}</span><span>${esc(l[1])}</span></div>`).join('') : '<div><span class="muted">ऊपर weight और rate डालें</span></div>';
+}
+function setupSig(){
+  const c = $('#sig'); if (!c) return;
+  const ratio = Math.max(1, window.devicePixelRatio || 1);
+  const resize = () => { const w = c.clientWidth || 320; c.width = w * ratio; c.height = 170 * ratio; const x = c.getContext('2d'); x.scale(ratio, ratio); x.lineWidth = 2.4; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#0a271b'; };
+  resize(); F.sigDirty = false;
+  let drawing = false, last = null;
+  const pos = e => { const r = c.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  c.addEventListener('pointerdown', e => { drawing = true; last = pos(e); c.setPointerCapture(e.pointerId); e.preventDefault(); });
+  c.addEventListener('pointermove', e => { if (!drawing) return; const p = pos(e); const x = c.getContext('2d'); x.beginPath(); x.moveTo(last[0], last[1]); x.lineTo(p[0], p[1]); x.stroke(); last = p; F.sigDirty = true; e.preventDefault(); });
+  const end = () => { if (drawing) { drawing = false; const w = $('#w-sig'); if (w) w.classList.remove('miss'); renderFormBar(); } };
+  c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end);
+}
+function clearSig(){ const c = $('#sig'); if (!c) return; const x = c.getContext('2d'); x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, c.width, c.height); x.restore(); F.sigDirty = false; }
+function missingFields(){
+  const isNew = F.mode === 'new', m = [];
+  const need = (path, label, ok) => { if (!ok) m.push([path, label]); };
+  need('client.name', 'Client का नाम', F.client.name.trim());
+  need('client.phone', 'Contact No. (10 अंक)', phone10(F.client.phone).length === 10);
+  need('spec.jtype', 'Jewellery Type', F.spec.jtype);
+  if (F.spec.jtype === 'Other') need('spec.jtypeOther', 'Jewellery Type (लिखें)', F.spec.jtypeOther.trim());
+  need('spec.metalColor', 'Metal Color', F.spec.metalColor);
+  need('spec.purity', 'Purity', F.spec.purity);
+  need('spec.size', 'Size / Length (या NA)', F.spec.size.trim());
+  need('spec.dia1Ct', 'Dia Ct. 1 (या NA)', F.spec.dia1Ct.trim());
+  need('spec.design', 'Design details / Remark', F.spec.design.trim());
+  if (staff()) {
+    need('price.est', 'Est. Amount', num(F.price.est) > 0);
+    need('price.goldRateBooked', 'Gold Rate Booked (Yes/No)', F.price.goldRateBooked);
+    if (isNew) {
+      need('advance.amount', 'Advance Paid (0 भी चलेगा)', String(F.advance.amount).trim() !== '');
+      if (num(F.advance.amount) > 0) need('advance.mode', 'Advance का mode (UPI/Cash…)', F.advance.mode);
+    }
+  }
+  need('deliveryDay', 'Delivery date', F.deliveryDay);
+  if (isNew) {
+    need('ack', 'Client acknowledgement (शर्तें मानीं)', F.ack.accepted);
+    if (!F.ack.remote) need('sig', 'Client signature', F.sigDirty);
+  }
+  return m;
+}
+function markMissing(){
+  $$('.fld.miss,.check.miss,#w-sig.miss').forEach(e => e.classList.remove('miss'));
+  missingFields().forEach(([p]) => { const w = fieldWrap(p); if (w) w.classList.add('miss'); });
+}
+function fieldWrap(path){
+  if (path === 'ack') return $('#w-f-ack');
+  if (path === 'sig') return $('#w-sig');
+  return document.getElementById('w-f-' + path.replace(/\./g, '-'));
+}
+function renderFormBar(){
+  if (!F) return;
+  const miss = missingFields().length;
+  const total = F.mode === 'new' ? (staff() ? 15 : 11) : 12;
+  const label = F.mode === 'new' ? 'आगे — Review करें' : 'बदलाव Save करें';
+  patch($('#stickbar'), `<div class="stick"><div class="in2"><span class="prog">${miss ? '⚠️ ' + miss + ' बाकी' : '✓ सब भरा'}</span><button class="btn primary" data-act="f-review">${label}</button></div></div>`);
+  void total;
+}
+function onFormInput(t){
+  const path = t.dataset.f;
+  setp(F, path, t.value);
+  if (path === 'deliveryDay') { const dl = $('#f-days-left'); if (dl) dl.textContent = F.deliveryDay ? diffDays(F.deliveryDay, today()) + ' दिन बाद' : ''; }
+  if (path === 'spec.dia2Ct') { const w = $('#w-dia2shape'); if (w) w.hidden = !(F.spec.dia2Ct && F.spec.dia2Ct !== 'NA'); }
+  if (path.startsWith('price.calc') || path === 'spec.dia1Ct' || path === 'spec.dia2Ct') updateCalc();
+  const w = t.closest('.fld'); if (w) w.classList.remove('miss');
+  renderFormBar(); saveDraft();
+}
+function onChip(btn){
+  const path = btn.dataset.f, v = btn.dataset.v;
+  const cur = get(F, path);
+  const nv = cur === v && !['priority', 'price.goldRateBooked'].includes(path) ? '' : v;
+  setp(F, path, nv);
+  $$(`[data-act="chip"][data-f="${path}"]`).forEach(b => b.classList.toggle('on', b.dataset.v === nv));
+  if (path === 'spec.jtype') { const w = $('#w-f-spec-jtypeOther'); if (w) w.hidden = nv !== 'Other'; }
+  if (path === 'price.goldRateBooked') { const w = $('#w-f-price-goldRate'); if (w) w.hidden = nv !== 'yes'; }
+  const w = btn.closest('.fld'); if (w) w.classList.remove('miss');
+  renderFormBar(); saveDraft();
+}
+function reviewForm(){
+  if (FP.busy()) return toast('Photo/Video upload पूरा होने दें…');
+  markMissing();
+  const miss = missingFields();
+  if (F.mode === 'edit') { if (miss.length) return openSheet('ये भरना बाकी है', missHtml(miss), {}); return saveEdit(); }
+  const s = F.spec, sum = [];
+  const row = (k, v) => v ? `<div>${esc(k)}</div><div>${esc(v)}</div>` : '';
+  let h = miss.length ? `<p style="color:var(--bad);font-weight:600;margin-top:-4px">Submit से पहले ये भरें (दबाकर वहाँ जाएँ):</p>${missHtml(miss)}` : `<p class="small muted" style="margin-top:-4px">Client के साथ एक बार सब मिला लें. Submit करते ही order Darshana / Admin के पास approval के लिए चला जाएगा.</p>`;
+  h += `<div class="sum"><h5>Client</h5><div class="kv">${row('नाम', F.client.name)}${row('Contact', F.client.phone)}${row('City', F.client.city)}</div>
+    <h5>Product (factory को)</h5><div class="kv">${row('Type', jtypeOf(s))}${row('Qty', s.qty !== '1' ? s.qty : '')}${row('Metal', s.metalColor)}${row('Purity', s.purity)}${row('Size / Length', s.size)}${row('Dia Ct. 1', s.dia1Ct ? s.dia1Ct + (s.dia1Ct !== 'NA' ? ' ct ' + (s.dia1Shape || '') : '') : '')}${row('Dia Ct. 2', s.dia2Ct ? s.dia2Ct + (s.dia2Ct !== 'NA' ? ' ct ' + (s.dia2Shape || '') : '') : '')}${row('Gemstone 1', s.gem1)}${row('Gemstone 2', s.gem2)}${row('Engraving', s.engraving)}${s.design ? `<div class="full">${esc(s.design)}</div>` : ''}</div>
+    <h5>Photos / Video / Voice</h5><p style="margin:4px 0 8px">${FP.done().length ? FP.done().map(m => (m.kind === 'image' ? '📷' : m.kind === 'video' ? '🎥' : '🎙️') + (m.factory === false ? '🔒' : '')).join(' ') : '—'}</p>
+    <h5>Price & Payment</h5><div class="kv">${row('Est. Amount', F.price.est ? money(F.price.est) : '')}${row('Gold rate booked', F.price.goldRateBooked === 'yes' ? 'Yes' + (F.price.goldRate ? ' @ ' + money(F.price.goldRate) + '/g' : '') : F.price.goldRateBooked === 'no' ? 'No' : '')}${row('Advance', F.advance.amount !== '' ? money(F.advance.amount) + (F.advance.mode ? ' (' + F.advance.mode + ')' : '') : '')}</div>
+    <h5>Delivery</h5><div class="kv">${row('Date', F.deliveryDay ? fmtDay(F.deliveryDay) + ' (' + diffDays(F.deliveryDay, today()) + ' दिन)' : '')}${row('Priority', F.priority === 'urgent' ? 'Urgent' : 'Normal')}</div></div>`;
+  void sum;
+  if (F.price.goldRateBooked === 'yes' && num(F.price.est) && num(F.advance.amount) < num(F.price.est) * 0.5) h += `<p class="small" style="color:var(--warn)">⚠️ Gold rate booked है पर advance 50% से कम है (शर्त 6).</p>`;
+  h += `<button class="btn primary big" data-act="f-submit" ${miss.length ? 'disabled' : ''}>✅ Order Submit करें</button>`;
+  openSheet(miss.length ? 'कुछ बाकी है' : 'Review — सब सही है?', h, {});
+}
+function missHtml(miss){ return `<ul class="miss-list">${miss.map(([p, l]) => `<li data-act="goto-field" data-p="${esc(p)}">⚠️ ${esc(l)}</li>`).join('')}</ul>`; }
+function gotoField(p){
+  closeSheet();
+  const w = fieldWrap(p); if (!w) return;
+  w.scrollIntoView({behavior: 'smooth', block: 'center'});
+  const i = w.querySelector('input,textarea,button'); if (i && i.tagName !== 'BUTTON') setTimeout(() => i.focus({preventScroll: true}), 350);
+}
+function ymOf(d){ return String(d.getFullYear()).slice(2) + pad(d.getMonth() + 1); }
+async function submitNew(){
+  if (FP.busy()) return toast('Upload पूरा होने दें…');
+  const miss = missingFields(); if (miss.length) return reviewForm();
+  const btn = $('[data-act="f-submit"]'); if (btn) { btn.disabled = true; btn.textContent = 'Submit हो रहा है…'; }
+  try {
+    const id = F.id, now = Date.now(), uid = S.authUser.uid;
+    let signUrl = '', signPath = '';
+    if (!F.ack.remote && F.sigDirty) {
+      const blob = await new Promise(r => $('#sig').toBlob(r, 'image/png'));
+      const res = await B.storage.upload('private/' + id + '/signature-' + now + '.png', blob, 'image/png');
+      signUrl = res.url; signPath = res.path;
+    }
+    const all = FP.done();
+    const fmedia = {}, pmedia = {};
+    all.forEach(m => { const f = m.factory !== false; const d = Object.assign({}, m); delete d.factory; delete d.id; (f ? fmedia : pmedia)[m.id] = d; });
+    const spec = clone(F.spec); Object.keys(spec).forEach(k => { spec[k] = String(spec[k] == null ? '' : spec[k]).trim(); });
+    if (!spec.qty) spec.qty = '1';
+    const ym = ymOf(new Date());
+    const priv = {
+      client: {name: F.client.name.trim(), phone: phone10(F.client.phone), city: F.client.city.trim()},
+      price: {est: num(F.price.est), goldRateBooked: F.price.goldRateBooked, goldRate: F.price.goldRateBooked === 'yes' ? num(F.price.goldRate) : '', calc: calcValues(F.price.calc, spec).value ? Object.assign(clone(F.price.calc), calcValues(F.price.calc, spec)) : null, final: ''},
+      payments: {}, internalNote: F.internalNote.trim(), media: pmedia,
+      ack: {accepted: true, remote: !!F.ack.remote, at: now, signUrl, signPath, terms: TERMS.length},
+      log: {}
+    };
+    if (num(F.advance.amount) > 0) {
+      priv.payments['p' + rid()] = {amount: num(F.advance.amount), mode: F.advance.mode, day: today(), note: 'Advance', by: uid, name: myName(), at: now};
+      priv.log[logKey()] = logEntry('payment', 'Advance ' + money(F.advance.amount) + ' (' + F.advance.mode + ')');
+    }
+    let no = '';
+    await B.db.counterTx('counters/' + ym, n => {
+      no = 'DD-' + ym + '-' + String(n).padStart(3, '0');
+      const order = {
+        no, ym, seq: n, orderDay: today(), createdAt: now, createdBy: uid, createdByName: myName(),
+        status: 'review', factoryVisible: false, stage: '', priority: F.priority, deliveryDay: F.deliveryDay,
+        spec, media: fmedia, edited: {}, query: {open: false}, updatedAt: now, updatedBy: uid,
+        log: {[logKey()]: logEntry('created', 'Order बना — ' + itemLine({spec}) + (all.length ? '\n📎 ' + all.length + ' photo/video/voice' : ''))}
+      };
+      return [{path: 'orders/' + id, data: order}, {path: 'orders/' + id + '/private/info', data: priv}];
+    });
+    const dday = F.deliveryDay;
+    clearDraft(); FORMKEY = null; F = null; FP = null;
+    go('#/o/' + id);
+    setTimeout(() => {
+      const o = getOrder(id) || {no, spec, deliveryDay: dday};
+      const admins = usersWith('admin').filter(u => u.phone && u.uid !== uid);
+      openSheet('Order बन गया — ' + no, `<p>Order <b>${esc(no)}</b> Darshana / Admin के app में approval के लिए पहुँच गया है.</p>
+        ${admins.length ? `<div class="lbl">WhatsApp पर भी बता दें</div><div class="btns" style="margin-bottom:10px">${pingBtns(id, o, 'admin')}</div>` : ''}
+        <div class="lbl">Client को confirmation</div><div class="btns"><a class="btn wa" target="_blank" rel="noopener" href="${esc(waLink(priv.client.phone, clientMsg(Object.assign({}, o, {no, deliveryDay: dday}), priv)))}">WhatsApp पर client को भेजें</a></div>
+        <button class="btn big" style="margin-top:12px" data-act="sheet-close">ठीक है</button>`, {id});
+    }, 400);
+  } catch (e) {
+    console.error(e);
+    toast('Order submit नहीं हुआ — ' + errText(e), 'bad');
+    if (btn) { btn.disabled = false; btn.textContent = '✅ Order Submit करें'; }
+  }
+}
+async function saveEdit(){
+  const id = F.id, o = F.orig.o, p = F.orig.p;
+  const fresh = getOrder(id);
+  if (!canEdit(fresh)) { toast('ये order अब edit नहीं हो सकता.', 'bad'); return go('#/o/' + id); }
+  const main = {}, priv = {}, mainTxt = [], privTxt = [], edited = {};
+  const cur = {client: F.client, spec: F.spec, deliveryDay: F.deliveryDay, priority: F.priority, price: F.price, internalNote: F.internalNote};
+  const oldAll = {client: p.client || {}, spec: o.spec || {}, deliveryDay: o.deliveryDay, priority: o.priority, price: p.price || {}, internalNote: p.internalNote || ''};
+  for (const [path, label, where] of EDIT_FIELDS) {
+    if (!staff() && where === 'priv') continue;
+    let nv = get(cur, path); let ov = get(oldAll, path);
+    nv = nv == null ? '' : String(nv).trim(); ov = ov == null ? '' : String(ov).trim();
+    if (path === 'client.phone') nv = phone10(nv);
+    if (path === 'price.est' || path === 'price.goldRate') { nv = nv === '' ? '' : String(num(nv)); ov = ov === '' ? '' : String(num(ov)); }
+    if (nv === ov) continue;
+    const val = (path === 'price.est' || path === 'price.goldRate') ? (nv === '' ? '' : num(nv)) : nv;
+    const line = label + ': ' + (ov || '—') + ' → ' + (nv || '—');
+    if (where === 'main') { setp(main, path, val); mainTxt.push(line); edited[path.replace(/\./g, '_')] = Date.now(); }
+    else { setp(priv, path, val); privTxt.push(line); }
+  }
+  /* calc */
+  const CALC_IN = ['goldWt', 'goldRate', 'diaRate', 'dia2Rate', 'gemAmt', 'making', 'other', 'gst'];
+  const calcSig = c => c && num(c.final) ? CALC_IN.map(k => String(num(c[k]))).join('|') + '|' + Math.round(num(c.final)) : '';
+  const nvCalc = calcValues(F.price.calc, F.spec).value ? Object.assign(clone(F.price.calc), calcValues(F.price.calc, F.spec)) : null;
+  if (calcSig(nvCalc) !== calcSig((p.price || {}).calc)) { priv.price = priv.price || {}; priv.price.calc = nvCalc; if (!privTxt.length) privTxt.push('हिसाब (calculation) बदला'); }
+  /* media: new, removed, moved */
+  const nowMedia = FP.done();
+  const oldF = o.media || {}, oldP = p.media || {};
+  let mAdd = 0, mDel = 0;
+  nowMedia.forEach(m => {
+    const d = Object.assign({}, m); const f = d.factory !== false; delete d.factory; delete d.id;
+    const inF = oldF[m.id] && !oldF[m.id].deleted, inP = oldP[m.id] && !oldP[m.id].deleted;
+    if (f && !inF) { setp(main, 'media.' + m.id, d); if (inP) setp(priv, 'media.' + m.id + '.deleted', true); else mAdd++; }
+    if (!f && !inP) { setp(priv, 'media.' + m.id, d); if (inF) setp(main, 'media.' + m.id + '.deleted', true); else mAdd++; }
+    if (f && inF && (oldF[m.id].desc || '') !== d.desc) setp(main, 'media.' + m.id + '.desc', d.desc);
+    if (!f && inP && (oldP[m.id].desc || '') !== d.desc) setp(priv, 'media.' + m.id + '.desc', d.desc);
+  });
+  const ids = new Set(nowMedia.map(m => m.id));
+  Object.keys(oldF).forEach(k => { if (!oldF[k].deleted && !ids.has(k)) { setp(main, 'media.' + k + '.deleted', true); mDel++; } });
+  Object.keys(oldP).forEach(k => { if (!oldP[k].deleted && !ids.has(k)) { setp(priv, 'media.' + k + '.deleted', true); mDel++; } });
+  if (mAdd) mainTxt.push(mAdd + ' नई photo/video/voice जोड़ी');
+  if (mDel) mainTxt.push(mDel + ' photo/video हटाई');
+  if (!Object.keys(main).length && !Object.keys(priv).length) { toast('कुछ नहीं बदला.'); return go('#/o/' + id); }
+  const ops = [];
+  if (Object.keys(main).length || mainTxt.length) {
+    main.log = {[logKey()]: logEntry('edited', 'बदलाव:\n' + (mainTxt.join('\n') || 'Details update'))};
+    if (Object.keys(edited).length) main.edited = edited;
+    if (fresh.status === 'factory' && mainTxt.length) main.factoryAck = false;
+    ops.push({op: 'update', path: 'orders/' + id, data: stamp(main)});
+  }
+  if (Object.keys(priv).length) {
+    if (privTxt.length) priv.log = {[logKey()]: logEntry('price', 'बदलाव:\n' + privTxt.join('\n'))};
+    ops.push({op: 'update', path: 'orders/' + id + '/private/info', data: priv});
+  }
+  const ok = await batch(ops);
+  if (!ok) return;
+  FORMKEY = null; F = null; FP = null;
+  toast('बदलाव save हो गए.' + (fresh.status === 'factory' && mainTxt.length ? ' Factory को alert चला गया.' : ''));
+  go('#/o/' + id);
+}
+
+/* ---------- team (admin) ---------- */
+function renderTeam(){
+  const list = Object.entries(S.users).map(([uid, u]) => Object.assign({uid}, u)).sort((a, b) => (b.active ? 1 : 0) - (a.active ? 1 : 0) || (a.role > b.role ? 1 : -1));
+  let h = `<div class="view-title">Team & Logins</div>`;
+  h += `<div class="card"><h3>नया व्यक्ति जोड़ें</h3>
+    <div class="err" id="u-err" hidden></div>
+    <div class="fld"><label for="u-name">नाम</label><input class="in" id="u-name" placeholder="जैसे: Nishant"></div>
+    <div class="lbl">Role</div><div class="chips" id="u-role" style="margin-bottom:6px">${[['store','Store (order लेने वाले)'],['admin','Admin (approve, सब access)'],['factory','Factory']].map((r, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="u-role" data-v="${r[0]}">${r[1]}</button>`).join('')}</div>
+    <p class="small muted" style="margin:0 0 12px">Store: order बनाए, price/payment देखे. Admin: approve करे, सब बदले, team बनाए. Factory: सिर्फ product details, photo/video/voice और stage update — price और client नहीं दिखेगा.</p>
+    <div class="two"><div class="fld"><label for="u-lid">Login ID</label><input class="in" id="u-lid" autocapitalize="none" placeholder="nishant"></div>
+    <div class="fld"><label for="u-pw">Password</label><input class="in" id="u-pw" placeholder="कम से कम 6"></div></div>
+    <div class="fld"><label for="u-phone">WhatsApp नंबर (alert भेजने के लिए)</label><input class="in" id="u-phone" type="tel" inputmode="numeric" placeholder="10 अंक"></div>
+    <button class="btn primary big" data-act="u-add" id="u-add">Login बनाएँ</button><div id="u-cred"></div></div>`;
+  h += `<div class="card"><h3>सभी लोग</h3>` + list.map(u => `<div class="urow ${u.active ? '' : 'off'}"><span class="av">${esc(initial(u.name))}</span><div class="nm"><b>${esc(u.name)} ${u.uid === S.authUser.uid ? '<span class="pill gold">आप</span>' : ''}</b><small>${esc(ROLES[u.role] || u.role)} · ID: ${esc(u.loginId || '')}${u.phone ? ' · 📱 ' + esc(u.phone) : ''}${u.active ? '' : ' · बंद'}</small></div>
+    ${u.uid !== S.authUser.uid && u.active ? `<button class="btn sm" data-act="u-menu" data-uid="${esc(u.uid)}">⋯</button>` : ''}</div>`).join('') + `</div>`;
+  patch($('#view'), h);
+}
+async function addUser(){
+  const name = $('#u-name').value.trim(), lid = $('#u-lid').value.trim().toLowerCase(), pw = $('#u-pw').value, phone = phone10($('#u-phone').value);
+  const roleV = (($('#u-role .chip.on') || {}).dataset || {}).v || 'store';
+  if (!name) return showErr('#u-err', 'नाम डालें.');
+  if (!/^[a-z0-9._-]{3,40}$/.test(lid)) return showErr('#u-err', 'Login ID में 3-40 अक्षर: a-z, 0-9, . _ - (space नहीं).');
+  if (pw.length < 6) return showErr('#u-err', 'Password कम से कम 6 अक्षर.');
+  showErr('#u-err', '');
+  const btn = $('#u-add'); btn.disabled = true; btn.textContent = 'बन रहा है…';
+  try {
+    const ex = await B.db.get('logins/' + lid);
+    if (ex.exists) throw {msg: 'ये Login ID पहले से है. दूसरा चुनें.'};
+    const email = lid.replace(/[^a-z0-9]/g, '') + '-' + Math.random().toString(36).slice(2, 7) + '@' + (B.projectId || 'deeva-orders') + '.firebaseapp.com';
+    const uid = await B.auth.createUser(email, pw);
+    await B.db.batch([
+      {op: 'set', path: 'logins/' + lid, data: {email, uid, at: Date.now()}},
+      {op: 'set', path: 'users/' + uid, data: {name, role: roleV, loginId: lid, phone, active: true, at: Date.now(), by: S.authUser.uid}}
+    ]);
+    ['#u-name', '#u-lid', '#u-pw', '#u-phone'].forEach(s => { $(s).value = ''; });
+    showCred(name, lid, pw, phone);
+  } catch (e) { showErr('#u-err', e.msg || authErr(e)); }
+  btn.disabled = false; btn.textContent = 'Login बनाएँ';
+}
+function credText(name, lid, pw){ return `Deeva Orders app\nनाम: ${name}\nLogin ID: ${lid}\nPassword: ${pw}\n\nApp: ${location.origin + location.pathname}${NATIVE ? '' : '\n(Android APK का link Admin से लें)'}`; }
+function showCred(name, lid, pw, phone){
+  openSheet('Login बन गया', `<div class="cred">नाम: <b>${esc(name)}</b><br>Login ID: <b>${esc(lid)}</b><br>Password: <b>${esc(pw)}</b></div>
+    <p class="small muted">ये details अभी भेज दें — password बाद में दोबारा नहीं दिखेगा.</p>
+    <div class="btns">${phone ? `<a class="btn wa" target="_blank" rel="noopener" href="${esc(waLink(phone, credText(name, lid, pw)))}">WhatsApp पर भेजें</a>` : ''}<button class="btn" data-act="copy" data-t="${esc(credText(name, lid, pw))}">Copy करें</button></div>
+    <button class="btn big" style="margin-top:12px" data-act="sheet-close">ठीक है</button>`, {});
+}
+function userMenu(uid){
+  const u = S.users[uid];
+  openSheet(u.name, `<div class="fld"><label for="um-phone">WhatsApp नंबर</label><div class="inp"><input id="um-phone" type="tel" inputmode="numeric" value="${esc(u.phone || '')}"><button class="btn sm" data-act="um-phone" style="flex:none">Save</button></div></div>
+    <div class="lbl">Role</div><div class="chips" id="um-role" style="margin-bottom:8px">${Object.entries(ROLES).map(([k, v]) => `<button class="chip ${u.role === k ? 'on' : ''}" data-act="um-role" data-v="${k}">${v}</button>`).join('')}</div>
+    <div class="btns" style="margin-top:14px"><button class="btn" data-act="um-newpw">🔑 नया Password बनाएँ</button><button class="btn danger" data-act="um-off">Login बंद करें</button></div>`, {uid});
+}
+async function userNewPw(){
+  const uid = S.sheet.uid, u = S.users[uid];
+  const pw = prompt('नया password (कम से कम 6 अक्षर):');
+  if (!pw) return; if (pw.length < 6) return toast('Password कम से कम 6 अक्षर.', 'bad');
+  try {
+    const email = (u.loginId || 'user').replace(/[^a-z0-9]/g, '') + '-' + Math.random().toString(36).slice(2, 7) + '@' + (B.projectId || 'deeva-orders') + '.firebaseapp.com';
+    const nuid = await B.auth.createUser(email, pw);
+    await B.db.batch([
+      {op: 'set', path: 'users/' + nuid, data: Object.assign({}, u, {active: true, at: Date.now(), by: S.authUser.uid, prevUid: uid})},
+      {op: 'update', path: 'users/' + uid, data: {active: false, replacedBy: nuid}},
+      {op: 'set', path: 'logins/' + u.loginId, data: {email, uid: nuid, at: Date.now()}}
+    ]);
+    showCred(u.name, u.loginId, pw, u.phone);
+  } catch (e) { toast(authErr(e), 'bad'); }
+}
+
+/* ---------- account ---------- */
+function notifLater(){ try { return localStorage.getItem('do.notif.later') === '1'; } catch (e) { return false; } }
+function renderAccount(){
+  const lang = micLang();
+  let h = `<div class="view-title">मेरा Account</div>
+  <div class="card"><div class="row"><span class="who" style="pointer-events:none;background:var(--g8)"><span class="av">${esc(initial(myName()))}</span><span>${esc(myName())}</span><em>${esc(ROLES[role()])}</em></span></div>
+    <p class="small muted" style="margin:10px 0 0">Login ID: ${esc((S.me && S.me.loginId) || '')}</p></div>
+  <div class="card"><h3>🎤 बोलकर लिखने की भाषा</h3><div class="chips">${[['hi-IN','हिंदी'],['en-IN','English (India)']].map(x => `<button class="chip ${lang === x[0] ? 'on' : ''}" data-act="mic-lang" data-v="${x[0]}">${x[1]}</button>`).join('')}</div>
+    <p class="small muted" style="margin:8px 0 0">हिंदी चुनने पर भी "rose gold", "pendant" जैसे English शब्द ठीक लिखे जाते हैं.</p></div>
+  <div class="card"><h3>🔑 Password बदलें</h3><div class="err" id="pw-err" hidden></div>
+    <div class="fld"><label for="pw-cur">अभी का password</label><input class="in" id="pw-cur" type="password" autocomplete="current-password"></div>
+    <div class="fld"><label for="pw-new">नया password</label><input class="in" id="pw-new" type="password" autocomplete="new-password"></div>
+    <button class="btn" data-act="pw-change">Password बदलें</button></div>`;
+  if (!NATIVE && 'Notification' in window) h += `<div class="card"><h3>🔔 Notification</h3><p class="small muted" style="margin-top:0">${Notification.permission === 'granted' ? 'चालू है — app खुला या background में हो तो alert आएगा.' : 'नए order / update पर phone में alert के लिए चालू करें.'}</p>${Notification.permission !== 'granted' ? '<button class="btn" data-act="notif-on">चालू करें</button>' : ''}</div>`;
+  h += `<button class="btn big danger" data-act="logout">Logout</button>`;
+  patch($('#view'), h);
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (!t) return;
+  const a = t.dataset.act;
+  const oid = S.route && S.route.id;
+  switch (a) {
+    case 'go': e.preventDefault(); go(t.dataset.to); break;
+    case 'logout': logout(); break;
+    case 'reset-pw': sendResetLink(); break;
+    case 'filter': S.filter = t.dataset.v; render(); break;
+    case 'hist-load': loadHistory(); break;
+    case 'notif-on': if ('Notification' in window) Notification.requestPermission().then(() => render()); break;
+    case 'notif-later': try { localStorage.setItem('do.notif.later', '1'); } catch (x) {} render(); break;
+    case 'sheet-close': closeSheet(); break;
+    case 'sheet-bg': if (e.target === t) closeSheet(); break;
+    case 'zoom': {
+      const lb = document.createElement('div'); lb.className = 'lightbox';
+      lb.innerHTML = `<div><img src="${esc(t.dataset.src)}" alt="">${t.dataset.cap ? `<p>${esc(t.dataset.cap)}</p>` : ''}</div><button aria-label="बंद करें">✕</button>`;
+      lb.addEventListener('click', () => lb.remove()); document.body.appendChild(lb); break;
+    }
+    case 'mic': e.preventDefault(); micStart(t.dataset.for, t); break;
+    case 'chip': e.preventDefault(); onChip(t); break;
+    case 'pick1': {
+      e.preventDefault();
+      $$('#' + t.dataset.g + ' .chip').forEach(c => c.classList.toggle('on', c === t));
+      if (S.sheet && (t.dataset.g === 'dp-mode' || t.dataset.g === 'py-mode')) S.sheet.mode = t.dataset.v;
+      break;
+    }
+    case 'f-days': if (F) { const d = addDays(today(), +t.dataset.n); const i = $('#f-deliveryDay'); i.value = d; onFormInput(i); } break;
+    case 'calc-toggle': { const c = $('#calc'); c.hidden = !c.hidden; if (!c.hidden) updateCalc(); break; }
+    case 'calc-apply': { const v = calcValues(F.price.calc, F.spec); if (!v.final) return toast('पहले weight और rate डालें.', 'bad'); const i = $('#f-price-est'); i.value = String(Math.round(v.final)); onFormInput(i); toast('Est. Amount: ' + money(v.final)); break; }
+    case 'sig-clear': clearSig(); break;
+    case 'f-clear': if (confirm('ये अधूरा order मिटाकर नया शुरू करें?')) { clearDraft(); FORMKEY = null; F = null; render(); } break;
+    case 'f-review': reviewForm(); break;
+    case 'f-submit': submitNew(); break;
+    case 'goto-field': gotoField(t.dataset.p); break;
+    case 'rec': e.preventDefault(); { const p = PICKERS[t.dataset.p]; if (p) p.toggleRec(); } break;
+    case 'mdel': e.preventDefault(); { const p = PICKERS[t.dataset.p]; if (p) p.del(t.dataset.id); } break;
+    case 'approve-open': sheetApprove(oid); break;
+    case 'approve-do': doApprove(); break;
+    case 'query-open': sheetQuery(oid); break;
+    case 'query-do': doQuery(); break;
+    case 'reply-open': sheetReply(oid); break;
+    case 'reply-do': doReply(); break;
+    case 'stage-open': sheetStage(oid); break;
+    case 'stage-pick': if (S.sheet) { S.sheet.stage = t.dataset.k; $$('#st-chips .chip').forEach(c => c.classList.toggle('on', c === t)); } break;
+    case 'stage-do': doStage(); break;
+    case 'stage-quick': setStage(oid, t.dataset.k, '', []).then(ok => { if (ok) toast('Stage: ' + STAGE_SHORT[t.dataset.k]); }); break;
+    case 'cad-ok': if (confirm('CAD OK करें? Factory casting शुरू करेगा.')) doCad(true); break;
+    case 'cad-change-open': openSheet('CAD में क्या बदलना है?', `<div class="fld">${textArea('cad-text', 'जैसे: flower थोड़ा छोटा, butterfly हटाओ', '')}</div><button class="btn primary big" data-act="cad-change-do">Factory को भेजें</button>`, {id: oid}); break;
+    case 'cad-change-do': doCad(false); break;
+    case 'note-open': sheetNote(oid); break;
+    case 'note-do': doNote(); break;
+    case 'dispatch-open': sheetDispatch(oid); break;
+    case 'dispatch-do': doDispatch(); break;
+    case 'recv': doReceived(); break;
+    case 'deliv-open': sheetDelivered(oid); break;
+    case 'deliv-do': doDelivered(); break;
+    case 'pay-open': sheetPay(oid); break;
+    case 'pay-do': doPay(); break;
+    case 'final-open': sheetFinal(oid); break;
+    case 'final-do': doFinal(); break;
+    case 'cancel-open': sheetCancel(oid); break;
+    case 'cancel-do': doCancel(); break;
+    case 'reopen': doReopen(); break;
+    case 'seen': doSeen(); break;
+    case 'u-add': addUser(); break;
+    case 'u-menu': userMenu(t.dataset.uid); break;
+    case 'um-phone': write('users/' + S.sheet.uid, {phone: phone10($('#um-phone').value)}).then(ok => ok && toast('Save हो गया.')); break;
+    case 'um-role': { const v = t.dataset.v; if (confirm(S.users[S.sheet.uid].name + ' का role "' + ROLES[v] + '" करें?')) write('users/' + S.sheet.uid, {role: v}).then(ok => { if (ok) { $$('#um-role .chip').forEach(c => c.classList.toggle('on', c === t)); toast('Role बदल गया.'); } }); break; }
+    case 'um-newpw': userNewPw(); break;
+    case 'um-off': if (confirm(S.users[S.sheet.uid].name + ' का login बंद करें? वो अब app नहीं खोल पाएँगे.')) write('users/' + S.sheet.uid, {active: false}).then(ok => { if (ok) { closeSheet(); toast('Login बंद कर दिया.'); } }); break;
+    case 'copy': { const tx = t.dataset.t; if (NATIVE && NATIVE.copy) NATIVE.copy(tx); else if (navigator.clipboard) navigator.clipboard.writeText(tx).catch(() => {}); toast('Copy हो गया.'); break; }
+    case 'mic-lang': write('users/' + S.authUser.uid, {micLang: t.dataset.v}).then(ok => ok && toast('भाषा बदल गई.')); break;
+    case 'pw-change': {
+      const cur = $('#pw-cur').value, nw = $('#pw-new').value;
+      if (nw.length < 6) { showErr('#pw-err', 'नया password कम से कम 6 अक्षर.'); break; }
+      B.auth.changePassword(cur, nw).then(() => { showErr('#pw-err', ''); $('#pw-cur').value = ''; $('#pw-new').value = ''; toast('Password बदल गया.'); }, err => showErr('#pw-err', authErr(err)));
+      break;
+    }
+  }
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.id === 'q') { S.q = t.value; render(); return; }
+  if (t.dataset && t.dataset.f && F && FORMKEY) { onFormInput(t); return; }
+  if (t.dataset && t.dataset.desc) { const p = PICKERS[t.dataset.p]; if (p && p.items[t.dataset.desc]) { p.items[t.dataset.desc].desc = t.value; if (p.opts.onChange) p.opts.onChange(); } }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset && t.dataset.pick) {
+    const p = PICKERS[t.dataset.p];
+    if (p) Array.from(t.files || []).forEach(f => p.add(f, t.dataset.pick));
+    t.value = '';
+    return;
+  }
+  if (t.dataset && t.dataset.fact) { const p = PICKERS[t.dataset.p]; if (p && p.items[t.dataset.fact]) { p.items[t.dataset.fact].factory = t.checked; if (p.opts.onChange) p.opts.onChange(); } return; }
+  if (t.id === 'f-ack' && F) { F.ack.accepted = t.checked; $('#w-f-ack').classList.remove('miss'); renderFormBar(); saveDraft(); }
+  if (t.id === 'f-remote' && F) { F.ack.remote = t.checked; $('#w-sig').hidden = t.checked; renderFormBar(); saveDraft(); }
+});
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  if (e.target.id === 'setup-form') doSetup();
+  if (e.target.id === 'login-form') doLogin();
+});
+window.addEventListener('hashchange', () => { closeSheet(); S.route = parseRoute(); render(); });
+/* Android back button: close a dialog / photo first */
+window.__doBack = () => {
+  const lb = document.querySelector('.lightbox'); if (lb) { lb.remove(); return true; }
+  if ($('#sheet .sheet')) { closeSheet(); return true; }
+  return false;
+};
+function net(){ $('#net').hidden = navigator.onLine !== false; }
+window.addEventListener('online', net); window.addEventListener('offline', net);
+
+/* ---------- boot ---------- */
+function boot(){
+  net();
+  if (!B) {
+    $('#view').innerHTML = `<div class="auth"><div class="logo"><img src="icons/wordmark.png" alt="Deeva"></div><div class="card"><h3>Setup बाकी है</h3><p>App अभी Firebase से नहीं जुड़ा है (config खाली है) या Internet नहीं है.</p></div></div>`;
+    return;
+  }
+  S.route = parseRoute();
+  B.auth.onChange(async u => {
+    if (u) {
+      if (S.authUser && S.authUser.uid === u.uid) return;
+      stopAll(); S.booted = true; startSession(u); S.route = parseRoute(); render(); return;
+    }
+    stopAll(); S.authUser = null;
+    try { const a = await B.db.get('config/admin'); S.needSetup = !a.exists; } catch (e) { S.needSetup = false; }
+    S.booted = true; S.route = {v: ''}; render();
+  });
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+boot();
+})();
+</script>
+</body>
+</html>

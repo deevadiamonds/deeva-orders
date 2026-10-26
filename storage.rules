@@ -1,0 +1,31 @@
+rules_version = '2';
+// Deeva Orders — photos, videos, voice notes and client signatures.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function person() { return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data; }
+    function active() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && person().active == true;
+    }
+    function staff() { return active() && person().role in ['admin', 'store']; }
+
+    // order photos / videos / voice notes (store, admin and factory)
+    match /orders/{orderId}/{file} {
+      allow read: if active();
+      allow create: if active()
+        && request.resource.size < 300 * 1024 * 1024
+        && request.resource.contentType.matches('(image|video|audio)/.*');
+      allow update, delete: if false;
+    }
+
+    // client signature and other store-only files
+    match /private/{orderId}/{file} {
+      allow read: if staff();
+      allow create: if staff()
+        && request.resource.size < 50 * 1024 * 1024
+        && request.resource.contentType.matches('(image|video|audio)/.*|application/pdf');
+      allow update, delete: if false;
+    }
+  }
+}

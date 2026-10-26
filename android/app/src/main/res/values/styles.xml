@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="do_green">#0D3B25</color>
+    <color name="do_green_dark">#0A271B</color>
+    <color name="do_gold">#E7B150</color>
+    <color name="do_paper">#F4EFE4</color>
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/do_green</item>
+        <item name="android:navigationBarColor">@color/do_green_dark</item>
+        <item name="android:windowBackground">@color/do_paper</item>
+        <item name="android:colorPrimary">@color/do_green</item>
+        <item name="android:colorAccent">@color/do_gold</item>
+    </style>
+</resources>

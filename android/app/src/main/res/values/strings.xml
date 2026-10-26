@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Deeva Orders</string>
+    <string name="channel_name">Orders</string>
+    <string name="channel_desc">नए order, approval और factory updates</string>
+    <string name="link_failed">ये link नहीं खुल सका</string>
+    <string name="pick_file">Photo / Video चुनें</string>
+    <string name="speak_now">बोलिए…</string>
+    <string name="no_speech">इस phone में बोलकर लिखने वाला Google app नहीं है</string>
+</resources>

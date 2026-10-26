@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+}
+
+def appUrl = System.getenv('APP_URL') ?: 'https://example.github.io/deeva-orders/'
+def ksFile = file(System.getenv('DO_KEYSTORE') ?: 'release.jks')
+
+android {
+    namespace 'com.deeva.orders'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.deeva.orders'
+        minSdk 24
+        targetSdk 34
+        versionCode((System.getenv('VERSION_CODE') ?: '1') as Integer)
+        versionName '1.0.' + (System.getenv('VERSION_CODE') ?: '1')
+        resValue 'string', 'app_url', appUrl
+    }
+
+    signingConfigs {
+        release {
+            storeFile ksFile
+            storePassword System.getenv('DO_KS_PASS') ?: 'deevaorders'
+            keyAlias 'deevaorders'
+            keyPassword System.getenv('DO_KS_PASS') ?: 'deevaorders'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        encoding 'UTF-8'
+    }
+}

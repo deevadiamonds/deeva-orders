@@ -1,0 +1,118 @@
+rules_version = '2';
+// Deeva Orders — who can see and change what.
+//  admin   : everything (approve, edit, team, price, payments)
+//  store   : creates orders, sees client + price + payments, edits until approved, replies to queries,
+//            CAD decision, marks received / delivered
+//  factory : only approved orders, only product details (no client, no price), updates stage, dispatches
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function userDoc() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function hasUser() { return signedIn() && exists(userDoc()); }
+    function me() { return get(userDoc()).data; }
+    function active() { return hasUser() && me().active == true; }
+    function isAdmin() { return active() && me().role == 'admin'; }
+    function isStore() { return active() && me().role == 'store'; }
+    function isFactory() { return active() && me().role == 'factory'; }
+    function staff() { return isAdmin() || isStore(); }
+
+    // first setup: the first person becomes admin, only once
+    match /config/admin {
+      allow get: if true;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && getAfter(userDoc()).data.role == 'admin';
+      allow update, delete: if false;
+    }
+    match /config/{doc} {
+      allow get: if true;
+      allow list: if active();
+      allow write: if isAdmin() && doc != 'admin';
+    }
+
+    match /users/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow read: if active();
+      allow create: if isAdmin()
+        || (signedIn() && uid == request.auth.uid
+            && !exists(/databases/$(database)/documents/config/admin)
+            && getAfter(/databases/$(database)/documents/config/admin).data.uid == request.auth.uid
+            && request.resource.data.role == 'admin' && request.resource.data.active == true);
+      allow update: if isAdmin()
+        || (active() && uid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['micLang']));
+      allow delete: if false;
+    }
+
+    // Login ID -> sign-in email (looked up before login)
+    match /logins/{id} {
+      allow get: if true;
+      allow list, write: if isAdmin();
+    }
+
+    // monthly order-number counters (DD-YYMM-001 ...)
+    match /counters/{ym} {
+      allow read: if staff();
+      allow create: if staff() && request.resource.data.n == 1;
+      allow update: if staff() && request.resource.data.n == resource.data.n + 1;
+      allow delete: if false;
+    }
+
+    function sameIdentity() {
+      let o = resource.data; let n = request.resource.data;
+      return n.no == o.no && n.seq == o.seq && n.ym == o.ym && n.createdBy == o.createdBy;
+    }
+
+    function storeUpdate() {
+      let o = resource.data; let n = request.resource.data;
+      let k = n.diff(o).affectedKeys();
+      return sameIdentity() && n.factoryVisible == o.factoryVisible && (
+        // before approval: may correct details and answer a query
+        (o.status in ['review', 'query']
+          && (n.status == o.status || (o.status == 'query' && n.status == 'review'))
+          && !k.hasAny(['approvedAt', 'approvedBy', 'factoryDue', 'factoryNote', 'stage', 'stageAt',
+                        'dispatch', 'cadRequired', 'cad', 'factoryAck', 'factoryAckAt', 'cancel']))
+        ||
+        // after approval: notes/photos, CAD decision, received at store, delivered
+        (o.status in ['factory', 'dispatched', 'received']
+          && k.hasOnly(['log', 'media', 'updatedAt', 'updatedBy', 'stage', 'stageAt', 'cad', 'status', 'received', 'delivered'])
+          && (n.stage == o.stage || (o.stage == 'cad_approval' && n.stage in ['cad', 'casting']))
+          && (n.status == o.status
+              || (o.status == 'dispatched' && n.status in ['received', 'delivered'])
+              || (o.status == 'received' && n.status == 'delivered')))
+      );
+    }
+
+    function factoryUpdate() {
+      let o = resource.data; let n = request.resource.data;
+      let k = n.diff(o).affectedKeys();
+      let cadOk = !(o.get('cadRequired', false) == true && o.get('cad', {}).get('ok', false) != true);
+      return sameIdentity()
+        && o.factoryVisible == true && n.factoryVisible == true
+        && o.status in ['factory', 'dispatched']
+        && k.hasOnly(['stage', 'stageAt', 'log', 'media', 'updatedAt', 'updatedBy', 'dispatch', 'status', 'factoryAck', 'factoryAckAt'])
+        && (n.status == o.status || (o.status == 'factory' && n.status == 'dispatched'))
+        && n.stage in ['new', 'received', 'cad', 'cad_approval', 'casting', 'filing', 'setting', 'polish', 'qc', 'ready', 'dispatched']
+        && (n.stage == o.stage || cadOk || n.stage in ['new', 'received', 'cad', 'cad_approval']);
+    }
+
+    match /orders/{id} {
+      allow read: if staff() || (isFactory() && resource.data.factoryVisible == true);
+      allow create: if staff()
+        && request.resource.data.status == 'review'
+        && request.resource.data.factoryVisible == false
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.seq is int
+        && getAfter(/databases/$(database)/documents/counters/$(request.resource.data.ym)).data.n == request.resource.data.seq;
+      allow update: if isAdmin() || (isStore() && storeUpdate()) || (isFactory() && factoryUpdate());
+      allow delete: if false;
+
+      // client name/phone, price, payments, internal notes & media — never visible to the factory
+      match /private/{doc} {
+        allow read, create, update: if staff();
+        allow delete: if false;
+      }
+    }
+  }
+}
