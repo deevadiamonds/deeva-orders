@@ -7,7 +7,8 @@ const admin = require('firebase-admin');
 const cfg = fs.readFileSync('web/config.js', 'utf8');
 const pick = k => (new RegExp(k + ':\\s*"([^"]*)"').exec(cfg) || [])[1] || '';
 const apiKey = pick('apiKey'), bucket = pick('storageBucket');
-admin.initializeApp({ credential: admin.credential.applicationDefault(), storageBucket: bucket });
+/* the key file itself, so the custom token is signed here (no extra IAM permission needed) */
+admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'utf8'))), storageBucket: bucket });
 
 (async () => {
   const a = await admin.firestore().doc('config/admin').get();
