@@ -101,6 +101,11 @@ extra); a browser downloads it and opens the chat (WhatsApp does not let website
 
 - Database: Firestore daily backups (kept 30 days) + 7-day point-in-time recovery; photos/videos: Storage soft delete 30 days.
   Set (idempotently) by `firebase.yml` → annotation "Backups".
+- Live data is never deleted by anything (only the Admin's permanent delete). The 30 days above are how long each *backup copy* is kept.
+- Permanent archive: `.github/workflows/archive.yml` — weekly (Mon 03:00 IST, also on dispatch) `gcloud firestore export` into
+  `gs://deeva-orders-archive-395857273671/database/<date>` + `gcloud storage rsync` of all photos / videos / voice notes into
+  `…/files` (adds only). Bucket in asia-south2 (Delhi), Nearline, retention policy 10 years (unlocked), soft delete 90 days.
+  Restore = `gcloud firestore import <folder>` (into the live or a new database).
 - Past Orders (`#/past`, tab for everyone): delivered + cancelled (factory: also received) loaded on demand, grouped by month;
   nothing is ever removed automatically. Only the main Admin (`isOwner()`, role `admin`, not the Sub Admin) can delete an order
   permanently: "🗑️ Delete this order permanently" on the order page, order no. typed to confirm → batch delete of the order +

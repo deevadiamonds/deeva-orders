@@ -1,0 +1,68 @@
+name: Permanent archive (weekly full copy)
+
+# Every week: a full copy of the database (all orders, clients, payments, bills) and every photo / video / voice note goes
+# into a separate archive bucket in Delhi (asia-south2) — the live data is in Mumbai. Nothing in the archive is ever deleted:
+# copies are kept in dated folders, files are only added, and a retention policy blocks deletion for 10 years.
+on:
+  schedule:
+    - cron: '30 21 * * 0'   # Monday 03:00 India time
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/archive.yml']
+
+concurrency:
+  group: archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Credentials
+        id: cred
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then echo "::warning::FIREBASE_SERVICE_ACCOUNT secret is not set — no archive made."; echo "ok=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          gcloud auth activate-service-account --key-file="$RUNNER_TEMP/sa.json" >/dev/null 2>&1
+          PROJECT=$(python3 -c "import json;print(json.load(open('.firebaserc'))['projects']['default'])")
+          gcloud config set project "$PROJECT" >/dev/null 2>&1
+          PN=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
+          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
+          echo "ARCHIVE=gs://deeva-orders-archive-$PN" >> "$GITHUB_ENV"
+          echo "LIVE=gs://$(python3 -c "import re;print(re.search(r'storageBucket:\s*\"([^\"]+)\"', open('web/config.js').read()).group(1))")" >> "$GITHUB_ENV"
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+
+      - name: Archive bucket (Delhi, kept 10 years, never deleted)
+        if: steps.cred.outputs.ok == 'true'
+        run: |
+          if ! gcloud storage buckets describe "$ARCHIVE" >/dev/null 2>&1; then
+            gcloud storage buckets create "$ARCHIVE" --location=asia-south2 --default-storage-class=NEARLINE \
+              --uniform-bucket-level-access --public-access-prevention --quiet
+          fi
+          gcloud storage buckets update "$ARCHIVE" --retention-period=3650d --soft-delete-duration=90d --quiet >/dev/null
+
+      - name: Copy the database (all orders, clients, payments, bills)
+        if: steps.cred.outputs.ok == 'true'
+        run: |
+          STAMP=$(TZ=Asia/Kolkata date +%Y-%m-%d)
+          gcloud firestore export "$ARCHIVE/database/$STAMP" --database='(default)' --quiet 2>&1 | tail -n 5 > "$RUNNER_TEMP/exp.log" \
+            || { echo "::error title=Archive::Database copy failed — $(tr '\n' ' ' < "$RUNNER_TEMP/exp.log" | head -c 800)"; exit 1; }
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+
+      - name: Copy every photo, video and voice note (only added, never removed)
+        if: steps.cred.outputs.ok == 'true'
+        run: |
+          gcloud storage rsync "$LIVE" "$ARCHIVE/files" --recursive --quiet 2>&1 | tail -n 3 || { echo "::error title=Archive::File copy failed"; exit 1; }
+
+      - name: Summary
+        if: steps.cred.outputs.ok == 'true'
+        run: |
+          COPIES=$(gcloud storage ls "$ARCHIVE/database/" 2>/dev/null | wc -l)
+          FILES=$(gcloud storage ls -r "$ARCHIVE/files/**" 2>/dev/null | wc -l)
+          SIZE=$(gcloud storage du -s "$ARCHIVE" --readable-sizes 2>/dev/null | awk '{print $1" "$2}')
+          echo "::notice title=Archive::Copy of $STAMP saved in $ARCHIVE (Delhi) · $COPIES weekly database copies · $FILES files · total $SIZE"
