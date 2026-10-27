@@ -330,7 +330,17 @@ async def main():
         await pg.wait_for_function("document.querySelector('#toasts').innerText.includes('Still required')")
         await pg.fill('#dp-gross', '3.62')
         await pg.fill('#dp-d1-ct', '0.42'); await pg.click('#dp-d1-cert [data-v="yes"]'); await pg.fill('#dp-d1-certno', 'IGI123'); await pg.fill('#dp-d1-rate', '21000')
-        await pg.fill('#dp-d2-pcs', '12'); await pg.click('#dp-d2-cert [data-v="no"]'); await pg.fill('#dp-d2-amt', '1400')
+        # side diamonds split into two sizes, each with its own rate (0.06 ct × 15,000 + 0.04 ct × 12,500 = 1,400)
+        await pg.fill('#dp-d2-size', '−2'); await pg.fill('#dp-d2-ct', '0.06'); await pg.fill('#dp-d2-pcs', '8'); await pg.fill('#dp-d2-rate', '15000')
+        await pg.click('[data-act="dp-part-add"][data-g="d2"]')
+        await pg.wait_for_selector('#dp-d2p2-ct')
+        assert await pg.input_value('#dp-d2p2-shape') == await pg.input_value('#dp-d2-shape'), 'new size keeps the shape'
+        await pg.fill('#dp-d2p2-size', '+6'); await pg.select_option('#dp-d2p2-shape', 'Pear'); await pg.fill('#dp-d2p2-ct', '0.04'); await pg.fill('#dp-d2p2-pcs', '4'); await pg.fill('#dp-d2p2-rate', '12500')
+        await pg.select_option('#dp-d2p2-color', 'G-H'); await pg.select_option('#dp-d2p2-clarity', 'VS2')
+        await pg.click('#dp-d2-cert [data-v="no"]')
+        # a diamond that was not in the order can be added (and removed again)
+        await pg.click('[data-act="dp-extra-add"]'); await pg.wait_for_selector('#dp-d5-type')
+        await pg.click('[data-act="dp-grp-del"][data-g="d5"]'); await pg.wait_for_function("!document.querySelector('#dp-d5-type')")
         await pg.fill('#dp-g1-amt', '1200')
         await pg.click('#dp-hm [data-v="yes"]'); await pg.fill('#dp-huid', 'AB1234')
         await pg.click('#dp-gm [data-v="fine"]'); await pg.fill('#dp-touch', '59')
@@ -367,8 +377,14 @@ async def main():
         print('ok  factory bill PDF saved with order number (' + fname + '), store + address, no client / store person')
         bill = await pg.evaluate("Object.entries(__fake.store).find(([k]) => k.endsWith('/factory/bill'))[1]")
         assert bill['goldMode'] == 'fine' and abs(bill['fine'] - 2.051) < 1e-9 and bill['total'] == 14848.4, bill
+        d2 = [l for l in bill['lines'] if l['kind'] == 'd' and l['n'] == 2]
+        assert [(l['size'], l['shape'], l['ct'], l['pcs'], l['rate'], l['amt']) for l in d2] == [('−2', 'Round', 0.06, '8', 15000, 900), ('+6', 'Pear', 0.04, '4', 12500, 500)], d2
+        assert d2[1]['color'] == 'G-H' and d2[1]['clarity'] == 'VS2', d2
         st = await order_doc(); a = st['dispatch']['actual']
         assert a['netWt'] == 3.476 and a['dias'][0]['ct'] == 0.42 and a['dias'][0]['cert'] == 'yes' and a['hallmark'] == 'yes', a
+        assert a['dias'][1]['ct'] == 0.1 and a['dias'][1]['pcs'] == '12' and len(a['dias'][1]['parts']) == 2 and len(a['dias']) == 2, a['dias']
+        t = await text(); assert '−2 · Round' in t and '+6 · Pear · G-H · VS2' in t and 'Diamond 2 · Side (+6 · Pear) — 0.04 ct / 4 pc' in t, 'slip shows each size'
+        print('ok  factory splits a diamond line into sizes with own rates, shape / colour / clarity per size; extra diamonds supported')
         t = await text(); assert 'Dispatch Slip' in t and 'Factory total' in t
         await shot('06-factory-slip')
         print('ok  factory dispatch slip: actual ct / pcs / certified / hallmark, net auto, fine 59% = 2.051 g, factory total ₹14,848.4')

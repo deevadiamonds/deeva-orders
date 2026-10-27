@@ -487,6 +487,14 @@ const D_CUT = ['Ideal','Excellent','Very Good','Good','NA'];
 const D_CERT = ['IGI','GIA','SGL','No certificate'];
 const DIA_TYPES = ['Solitaire','Side','Cluster','Halo','Accent','Baguette set'];
 const DIA_N = [1, 2, 3, 4];                 /* up to 4 diamond lines per order */
+const DIA_X = [5, 6, 7, 8];                 /* diamonds the factory adds that were not in the order (dispatch slip) */
+const DP_SIZES = ['−2', '−1.5', '−1', '+0', '+1', '+2', '+3', '+4', '+6', '+6.5', '+8', '+11', '+14'];
+const diaName = (n, type) => (n > 4 ? 'Extra diamond ' + (n - 4) : 'Diamond ' + n) + (type ? ' · ' + type : '');
+/* one factory bill line, e.g. "Diamond 2 · Side (+6 · Round) — 0.05 ct / 2 pc" */
+function billLineLabel(l){
+  const det = [l.size, l.shape].filter(Boolean).join(' · ');
+  return (l.kind === 'd' ? diaName(l.n, l.type) : 'Gemstone ' + l.n + (l.type ? ' · ' + l.type : '')) + (det ? ' (' + det + ')' : '') + ' — ' + l.ct + ' ct' + (l.pcs ? ' / ' + l.pcs + ' pc' : '');
+}
 const DIA_KEYS = ['Type', 'Ct', 'Pcs', 'Shape', 'Color', 'Clarity', 'Cut', 'Cert'];
 const CT_TO_G = 0.2;                        /* 1 carat = 0.2 gram, for net gold weight */
 /* fine gold % (touch) by purity — the factory can change it on the dispatch slip */
@@ -532,7 +540,7 @@ const EDIT_FIELDS = [
   ['price.est','Agreed amount','priv'], ['price.goldRateBooked','Gold rate booked','priv'], ['price.goldRate','Gold rate','priv'],
   ['internalNote','Internal note','priv']
 ];
-const CALC_IN = ['grossWt', 'goldRate', 'making', 'd1Rate', 'd2Rate', 'd3Rate', 'd4Rate', 'gemAmt', 'other', 'gst', 'netWt', 'dct1', 'dct2', 'dct3', 'dct4', 'gct1', 'gct2'];
+const CALC_IN = ['grossWt', 'goldRate', 'making', 'd1Rate', 'd2Rate', 'd3Rate', 'd4Rate', 'gemAmt', 'other', 'gst', 'netWt', 'dct1', 'dct2', 'dct3', 'dct4', 'gct1', 'gct2', 'dct5', 'dct6', 'dct7', 'dct8', 'd5Rate', 'd6Rate', 'd7Rate', 'd8Rate'];
 const EMPTY_CALC = () => ({grossWt: '', goldRate: '', making: '', d1Rate: '', d2Rate: '', d3Rate: '', d4Rate: '', gemAmt: '', other: '', gst: '3'});
 const GEM_KEYS = ['Type', 'Color', 'Shape', 'Ct', 'Size', 'Pcs'];
 /* weights: 3 decimals in grams, and milligrams for small stones */
@@ -1252,8 +1260,12 @@ function slipBlock(o, bill){
   h += tr('Gross weight', estC && estC.gross ? fmtG(estC.gross) : '—', fmtG(a.grossWt), estC && estC.gross && Math.abs(estC.gross - a.grossWt) > 0.0005);
   h += tr('<b>Net gold</b>', estC && estC.gross ? fmtG(estC.net) : '—', '<b>' + fmtG(a.netWt) + '</b>', estC && estC.gross && Math.abs(estC.net - a.netWt) > 0.0005);
   (a.dias || []).forEach(x => {
-    const oc = s['dia' + x.n + 'Ct'], op = s['dia' + x.n + 'Pcs'];
-    h += tr('Diamond ' + x.n + (x.type ? ' · ' + esc(x.type) : ''), esc(oc || '—') + ' ct' + (op ? ' / ' + esc(op) + ' pc' : ''), x.ct + ' ct / ' + esc(x.pcs) + ' pc', num(oc) !== num(x.ct) || String(op || '') !== String(x.pcs || ''));
+    const extra = x.n > 4, oc = extra ? '' : s['dia' + x.n + 'Ct'], op = extra ? '' : s['dia' + x.n + 'Pcs'];
+    const parts = x.parts || [];
+    const det = q => [q.size, q.shape, q.color, q.clarity].filter(Boolean).join(' · ');
+    const one = parts.length === 1 && det(parts[0]) ? '<br><span class="small" style="font-weight:400">' + esc(det(parts[0])) + '</span>' : '';
+    h += tr(esc(diaName(x.n, x.type)), extra ? 'Not in order' : esc(oc || '—') + ' ct' + (op ? ' / ' + esc(op) + ' pc' : ''), x.ct + ' ct / ' + esc(x.pcs) + ' pc' + one, extra || num(oc) !== num(x.ct) || String(op || '') !== String(x.pcs || ''));
+    if (parts.length > 1) parts.forEach(q => { h += tr('&nbsp;&nbsp;<span class="small">' + esc(det(q) || '—') + '</span>', '', '<span class="small">' + q.ct + ' ct / ' + esc(q.pcs) + ' pc</span>', false); });
     if (x.cert) h += tr('&nbsp;&nbsp;Certified', '', x.cert === 'yes' ? '✓ Yes' + (x.certNo ? ' · ' + esc(x.certNo) : '') : 'No', false);
   });
   (a.gems || []).forEach(x => { const oc = s['gem' + x.n + 'Ct']; h += tr('Gemstone ' + x.n + ' · ' + esc(x.type), esc(oc || '—') + ' ct', x.ct + ' ct / ' + esc(x.pcs) + ' pc', num(oc) !== num(x.ct)); });
@@ -1264,7 +1276,7 @@ function slipBlock(o, bill){
     let b = '';
     if (bill.goldMode === 'fine') b += row('Fine gold — ' + fmtG(bill.netWt) + ' × ' + bill.touch + '%', '<b>' + fmtG(bill.fine) + '</b>');
     else b += row('Gold — ' + fmtG(bill.netWt) + ' × ' + money(bill.goldRate), money2(bill.goldAmt));
-    (bill.lines || []).forEach(l => { if (l.amt) b += row((l.kind === 'd' ? 'Diamond ' : 'Gemstone ') + l.n + (l.type ? ' · ' + esc(l.type) : '') + ' — ' + l.ct + ' ct' + (l.rate ? ' × ' + money(l.rate) : ''), money2(l.amt)); });
+    (bill.lines || []).forEach(l => { if (l.amt) b += row(esc(billLineLabel(l)) + (l.rate ? ' × ' + money(l.rate) : ''), money2(l.amt)); });
     if (bill.labour) b += row('Labour — ' + fmtG(bill.netWt) + ' × ' + money(bill.labourRate), money2(bill.labour));
     if (bill.other) b += row('Other', money2(bill.other));
     b += row('<b>Factory total</b>', '<b>' + money2(bill.total) + '</b>' + (bill.goldMode === 'fine' ? ' <small>+ fine ' + fmtG(bill.fine) + '</small>' : ''), 'net');
@@ -1497,23 +1509,47 @@ async function doNote(){
 /* ---------- factory dispatch slip: actual weights, carats, pieces, certified, hallmark + factory's bill ---------- */
 function dpLines(o){
   const s = o.spec || {};
-  const dias = DIA_N.filter(n => hasDia(s['dia' + n + 'Ct'])).map(n => ({kind: 'd', n, type: s['dia' + n + 'Type'] || '', ct: s['dia' + n + 'Ct'], pcs: s['dia' + n + 'Pcs'] || '', shape: s['dia' + n + 'Shape'] || ''}));
+  const dias = DIA_N.filter(n => hasDia(s['dia' + n + 'Ct'])).map(n => ({kind: 'd', n, type: s['dia' + n + 'Type'] || '', ct: s['dia' + n + 'Ct'], pcs: s['dia' + n + 'Pcs'] || '', shape: s['dia' + n + 'Shape'] || '', color: s['dia' + n + 'Color'] || '', clarity: s['dia' + n + 'Clarity'] || ''}));
   const gems = [1, 2].filter(n => s['gem' + n + 'Type']).map(n => ({kind: 'g', n, type: s['gem' + n + 'Type'], ct: s['gem' + n + 'Ct'] || '', pcs: s['gem' + n + 'Pcs'] || ''}));
   return dias.concat(gems);
+}
+const dpInp = (key, label, val, ph, extra) => `<div class="fld" style="margin-bottom:8px"><label for="dp-${key}" class="small">${label}</label><input class="in" id="dp-${key}" data-dp="${key}" inputmode="decimal" value="${esc(val == null ? '' : val)}" placeholder="${esc(ph || '')}" ${extra || ''}></div>`;
+const dpSel = (key, label, opts, cur) => `<div class="fld" style="margin-bottom:8px"><label for="dp-${key}" class="small">${label}</label><select class="in" id="dp-${key}" data-dp="${key}"><option value="">—</option>${opts.map(x => `<option ${x === cur ? 'selected' : ''}>${esc(x)}</option>`).join('')}${cur && !opts.includes(cur) ? `<option selected>${esc(cur)}</option>` : ''}</select></div>`;
+const dpChips = (g, opts, cur) => `<div class="chips" id="${g}" style="margin-bottom:10px">${opts.map(x => `<button type="button" class="chip ${cur === x[0] ? 'on' : ''}" data-act="pick1" data-g="${g}" data-v="${x[0]}">${x[1]}</button>`).join('')}</div>`;
+/* one size / rate of a diamond line: the factory may split e.g. a cluster into −2, +2 and +6, each with its own rate */
+function dpPartHtml(key, d, removable){
+  d = d || {};
+  return `<div class="dp-part" id="dpp-${key}" style="${removable ? 'border-top:1px dotted var(--line2);padding-top:8px;margin-top:2px' : ''}">
+    ${removable ? `<div class="row" style="margin:0 0 4px;align-items:center"><span class="small muted grow">Another size / rate</span><button type="button" class="mdel" style="position:static" data-act="dp-part-del" data-key="${key}" aria-label="Remove this size">✕</button></div>` : ''}
+    <div class="two">${dpInp(key + '-size', 'Size / sieve', d.size, 'e.g. −2, +6, 2 mm', 'inputmode="text" list="dp-sizes" autocomplete="off"')}${dpSel(key + '-shape', 'Shape', SHAPES, d.shape)}</div>
+    <div class="two">${dpInp(key + '-ct', 'Carat (ct)', d.ct, '')}${dpInp(key + '-pcs', 'Pieces', d.pcs, '', 'inputmode="numeric"')}</div>
+    <div class="two">${dpSel(key + '-color', 'Colour', D_COLORS, d.color)}${dpSel(key + '-clarity', 'Clarity', D_CLARITY, d.clarity)}</div>
+    <div class="two">${dpInp(key + '-rate', '₹ per carat', '', '')}${dpInp(key + '-amt', 'Amount ₹', '', '')}</div></div>`;
+}
+function dpGroupHtml(g){
+  const k = 'd' + g.n;
+  const head = g.extra
+    ? `<div class="row" style="margin:0;align-items:center"><div class="lbl grow" style="font-size:15px;margin:0">💎 ${esc(diaName(g.n))} <span class="small muted" style="font-weight:400">— not in the order</span></div><button type="button" class="mdel" style="position:static" data-act="dp-grp-del" data-g="${k}" aria-label="Remove this diamond">✕</button></div>${dpInp(k + '-type', 'Type / remark', '', 'e.g. Side, Cluster', 'inputmode="text"')}`
+    : `<div class="lbl" style="font-size:15px">💎 ${esc(diaName(g.n, g.type))} <span class="small muted" style="font-weight:400">— order: ${esc(g.o.ct || '—')} ct${g.o.pcs ? ', ' + esc(g.o.pcs) + ' pcs' : ''}${g.o.shape ? ', ' + esc(g.o.shape) : ''}</span></div>`;
+  return `<div class="dp-grp" id="dpg-${k}" style="border-top:1px dashed var(--line2);padding-top:10px;margin-top:4px">${head}
+    <div id="dpg-${k}-parts">${dpPartHtml(k, g.extra ? {} : {ct: g.o.ct, pcs: g.o.pcs, shape: g.o.shape, color: g.o.color, clarity: g.o.clarity}, false)}</div>
+    <button type="button" class="btn sm" data-act="dp-part-add" data-g="${k}" style="margin:2px 0 10px">＋ Add another size / rate</button>
+    <span class="lbl small">Certified?</span>${dpChips('dp-' + k + '-cert', [['yes', 'Yes — certified'], ['no', 'No']], g.extra || !/solitaire/i.test(g.type) ? 'no' : '')}${dpInp(k + '-certno', 'Certificate no. (if any)', '', 'IGI …', 'inputmode="text"')}</div>`;
 }
 function sheetDispatch(id){
   const o = getOrder(id), s = o.spec || {};
   const lines = dpLines(o);
-  const inp = (key, label, val, ph, extra) => `<div class="fld" style="margin-bottom:8px"><label for="dp-${key}" class="small">${label}</label><input class="in" id="dp-${key}" data-dp="${key}" inputmode="decimal" value="${esc(val == null ? '' : val)}" placeholder="${esc(ph || '')}" ${extra || ''}></div>`;
-  const chipRow = (g, opts, cur) => `<div class="chips" id="${g}" style="margin-bottom:10px">${opts.map(x => `<button type="button" class="chip ${cur === x[0] ? 'on' : ''}" data-act="pick1" data-g="${g}" data-v="${x[0]}">${x[1]}</button>`).join('')}</div>`;
-  let h = `<p class="small muted" style="margin-top:-6px">Record what was actually made, even where it differs from the order. The store sees the weights, carats, pieces, certification and hallmark; the amounts in ₹ are visible to the Admin only.</p>`;
+  const inp = dpInp, chipRow = dpChips;
+  let h = `<p class="small muted" style="margin-top:-6px">Record what was actually made, even where it differs from the order. A diamond line may be split into several sizes, each with its own rate (e.g. a cluster in −2, +2 and +6), and diamonds that were not in the order can be added. The store sees the weights, carats, pieces, certification and hallmark; the amounts in ₹ are visible to the Admin only.</p>`;
+  h += `<datalist id="dp-sizes">${DP_SIZES.map(x => `<option value="${esc(x)}">`).join('')}</datalist>`;
   h += `<div class="lbl" style="font-size:15.5px">⚖️ Weight</div><div class="two">${inp('gross', 'Gross weight g (including stones)', '', '5.000')}${inp('net', 'Net gold weight g', '', 'Automatic')}</div><div class="hint" id="dp-net-hint" style="margin:-4px 0 10px">Net = gross − (all diamond + gemstone ct × 0.200 g). Change it if the weighed net differs.</div>`;
-  lines.forEach(l => {
+  const dg = lines.filter(l => l.kind === 'd').map(l => ({n: l.n, type: l.type, extra: false, o: l, parts: ['d' + l.n], seq: 1}));
+  dg.forEach(g => { h += dpGroupHtml(g); });
+  h += `<div id="dp-extra-anchor"></div><button type="button" class="btn sm" data-act="dp-extra-add" style="margin:6px 0 4px">＋ Add a diamond that is not in the order</button>`;
+  lines.filter(l => l.kind === 'g').forEach(l => {
     const key = l.kind + l.n;
-    const title = l.kind === 'd' ? 'Diamond ' + l.n + (l.type ? ' · ' + l.type : '') : 'Gemstone ' + l.n + ' · ' + l.type;
-    h += `<div style="border-top:1px dashed var(--line2);padding-top:10px;margin-top:4px"><div class="lbl" style="font-size:15px">${l.kind === 'd' ? '💎' : '🔴'} ${esc(title)} <span class="small muted" style="font-weight:400">— order: ${esc(l.ct || '—')} ct${l.pcs ? ', ' + esc(l.pcs) + ' pcs' : ''}${l.shape ? ', ' + esc(l.shape) : ''}</span></div>
+    h += `<div style="border-top:1px dashed var(--line2);padding-top:10px;margin-top:4px"><div class="lbl" style="font-size:15px">🔴 ${esc('Gemstone ' + l.n + ' · ' + l.type)} <span class="small muted" style="font-weight:400">— order: ${esc(l.ct || '—')} ct${l.pcs ? ', ' + esc(l.pcs) + ' pcs' : ''}</span></div>
       <div class="two">${inp(key + '-ct', 'Actual carat (ct)', l.ct, '')}${inp(key + '-pcs', 'Pieces', l.pcs, '', 'inputmode="numeric"')}</div>
-      ${l.kind === 'd' ? `<span class="lbl small">Certified?</span>${chipRow('dp-' + key + '-cert', [['yes', 'Yes — certified'], ['no', 'No']], /solitaire/i.test(l.type) ? '' : 'no')}${inp(key + '-certno', 'Certificate no. (if any)', '', 'IGI …', 'inputmode="text"')}` : ''}
       <div class="two">${inp(key + '-rate', '₹ per carat', '', '')}${inp(key + '-amt', 'Amount ₹', '', '')}</div></div>`;
   });
   h += `<div style="border-top:1px dashed var(--line2);padding-top:10px;margin-top:4px"><div class="lbl" style="font-size:15.5px">🏷️ Hallmark</div>${chipRow('dp-hm', [['yes', 'Yes — hallmarked'], ['no', 'No']], '')}${inp('huid', 'HUID (if any)', '', '', 'inputmode="text"')}</div>`;
@@ -1527,9 +1563,40 @@ function sheetDispatch(id){
     <div class="fld"><label for="dp-note">Note</label>${textArea('dp-note', 'e.g. Screw back, rhodium plated', '')}</div>
     <div class="lbl">📄 Photo of the dispatch slip + photos / videos of the finished piece</div><div id="dp-media"></div></div>`;
   h += `<button class="btn gold big" data-act="dispatch-do">🚚 Dispatch — the current time will be recorded</button>`;
-  openSheet('🚚 Dispatch Slip — ' + o.no, h, {id, mode: 'Hand delivery', lines, purity: s.purity, netManual: false});
+  openSheet('🚚 Dispatch Slip — ' + o.no, h, {id, mode: 'Hand delivery', lines, dg, purity: s.purity, netManual: false});
   S.sheet.picker = makePicker('dp-media', id, {kinds: ['image', 'video'], stage: () => 'dispatched', imageLabel: 'Slip / Photo'});
   S.sheet.picker.render();
+  dpUpdate();
+}
+function dpPartAdd(k){
+  const sh = S.sheet, g = sh && sh.dg && sh.dg.find(x => 'd' + x.n === k); if (!g) return;
+  const key = k + 'p' + (++g.seq);
+  const first = g.parts[0];
+  $('#dpg-' + k + '-parts').insertAdjacentHTML('beforeend', dpPartHtml(key, {shape: dpVal(first + '-shape'), color: dpVal(first + '-color'), clarity: dpVal(first + '-clarity')}, true));
+  g.parts.push(key);
+  dpUpdate();
+  const el = document.getElementById('dp-' + key + '-size'); if (el) { el.scrollIntoView({block: 'center', behavior: 'smooth'}); el.focus(); }
+}
+function dpPartDel(key){
+  const sh = S.sheet; if (!sh || !sh.dg) return;
+  sh.dg.forEach(g => { g.parts = g.parts.filter(x => x !== key); });
+  const el = document.getElementById('dpp-' + key); if (el) el.remove();
+  dpUpdate();
+}
+function dpExtraAdd(){
+  const sh = S.sheet; if (!sh || !sh.dg) return;
+  const n = DIA_X.find(x => !sh.dg.some(g => g.n === x));
+  if (!n) return toast('Up to 4 additional diamonds can be added.', 'bad');
+  const g = {n, type: '', extra: true, o: {}, parts: ['d' + n], seq: 1};
+  sh.dg.push(g);
+  $('#dp-extra-anchor').insertAdjacentHTML('beforebegin', dpGroupHtml(g));
+  dpUpdate();
+  const el = document.getElementById('dp-d' + n + '-type'); if (el) { el.scrollIntoView({block: 'center', behavior: 'smooth'}); el.focus(); }
+}
+function dpGroupDel(k){
+  const sh = S.sheet; if (!sh || !sh.dg) return;
+  sh.dg = sh.dg.filter(g => !(g.extra && 'd' + g.n === k));
+  const el = document.getElementById('dpg-' + k); if (el) el.remove();
   dpUpdate();
 }
 const dpVal = k => { const e = document.getElementById('dp-' + k); return e ? e.value.trim() : ''; };
@@ -1539,13 +1606,31 @@ function dpCompute(){
   const sh = S.sheet; if (!sh || !sh.lines) return null;
   const gross = num(dpVal('gross'));
   let stoneCt = 0;
-  const lines = sh.lines.map(l => {
-    const key = l.kind + l.n, ct = num(dpVal(key + '-ct')), pcs = dpVal(key + '-pcs');
+  const amtOf = (key, ct, rate) => {
+    const el = document.getElementById('dp-' + key + '-amt');
+    if (rate && el && !el.dataset.manual) el.value = String(Math.round(ct * rate));
+    return num(el ? el.value : 0);
+  };
+  const lines = [], groups = [];
+  (sh.dg || []).forEach(g => {
+    const k = 'd' + g.n;
+    const type = g.extra ? (dpVal(k + '-type') || 'Extra diamond') : g.type;
+    const parts = g.parts.map(key => {
+      const ct = num(dpVal(key + '-ct')), pcs = dpVal(key + '-pcs'), rate = num(dpVal(key + '-rate'));
+      stoneCt += ct;
+      const part = {size: dpVal(key + '-size'), shape: dpVal(key + '-shape'), color: dpVal(key + '-color'), clarity: dpVal(key + '-clarity'), ct, pcs};
+      lines.push(Object.assign({kind: 'd', n: g.n, type, key, rate, amt: amtOf(key, ct, rate)}, part));
+      return part;
+    });
+    const pcsNum = parts.every(x => /^\d+$/.test(String(x.pcs).trim()));
+    groups.push({n: g.n, type, extra: g.extra, parts, ct: r3(parts.reduce((a, x) => a + x.ct, 0)),
+      pcs: pcsNum ? String(parts.reduce((a, x) => a + +x.pcs, 0)) : parts.map(x => x.pcs).filter(Boolean).join(' + '),
+      cert: dpPick(k + '-cert'), certNo: dpVal(k + '-certno')});
+  });
+  sh.lines.filter(l => l.kind === 'g').forEach(l => {
+    const key = l.kind + l.n, ct = num(dpVal(key + '-ct')), pcs = dpVal(key + '-pcs'), rate = num(dpVal(key + '-rate'));
     stoneCt += ct;
-    const rate = num(dpVal(key + '-rate'));
-    const amtEl = document.getElementById('dp-' + key + '-amt');
-    if (rate && amtEl && !amtEl.dataset.manual) amtEl.value = String(Math.round(ct * rate));
-    return {kind: l.kind, n: l.n, type: l.type, ct, pcs, cert: l.kind === 'd' ? dpPick(key + '-cert') : '', certNo: l.kind === 'd' ? dpVal(key + '-certno') : '', rate, amt: num(amtEl ? amtEl.value : 0)};
+    lines.push({kind: 'g', n: l.n, type: l.type, key, ct, pcs, rate, amt: amtOf(key, ct, rate)});
   });
   const autoNet = Math.max(0, gross - stoneCt * CT_TO_G);
   const netEl = document.getElementById('dp-net');
@@ -1556,7 +1641,7 @@ function dpCompute(){
   const fine = net * touch / 100, goldAmt = mode === 'money' ? net * grate : 0, labour = net * lrate;
   const stonesAmt = lines.reduce((a, l) => a + l.amt, 0);
   const total = stonesAmt + labour + other + goldAmt;
-  return {gross, net, autoNet, stoneCt, lines, mode, touch, fine, grate, goldAmt, lrate, labour, other, stonesAmt, total, hallmark: dpPick('hm'), huid: dpVal('huid')};
+  return {gross, net, autoNet, stoneCt, lines, groups, mode, touch, fine, grate, goldAmt, lrate, labour, other, stonesAmt, total, hallmark: dpPick('hm'), huid: dpVal('huid')};
 }
 function dpUpdate(){
   const v = dpCompute(); if (!v) return;
@@ -1566,7 +1651,7 @@ function dpUpdate(){
   let h = row('Gross', fmtG(v.gross)) + row('− Stones ' + r3(v.stoneCt) + ' ct', '− ' + fmtG(v.stoneCt * CT_TO_G)) + row('<b>Net gold</b>', '<b>' + fmtG(v.net) + '</b>' + (Math.abs(v.net - v.autoNet) > 0.0005 && v.gross ? ' <small>(entered)</small>' : ''), 'net');
   if (v.mode === 'fine') h += row('Fine gold — ' + fmtG(v.net) + ' × ' + (v.touch || 0) + '%', '<b>' + fmtG(v.fine) + '</b>');
   if (v.mode === 'money') h += row('Gold — ' + fmtG(v.net) + ' × ' + money(v.grate), money2(v.goldAmt));
-  v.lines.forEach(l => { if (l.amt) h += row((l.kind === 'd' ? 'Diamond ' : 'Gemstone ') + l.n + (l.type ? ' · ' + esc(l.type) : '') + ' — ' + l.ct + ' ct', money2(l.amt)); });
+  v.lines.forEach(l => { if (l.amt) h += row(esc(billLineLabel(l)), money2(l.amt)); });
   if (v.labour) h += row('Labour — ' + fmtG(v.net) + ' × ' + money(v.lrate), money2(v.labour));
   if (v.other) h += row('Other', money2(v.other));
   h += row('<b>Total ₹</b>', '<b>' + money2(v.total) + '</b>' + (v.mode === 'fine' && v.fine ? ' <small>+ fine ' + fmtG(v.fine) + '</small>' : ''), 'net');
@@ -1579,7 +1664,8 @@ async function doDispatch(){
   const miss = [];
   if (!(v.gross > 0)) miss.push('Gross weight');
   if (!(v.net > 0)) miss.push('Net gold weight');
-  v.lines.forEach(l => { if (!(l.ct > 0)) miss.push((l.kind === 'd' ? 'Diamond ' : 'Gemstone ') + l.n + ' actual carat'); if (!String(l.pcs).trim()) miss.push((l.kind === 'd' ? 'Diamond ' : 'Gemstone ') + l.n + ' pieces'); if (l.kind === 'd' && !l.cert) miss.push('Diamond ' + l.n + ' — certified yes / no'); });
+  v.lines.forEach(l => { const nm = l.kind === 'd' ? diaName(l.n) + (l.size ? ' (' + l.size + ')' : '') : 'Gemstone ' + l.n; if (!(l.ct > 0)) miss.push(nm + ' carat'); if (!String(l.pcs).trim()) miss.push(nm + ' pieces'); });
+  v.groups.forEach(g => { if (!g.cert) miss.push(diaName(g.n) + ' — certified yes / no'); });
   if (!v.hallmark) miss.push('Hallmark yes / no');
   if (!v.mode) miss.push('Gold settlement — fine gold or money');
   if (v.mode === 'fine' && !(v.touch > 0)) miss.push('Fine % (touch)');
@@ -1587,15 +1673,15 @@ async function doDispatch(){
   if (miss.length) return toast('Still required: ' + miss.join(', '), 'bad');
   const items = pk.done(), now = Date.now();
   const actual = {grossWt: r3(v.gross), netWt: r3(v.net), hallmark: v.hallmark, huid: v.huid,
-    dias: v.lines.filter(l => l.kind === 'd').map(l => ({n: l.n, type: l.type, ct: l.ct, pcs: l.pcs, cert: l.cert, certNo: l.certNo})),
+    dias: v.groups.map(g => Object.assign({n: g.n, type: g.type, ct: g.ct, pcs: g.pcs, cert: g.cert, certNo: g.certNo, shape: g.parts[0] ? g.parts[0].shape : '', parts: g.parts}, g.extra ? {extra: true} : {})),
     gems: v.lines.filter(l => l.kind === 'g').map(l => ({n: l.n, type: l.type, ct: l.ct, pcs: l.pcs}))};
   const d = {at: now, by: S.authUser.uid, byName: myName(), mode: S.sheet.mode || '', ref: $('#dp-ref').value.trim(), note: $('#dp-note').value.trim(), grossWt: actual.grossWt, actual};
-  const lineTxt = actual.dias.map(x => 'Dia ' + x.n + (x.type ? ' ' + x.type : '') + ' ' + x.ct + 'ct/' + x.pcs + 'pc' + (x.cert === 'yes' ? ' certified' + (x.certNo ? ' ' + x.certNo : '') : '')).concat(actual.gems.map(x => x.type + ' ' + x.ct + 'ct/' + x.pcs + 'pc'));
+  const lineTxt = actual.dias.map(x => (x.n > 4 ? 'Extra ' + (x.n - 4) : 'Dia ' + x.n) + (x.type ? ' ' + x.type : '') + ' ' + x.ct + 'ct/' + x.pcs + 'pc' + (x.parts.length > 1 ? ' [' + x.parts.map(q => [q.size, q.shape].filter(Boolean).join(' ') + ' ' + q.ct + 'ct/' + q.pcs + 'pc').join('; ') + ']' : '') + (x.cert === 'yes' ? ' certified' + (x.certNo ? ' ' + x.certNo : '') : '')).concat(actual.gems.map(x => x.type + ' ' + x.ct + 'ct/' + x.pcs + 'pc'));
   const upd = {status: 'dispatched', stage: 'dispatched', stageAt: {dispatched: now}, dispatch: d,
     log: {[logKey()]: logEntry('dispatched', 'Dispatched — ' + [d.mode, d.ref].filter(Boolean).join(' · ') + '\nGross ' + fmtG(v.gross) + ' · Net ' + fmtG(v.net) + (lineTxt.length ? '\n' + lineTxt.join(' · ') : '') + '\nHallmark: ' + (v.hallmark === 'yes' ? 'Yes' + (v.huid ? ' (' + v.huid + ')' : '') : 'No') + (d.note ? '\n' + d.note : '') + (items.length ? '\n📎 ' + items.length + (items.length === 1 ? ' attachment' : ' attachments') : ''))}};
   if (items.length) { upd.media = {}; items.forEach(m => { const x = Object.assign({}, m); delete x.id; upd.media[m.id] = x; }); }
   const bill = {orderNo: o.no, goldMode: v.mode, purity: o.spec && o.spec.purity || '', netWt: r3(v.net), touch: v.touch, fine: r3(v.fine), goldRate: v.grate, goldAmt: Math.round(v.goldAmt * 100) / 100,
-    lines: v.lines.map(l => ({kind: l.kind, n: l.n, type: l.type, ct: l.ct, pcs: l.pcs, rate: l.rate, amt: l.amt})), labourRate: v.lrate, labour: Math.round(v.labour * 100) / 100, other: v.other,
+    lines: v.lines.map(l => ({kind: l.kind, n: l.n, type: l.type, size: l.size || '', shape: l.shape || '', color: l.color || '', clarity: l.clarity || '', ct: l.ct, pcs: l.pcs, rate: l.rate, amt: l.amt})), labourRate: v.lrate, labour: Math.round(v.labour * 100) / 100, other: v.other,
     total: Math.round(v.total * 100) / 100, at: now, by: S.authUser.uid, byName: myName()};
   const ok = await batch([{op: 'update', path: 'orders/' + id, data: stamp(upd)}, {op: 'set', path: 'orders/' + id + '/factory/bill', data: bill}]);
   if (ok) {
@@ -1677,7 +1763,7 @@ function sheetFinal(id){
   /* first time: take the factory's actual weights and carats from the dispatch slip */
   if (!pr.finalCalc && a) {
     c.grossWt = String(a.grossWt); c.netWt = String(a.netWt);
-    (a.dias || []).forEach(x => { c['dct' + x.n] = String(x.ct); });
+    (a.dias || []).forEach(x => { c['dct' + x.n] = String(x.ct); if (x.n > 4) c['dtype' + x.n] = x.type || ''; });
     (a.gems || []).forEach(x => { c['gct' + x.n] = String(x.ct); });
   } else if (!pr.finalCalc && o.dispatch && o.dispatch.grossWt) c.grossWt = o.dispatch.grossWt;
   const booked = pr.goldRateBooked === 'yes';
@@ -1687,11 +1773,12 @@ function sheetFinal(id){
   const f = (k, label, dis, hide) => `<div class="fld" style="margin-bottom:8px" ${hide ? 'hidden' : ''}><label for="fb-${k}" class="small">${esc(label)}</label><input class="in" id="fb-${k}" data-fb="${k}" inputmode="decimal" value="${esc(c[k] == null ? '' : c[k])}" ${dis ? 'readonly' : ''}></div>`;
   const s = o.spec || {};
   const dRows = DIA_N.filter(n => hasDia(s['dia' + n + 'Ct'])).map(n => `<div class="two">${f('dct' + n, 'Diamond ' + n + (s['dia' + n + 'Type'] ? ' · ' + s['dia' + n + 'Type'] : '') + ' — actual ct (order ' + s['dia' + n + 'Ct'] + ')')}${f('d' + n + 'Rate', 'Client rate ₹/ct', false)}</div>`).join('');
+  const xRows = DIA_X.filter(n => num(c['dct' + n]) > 0).map(n => `<div class="two">${f('dct' + n, diaName(n, c['dtype' + n]) + ' — actual ct (not in the order)')}${f('d' + n + 'Rate', 'Client rate ₹/ct (0 = no charge)', false)}</div>`).join('');
   const gRows = [1, 2].filter(n => s['gem' + n + 'Type']).map(n => `<div class="two">${f('gct' + n, 'Gemstone ' + n + ' · ' + s['gem' + n + 'Type'] + ' — actual ct')}<div></div></div>`).join('');
   openSheet('🧮 Final Bill (at delivery)', `<p class="small muted" style="margin-top:-6px">${a ? 'The actual weights and carats have been filled in from the factory dispatch slip. ' : ''}The client’s rates (diamond ₹/ct, making) are those agreed at the time of order. ${booked ? 'The gold rate is booked — the booked rate applies.' : 'The gold rate is not booked — today’s rate applies' + (S.rates && S.rates.day === today() ? ' (filled in).' : '.')}</p>
     <div class="two">${f('grossWt', 'Gross weight g')}${f('netWt', 'Net gold weight g (factory)')}</div>
     <div class="two">${f('goldRate', booked ? 'Booked rate ₹/g' : 'Today’s rate ₹/g', booked)}${f('making', 'Making ₹/g')}</div>
-    ${dRows}${gRows}
+    ${dRows}${xRows}${gRows}
     <div class="two">${f('gemAmt', 'Gemstone ₹', false, !(s.gem1Type || s.gem2Type))}${f('other', 'Other ₹')}</div>
     <div class="two">${f('gst', 'GST %')}<div></div></div>
     <div class="wbox" id="fb-wt"></div>
@@ -1788,6 +1875,7 @@ function receiptHtml(o, p, seal){
     if (m && act) { const x = (act.dias || []).find(d => d.n === +m[1]); if (x && x.cert === 'yes') extra = ' · <b>Certified</b>' + (x.certNo ? ' ' + esc(x.certNo) : ''); }
     return `<div style="margin-top:2px"><b>${esc(r[0])}:</b> ${esc(r[1])}${extra}</div>`;
   }).join('');
+  const extraStones = act ? (act.dias || []).filter(x => x.n > 4).map(x => `<div style="margin-top:2px"><b>${esc(diaName(x.n, x.type))}:</b> ${esc(x.ct)} ct · ${esc(x.pcs)} pcs</div>`).join('') : '';
   const design = s.design ? (s.design.length > 150 ? s.design.slice(0, 149) + '…' : s.design) : '';
   /* the estimate / final bill exactly as worked out: gold rate, every diamond's ₹/ct, making, GST */
   const breakdown = (c, title, totalLabel) => {
@@ -1810,7 +1898,7 @@ function receiptHtml(o, p, seal){
       <div style="flex:1;min-width:0;text-align:right">${lab('Expected delivery')}<div style="font-weight:700;font-size:14.5px">${esc(fmtDayEn(o.deliveryDay))}</div><div style="color:${MUTE}">Deeva Diamonds — ${esc(st.name || o.storeName || '')}</div></div>
     </div>
     <div style="padding:10px 0;border-bottom:1px solid ${LINE}">${lab('Your jewellery')}
-      <div style="font-weight:700;font-size:14.5px">${esc(item)}</div>${stones}
+      <div style="font-weight:700;font-size:14.5px">${esc(item)}</div>${stones}${extraStones}
       ${v && v.gross ? `<div style="margin-top:3px;color:${MUTE}">${pr.finalCalc ? 'Weight' : 'Approx. weight'}: <b style="color:${INK}">Net gold ${fmtG(v.net)}</b>${v.diaCt ? ' · Diamonds ' + r3(v.diaCt) + ' ct (' + fmtG(v.diaCt * CT_TO_G) + ')' : ''}${v.gemCt ? ' · Gemstones ' + r3(v.gemCt) + ' ct' : ''} · Gross ${fmtG(v.gross)}</div>` : ''}
       ${act ? `<div style="margin-top:3px;color:${MUTE}">Hallmark: <b style="color:${INK}">${act.hallmark === 'yes' ? 'Yes' + (act.huid ? ' · HUID ' + esc(act.huid) : '') : 'No'}</b></div>` : ''}
       ${design ? `<div style="margin-top:3px;color:${MUTE}">${esc(design)}</div>` : ''}
@@ -1864,7 +1952,8 @@ function factoryBillHtml(o, bill){
   (bill.lines || []).forEach(l => {
     const x = l.kind === 'd' ? (a.dias || []).find(q => q.n === l.n) : null;
     const cert = x && x.cert === 'yes' ? ' · certified' + (x.certNo ? ' ' + esc(x.certNo) : '') : '';
-    rows += tr((l.kind === 'd' ? 'Diamond ' : 'Gemstone ') + l.n + (l.type ? ' · ' + esc(l.type) : '') + ' — ' + esc(l.ct) + ' ct' + (l.pcs ? ' / ' + esc(l.pcs) + ' pc' : '') + cert + (l.rate ? ' × ' + money(l.rate) + '/ct' : ''), l.amt ? money2(l.amt) : '—');
+    const qual = [l.color ? 'Colour ' + l.color : '', l.clarity ? 'Clarity ' + l.clarity : ''].filter(Boolean).join(' · ');
+    rows += tr(esc(billLineLabel(l)) + (qual ? ' · ' + esc(qual) : '') + cert + (l.rate ? ' × ' + money(l.rate) + '/ct' : ''), l.amt ? money2(l.amt) : '—');
   });
   if (bill.labour) rows += tr('Labour — net ' + fmtG(bill.netWt) + ' × ' + money(bill.labourRate) + '/g', money2(bill.labour));
   if (bill.other) rows += tr('Other', money2(bill.other));
@@ -2393,6 +2482,11 @@ function calcValues(c, spec){
     const ct = dct(n), rate = num(c['d' + n + 'Rate']);
     return {n, type: spec['dia' + n + 'Type'] || '', ct, g: ct * CT_TO_G, rate, amt: ct * rate};
   });
+  DIA_X.forEach(n => {   /* final bill: diamonds the factory added that were not in the order */
+    const ct = num(c['dct' + n]); if (!(ct > 0)) return;
+    const rate = num(c['d' + n + 'Rate']);
+    dias.push({n, type: c['dtype' + n] || '', ct, g: ct * CT_TO_G, rate, amt: ct * rate, extra: true});
+  });
   const gems = [1, 2].filter(n => spec['gem' + n + 'Type'] && gct(n) > 0).map(n => {
     const ct = gct(n); return {n, type: spec['gem' + n + 'Type'], ct, g: ct * CT_TO_G};
   });
@@ -2417,7 +2511,7 @@ function weightHtml(c, spec){
   const row = (l, val, cls) => `<div class="wr ${cls || ''}"><span>${l}</span><span>${val}</span></div>`;
   let h = row('Gross weight', esc(fmtG(v.gross)));
   const ctTxt = ct => (Math.round(ct * 1000) / 1000).toFixed(2) + ' ct = ' + fmtG(ct * CT_TO_G);
-  v.dias.forEach(d => { h += row('− Diamond ' + d.n + (d.type ? ' · ' + esc(d.type) : ''), '− ' + esc(ctTxt(d.ct))); });
+  v.dias.forEach(d => { h += row('− ' + esc(diaName(d.n, d.type)), '− ' + esc(ctTxt(d.ct))); });
   v.gems.forEach(d => { h += row('− Gemstone ' + d.n + ' · ' + esc(d.type), '− ' + esc(ctTxt(d.ct))); });
   if (v.netGiven && Math.abs(v.net - v.netAuto) > 0.0005) { h += row('= ' + esc(fmtG(v.netAuto)) + ' (calculated)', ''); h += row('<b>Net gold weight</b> <small>from the factory slip</small>', '<b>' + esc(fmtG(v.net)) + '</b>', 'net'); }
   else h += row('<b>Net gold weight</b>', '<b>' + esc(fmtG(v.net)) + '</b>', 'net');
@@ -2432,7 +2526,7 @@ function calcLines(c, spec, en, totalLabel){
   const L = [];
   if (v.gross) L.push(['Net gold ' + fmtG(v.net) + (v.netGiven && Math.abs(v.net - v.netAuto) > 0.0005 ? (en ? ' (as weighed by factory; gross ' : ' (per factory slip; gross ') + fmtG(v.gross) + ')' : ' = gross ' + fmtG(v.gross) + ' − stones ' + r3(v.stoneCt) + ' ct (' + fmtG(v.stoneG) + ')'), '', 'note']);
   L.push(['Gold' + (v.net ? ' — net ' + fmtG(v.net) + ' × ' + money(c.goldRate || 0) : ''), money2(v.gold)]);
-  v.dias.forEach(d => L.push(['Diamond ' + d.n + (d.type ? ' · ' + d.type : '') + ' — ' + d.ct + ' ct × ' + money(d.rate), money2(d.amt)]));
+  v.dias.forEach(d => L.push([diaName(d.n, d.type) + ' — ' + d.ct + ' ct × ' + money(d.rate), money2(d.amt)]));
   if (v.gem) L.push(['Gemstone', money2(v.gem)]);
   L.push(['Making' + (v.net ? ' — net ' + fmtG(v.net) + ' × ' + money(c.making || 0) : ''), money2(v.mk)]);
   if (v.oth) L.push(['Other', money2(v.oth)]);
@@ -3134,6 +3228,10 @@ document.addEventListener('click', e => {
     case 'pdf': makeReceiptPdf(oid || (S.sheet && S.sheet.id), false); break;
     case 'pdf-wa': makeReceiptPdf(oid || (S.sheet && S.sheet.id), true); break;
     case 'fpdf': makeFactoryPdf(t.dataset.id || oid || (S.sheet && S.sheet.id)); break;
+    case 'dp-part-add': dpPartAdd(t.dataset.g); break;
+    case 'dp-part-del': dpPartDel(t.dataset.key); break;
+    case 'dp-extra-add': dpExtraAdd(); break;
+    case 'dp-grp-del': dpGroupDel(t.dataset.g); break;
     case 'sched-do': doSchedule(); break;
     case 'cancel-open': sheetCancel(oid); break;
     case 'cancel-do': doCancel(); break;

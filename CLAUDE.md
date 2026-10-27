@@ -78,14 +78,17 @@ Final bill (delivery) recomputes with the factory's final gross weight (`dispatc
 
 Factory (or admin) dispatches with `sheetDispatch()`: actual gross g, net g (auto = gross − all actual stone ct × 0.2, can
 be typed), per diamond line actual ct / pcs / certified yes-no + certificate no, per gemstone actual ct / pcs, hallmark
-yes-no + HUID, courier, note, slip photo. Saved in `orders/{id}.dispatch.actual` = `{grossWt, netWt, hallmark, huid,
-dias[{n,type,ct,pcs,cert,certNo}], gems[{n,type,ct,pcs}]}` — visible to store, admin, factory (`slipBlock()` shows order vs
+yes-no + HUID, courier, note, slip photo. Each diamond line can be split into several sizes / sieves with their own
+rate ("＋ Add another size / rate": e.g. cluster −2, +6), each size with shape / colour / clarity / ct / pcs; the factory can also
+add up to 4 diamonds not in the order (n 5–8, "Extra diamond 1…", `DIA_X`). Saved in `orders/{id}.dispatch.actual` = `{grossWt, netWt, hallmark, huid,
+dias[{n,type,ct (sum),pcs (sum),cert,certNo,shape,parts[{size,shape,color,clarity,ct,pcs}],extra?}], gems[{n,type,ct,pcs}]}` — visible to store, admin, factory (`slipBlock()` shows order vs
 actual, differences in orange). The factory's money side goes to `orders/{id}/factory/bill` = `{goldMode 'fine'|'money',
-touch %, fine g (= net × touch %), goldRate, goldAmt (= net × rate), lines[{kind d|g, n, type, ct, pcs, rate, amt}],
+touch %, fine g (= net × touch %), goldRate, goldAmt (= net × rate), lines[{kind d|g, n, type, size, shape, color, clarity, ct, pcs, rate, amt}] (one line per size),
 labourRate, labour (= net × rate), other, total}` — admin + sub admin + factory only, never the store or the client.
 Default touch by purity: `TOUCH` (14KT 58.5 …), editable. Final bill (`sheetFinal`) starts from the slip: gross, net
 (`calc.netWt` overrides the computed net), actual carats (`calc.dct{n}`, `calc.gct{n}` override the ordered ct), with the
-client's own rates (diamond ₹/ct, making, booked gold rate).
+client's own rates (diamond ₹/ct, making, booked gold rate). Extra diamonds come into the final bill as `calc.dct5..8` + `dtype5..8`
+with a client rate `d5Rate..d8Rate` (0 = no charge); `calcValues()` adds them to the stones and the diamond total.
 
 Factory bill PDF: `factoryBillHtml()` + `makeFactoryPdf()` — offered right after dispatch and on the slip ("📄 Save factory
 bill PDF", factory + Admin / Sub Admin): order no., bill to Deeva Diamonds — store + address, item, actual weights, hallmark,

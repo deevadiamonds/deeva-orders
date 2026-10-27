@@ -90,7 +90,17 @@ window.__demoPdfPreview = true;
       o.dispatch.grossWt = String(gross);
       o.dispatch.actual = {grossWt: gross, netWt: net, hallmark: 'yes', huid: 'HU' + Math.round(1000 + rr() * 8000), dias, gems};
       const touch = {'14KT': 59, '18KT': 76, '22KT': 92}[item[2]] || 59;
-      const lines = dias.map(x => ({kind: 'd', n: x.n, type: x.type, ct: x.ct, pcs: x.pcs, rate: 18500, amt: Math.round(x.ct * 18500)})).concat(gems.map(x => ({kind: 'g', n: x.n, type: x.type, ct: x.ct, pcs: x.pcs, rate: 0, amt: 900})));
+      /* side / cluster diamonds come in two sieve sizes with their own rates; solitaires are one line */
+      dias.forEach(x => {
+        const shape = spec['dia' + x.n + 'Shape'] || 'Round';
+        if (/side|cluster/i.test(x.type) && +x.pcs > 3) {
+          const p1 = Math.round(+x.pcs * 0.6), c1 = Math.round(x.ct * 0.55 * 100) / 100;
+          x.parts = [{size: '−2', shape, color: 'F-G', clarity: 'VS', ct: c1, pcs: String(p1)}, {size: '+6', shape, color: 'F-G', clarity: 'VS', ct: Math.round((x.ct - c1) * 100) / 100, pcs: String(+x.pcs - p1)}];
+        } else x.parts = [{size: '', shape, color: spec['dia' + x.n + 'Color'] || '', clarity: spec['dia' + x.n + 'Clarity'] || '', ct: x.ct, pcs: x.pcs}];
+      });
+      const lines = [];
+      dias.forEach(x => x.parts.forEach((q, i) => { const rate = x.parts.length > 1 ? (i ? 17500 : 14500) : 18500; lines.push({kind: 'd', n: x.n, type: x.type, size: q.size, shape: q.shape, color: q.color, clarity: q.clarity, ct: q.ct, pcs: q.pcs, rate, amt: Math.round(q.ct * rate)}); }));
+      gems.forEach(x => lines.push({kind: 'g', n: x.n, type: x.type, ct: x.ct, pcs: x.pcs, rate: 0, amt: 900}));
       const labour = Math.round(net * 850 * 100) / 100;
       const total = lines.reduce((a, l) => a + l.amt, 0) + labour + 250;
       F.store['orders/' + id + '/factory/bill'] = {orderNo: nn.no, goldMode: 'fine', purity: item[2], netWt: net, touch, fine: Math.round(net * touch / 100 * 1000) / 1000, goldRate: 0, goldAmt: 0, lines, labourRate: 850, labour, other: 250, total, at: o.dispatch.at, by: 'u_factory', byName: 'Factory (Raju)'};
@@ -123,6 +133,7 @@ window.__demoPdfPreview = true;
     o: {factoryVisible: false, approvedAt: null, factoryDue: '', cad: {}, deliveryDay: day(15), media: {m3: {kind: 'image', url: pendant, path: 'demo', desc: 'Reference — no drop', by: 'u_nishant', byName: 'Nishant', at: now - 2 * H}}}
   });
   makeOrder('o3', now - 14 * D, 'dispatched', 's_rpr', ITEMS[2], 'Pooja Sharma', {
+    spec: {dia2Type: 'Side', dia2Ct: '0.24', dia2Pcs: '20', dia2Shape: 'Round', dia2Color: 'F-G', dia2Clarity: 'VS'},
     o: {priority: 'urgent', deliveryDay: day(1), factoryDue: day(-1), approvedAt: now - 13 * D, dispatch: {at: now - 20 * H, by: 'u_factory', byName: 'Factory (Raju)', mode: 'Courier', ref: 'DTDC 7731', note: 'Screw back'}, stage: 'dispatched', stageAt: {dispatched: now - 20 * H},
       media: {m4: {kind: 'image', url: earr, path: 'demo', desc: 'Finished piece', by: 'u_factory', byName: 'Factory (Raju)', at: now - 20 * H, stage: 'dispatched'}}}
   });
