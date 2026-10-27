@@ -50,19 +50,24 @@ jobs:
         if: steps.cred.outputs.ok == 'true'
         run: |
           STAMP=$(TZ=Asia/Kolkata date +%Y-%m-%d)
-          gcloud firestore export "$ARCHIVE/database/$STAMP" --database='(default)' --quiet 2>&1 | tail -n 5 > "$RUNNER_TEMP/exp.log" \
-            || { echo "::error title=Archive::Database copy failed — $(tr '\n' ' ' < "$RUNNER_TEMP/exp.log" | head -c 800)"; exit 1; }
+          if ! gcloud firestore export "$ARCHIVE/database/$STAMP" --database='(default)' --quiet > "$RUNNER_TEMP/exp.log" 2>&1; then
+            echo "::error title=Archive::Database copy failed — $(tail -n 8 "$RUNNER_TEMP/exp.log" | tr '\n' ' ' | head -c 900)"; exit 1
+          fi
+          tail -n 5 "$RUNNER_TEMP/exp.log"
           echo "STAMP=$STAMP" >> "$GITHUB_ENV"
 
       - name: Copy every photo, video and voice note (only added, never removed)
         if: steps.cred.outputs.ok == 'true'
         run: |
-          gcloud storage rsync "$LIVE" "$ARCHIVE/files" --recursive --quiet 2>&1 | tail -n 3 || { echo "::error title=Archive::File copy failed"; exit 1; }
+          if ! gcloud storage rsync "$LIVE" "$ARCHIVE/files" --recursive --quiet > "$RUNNER_TEMP/rs.log" 2>&1; then
+            echo "::error title=Archive::File copy failed — $(tail -n 8 "$RUNNER_TEMP/rs.log" | tr '\n' ' ' | head -c 900)"; exit 1
+          fi
 
       - name: Summary
         if: steps.cred.outputs.ok == 'true'
         run: |
-          COPIES=$(gcloud storage ls "$ARCHIVE/database/" 2>/dev/null | wc -l)
-          FILES=$(gcloud storage ls -r "$ARCHIVE/files/**" 2>/dev/null | wc -l)
-          SIZE=$(gcloud storage du -s "$ARCHIVE" --readable-sizes 2>/dev/null | awk '{print $1" "$2}')
+          COPIES=$(gcloud storage ls "$ARCHIVE/database/" 2>"$RUNNER_TEMP/ls.log" | wc -l)
+          FILES=$(gcloud storage ls "$ARCHIVE/files/**" 2>>"$RUNNER_TEMP/ls.log" | wc -l)
+          SIZE=$(gcloud storage du -s "$ARCHIVE" --readable-sizes 2>>"$RUNNER_TEMP/ls.log" | awk '{print $1" "$2}')
+          if [ -s "$RUNNER_TEMP/ls.log" ]; then echo "::warning title=Archive listing::$(tr '\n' ' ' < "$RUNNER_TEMP/ls.log" | head -c 600)"; fi
           echo "::notice title=Archive::Copy of $STAMP saved in $ARCHIVE (Delhi) · $COPIES weekly database copies · $FILES files · total $SIZE"
