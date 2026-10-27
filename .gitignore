@@ -4,3 +4,5 @@ android/.gradle/
 android/build/
 android/app/build/
 __pycache__/
+node_modules/
+functions/.env

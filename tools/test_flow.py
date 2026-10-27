@@ -121,6 +121,15 @@ async def main():
         await pg.mouse.up()
         await pg.click('[data-act="brand-save"]')
         await pg.wait_for_function("!document.querySelector('#sheet .sheet')")
+        # Google Sheet backup: shows the address to share with, saves the link
+        card = await pg.inner_text('#sheet-card')
+        assert '-compute@developer.gserviceaccount.com' in card and 'Google Sheet link' in card, card
+        await pg.fill('#sh-url', 'https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-/edit#gid=0')
+        await pg.click('[data-act="sheet-save"]')
+        await pg.wait_for_function("document.querySelector('#sheet-card').innerText.includes('Open the sheet')")
+        shc = await pg.evaluate("__fake.store['config/sheet']")
+        assert shc['id'] == '1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-' and shc['syncReq'] > 0, shc
+        print('ok  Google Sheet backup linked (server copies every order)')
         await shot('01-team')
         print('ok  default store Raipur + Bilaspur, one manager per store enforced, sub admin, logins, today\'s rate, Deeva signature')
         await logout()

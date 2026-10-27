@@ -14,13 +14,16 @@
  * Device tokens: pushTokens/{token} = { uid, role, storeId, platform, at }. The person who made the change is never notified.
  * Client name, phone and price are never put into a notification.
  */
-const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { setGlobalOptions, logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 
 setGlobalOptions({ region: 'asia-south1', maxInstances: 5, memory: '256MiB' });
 admin.initializeApp();
 const db = admin.firestore();
+const sheet = require('./sheet');
+/* the Google Sheet copy never blocks a notification: its errors are written to config/sheet.status for the Admin */
+const toSheet = (id, o, ev) => sheet.onOrder(db, id, o, ev, APP_URL).catch(e => logger.warn('sheet', { id, ev, err: e.message }));
 
 const APP_URL = process.env.APP_URL || 'https://deevadiamonds.github.io/deeva-orders/';
 const DEAD_TOKEN = /registration-token-not-registered|invalid-registration-token|invalid-argument/;
@@ -78,6 +81,15 @@ exports.orderCreated = onDocumentCreated('orders/{orderId}', async (event) => {
   const o = event.data && event.data.data();
   if (!o) return;
   await notify({ roles: ['admin', 'subadmin'] }, o.createdBy, 'New order · ' + (o.storeName || o.createdByName || ''), o.no + ' — ' + itemLine(o) + ' · awaiting approval', event.params.orderId);
+  await toSheet(event.params.orderId, o, 'placed');
+});
+
+/* Admin saved the sheet link or asked for "Sync all again": rewrite the three tabs from the database */
+exports.sheetSetup = onDocumentWritten({ document: 'config/sheet', timeoutSeconds: 300 }, async (event) => {
+  const b = event.data && event.data.before.exists ? event.data.before.data() : {};
+  const a = event.data && event.data.after.exists ? event.data.after.data() : null;
+  if (!a || !a.id || (a.id === b.id && a.syncReq === b.syncReq)) return;
+  await sheet.rebuild(db, APP_URL).catch(e => logger.warn('sheet rebuild', { err: e.message }));
 });
 
 exports.orderUpdated = onDocumentUpdated('orders/{orderId}', async (event) => {
@@ -86,6 +98,8 @@ exports.orderUpdated = onDocumentUpdated('orders/{orderId}', async (event) => {
   if (!a || !b) return;
   const id = event.params.orderId, by = a.updatedBy, no = a.no, store = a.storeId;
   const newLogs = Object.entries(a.log || {}).filter(([k]) => !(b.log || {})[k]).map(([, v]) => v);
+  /* Google Sheet: dispatched → a new row in "Dispatched"; any other status change refreshes the order's row in "All orders" */
+  if (b.status !== a.status) await toSheet(id, a, a.status === 'dispatched' ? 'dispatched' : 'status');
 
   if (b.status !== a.status) {
     if (a.status === 'query') return notify({ storeId: store }, by, '❓ Query · ' + no, short((a.query && a.query.text) || '', 200), id);

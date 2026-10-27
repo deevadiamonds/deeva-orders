@@ -6,7 +6,7 @@ name: Firebase (rules + notifications)
 on:
   push:
     branches: [main]
-    paths: ['firestore.rules', 'storage.rules', 'firestore.indexes.json', 'firebase.json', '.firebaserc', 'functions/**', 'tools/storage-selftest.js', '.github/workflows/firebase.yml']
+    paths: ['firestore.rules', 'storage.rules', 'firestore.indexes.json', 'firebase.json', '.firebaserc', 'functions/**', 'tools/storage-selftest.js', 'tools/sheet-status.js', '.github/workflows/firebase.yml']
   workflow_dispatch:
 
 concurrency:
@@ -57,7 +57,7 @@ jobs:
           gcloud config set project "$PROJECT" >/dev/null 2>&1
           if ! gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
                run.googleapis.com eventarc.googleapis.com pubsub.googleapis.com compute.googleapis.com \
-               firebaserules.googleapis.com fcm.googleapis.com firestore.googleapis.com firebasestorage.googleapis.com cloudbilling.googleapis.com > "$RUNNER_TEMP/gcp.log" 2>&1; then
+               firebaserules.googleapis.com fcm.googleapis.com firestore.googleapis.com firebasestorage.googleapis.com cloudbilling.googleapis.com sheets.googleapis.com > "$RUNNER_TEMP/gcp.log" 2>&1; then
             "$RUNNER_TEMP/report.sh" "Could not turn on Google APIs — the service account needs the Owner role (and the project needs the Blaze plan)" "$RUNNER_TEMP/gcp.log"
             exit 1
           fi
@@ -82,6 +82,23 @@ jobs:
           fi
           ERR=$(grep -v '^Updated IAM policy' "$RUNNER_TEMP/iam.log" | tr '\n' ' ' | head -c 1500)
           if [ -n "$ERR" ]; then echo "::warning title=IAM::$ERR"; fi
+
+      - name: Data safety (daily database backups, 7-day point-in-time recovery, photos kept 30 days after any delete)
+        if: steps.cred.outputs.ok == 'true'
+        continue-on-error: true
+        run: |
+          : > "$RUNNER_TEMP/bk.log"
+          gcloud firestore databases update --database='(default)' --enable-pitr --quiet >/dev/null 2>>"$RUNNER_TEMP/bk.log" || echo "point-in-time recovery: failed" >> "$RUNNER_TEMP/bk.log"
+          if ! gcloud firestore backups schedules list --database='(default)' --format='value(name)' 2>>"$RUNNER_TEMP/bk.log" | grep -q .; then
+            gcloud firestore backups schedules create --database='(default)' --recurrence=daily --retention=30d --quiet >/dev/null 2>>"$RUNNER_TEMP/bk.log" || echo "daily backup schedule: failed" >> "$RUNNER_TEMP/bk.log"
+          fi
+          BUCKET=$(python3 -c "import re;print(re.search(r'storageBucket:\s*\"([^\"]+)\"', open('web/config.js').read()).group(1))")
+          gcloud storage buckets update "gs://$BUCKET" --soft-delete-duration=30d --quiet >/dev/null 2>>"$RUNNER_TEMP/bk.log" || echo "photo soft delete: failed" >> "$RUNNER_TEMP/bk.log"
+          SCHED=$(gcloud firestore backups schedules list --database='(default)' --format='value(retention)' 2>/dev/null | head -1)
+          PITR=$(gcloud firestore databases describe --database='(default)' --format='value(pointInTimeRecoveryEnablement)' 2>/dev/null)
+          SOFT=$(gcloud storage buckets describe "gs://$BUCKET" --format='value(soft_delete_policy.retentionDurationSeconds)' 2>/dev/null)
+          echo "::notice title=Backups::Daily database backup kept ${SCHED:-?} · point-in-time recovery ${PITR:-?} · deleted photos kept ${SOFT:-?} s"
+          if grep -q failed "$RUNNER_TEMP/bk.log"; then echo "::warning title=Backups::$(tr '\n' ' ' < "$RUNNER_TEMP/bk.log" | head -c 900)"; fi
 
       - name: Deploy security rules and indexes
         if: steps.cred.outputs.ok == 'true'
@@ -109,6 +126,11 @@ jobs:
           done
           echo "::error title=Upload self-test::Photo upload is still refused — $R"
           exit 1
+
+      - name: Google Sheet backup status
+        if: steps.cred.outputs.ok == 'true'
+        continue-on-error: true
+        run: echo "::notice title=Google Sheet::$(NODE_PATH=functions/node_modules node tools/sheet-status.js 2>&1 | tail -n 1)"
 
       - name: Deploy notification functions
         if: steps.cred.outputs.ok == 'true'

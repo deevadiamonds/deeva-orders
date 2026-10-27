@@ -97,6 +97,19 @@ browser download (iPhone: share sheet → Save to Files). `htmlToPdf()` is share
 Receipt to the client: only the Android app can put the PDF straight into the client's chat (`sharePdfWhatsApp`, jid
 extra); a browser downloads it and opens the chat (WhatsApp does not let websites attach files).
 
+## Backups and the Google Sheet copy (owner's request, 27 Oct 2026)
+
+- Database: Firestore daily backups (kept 30 days) + 7-day point-in-time recovery; photos/videos: Storage soft delete 30 days.
+  Set (idempotently) by `firebase.yml` → annotation "Backups". Rules never allow deleting orders or files.
+- Google Sheet: `functions/sheet.js` (called from `orderCreated` / `orderUpdated`, plus `sheetSetup` on `config/sheet`).
+  Admin pastes the sheet link under Team › 📊 Google Sheet backup (`config/sheet` = `{id, url, syncReq, status{ok,msg,at,working,count}}`,
+  Admin / Sub Admin read only). The owner shares the sheet (Editor) with the functions' account
+  `395857273671-compute@developer.gserviceaccount.com`. Tabs: **All orders** (one row per order: status, details, estimate,
+  `=IMAGE()` photo, then dispatch summary + factory bill), **Orders placed** (row appended at placement), **Dispatched** (row
+  appended at dispatch). Any status change refreshes the order's row in All orders (matched on order no. in column B).
+  Saving the link / "Copy all orders again" (`syncReq`) rewrites all three tabs. Errors go to `config/sheet.status` and show
+  on the Team page; `tools/sheet-status.js` prints the status in the deploy run. Offline test: fake Sheets server (scratch).
+
 ## Data model (Firestore)
 
 | Path | Fields | Who |

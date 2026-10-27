@@ -849,6 +849,7 @@ function startData(){
   S.unsubs.push(B.db.watchQuery('stores', [], list => { S.stores = Object.fromEntries(list.map(x => [x.id, x.data])); render(); }, e => console.error(e)));
   if (staff()) S.unsubs.push(B.db.watchDoc('config/brand', s => { S.brand = s.exists ? s.data : null; }, () => {}));
   if (staff()) S.unsubs.push(B.db.watchDoc('config/rates', s => { S.rates = s.exists ? s.data : null; if (F && FORMKEY) syncFormVis(); render(); }, () => {}));
+  if (isAdmin()) S.unsubs.push(B.db.watchDoc('config/sheet', s => { S.sheetCfg = s.exists ? s.data : null; render(); }, () => {}));
   const onErr = e => { console.error(e); toast('Orders could not be loaded — ' + errText(e), 'bad'); };
   /* two-field queries; while Firebase still builds an index, fall back to one field + filter here */
   let cur = null;
@@ -2834,9 +2835,42 @@ function renderTeam(){
   h += `<div class="card"><h3>📈 Today’s Rate <button class="btn sm tag" data-act="rates-open">Set</button></h3><p class="small muted" style="margin:0">${S.rates ? esc(ratesLine()) + ' · ' + esc(fmtDay(S.rates.day)) : 'Not set yet.'}</p></div>`;
   const b = S.brand || {};
   h += `<div class="card"><h3>🧾 Authorised signature on receipts</h3>${b.signData ? `<img class="sigimg" src="${esc(b.signData)}" alt=""><p class="small muted" style="margin:6px 0 10px">${esc(b.signName || '')}</p>` : '<p class="small muted" style="margin-top:0">No signature yet — receipts will carry the Deeva seal only.</p>'}<button class="btn sm" data-act="brand-sign">✍️ Signature ${b.signData ? 'Change' : 'set'}</button></div>`;
+  h += sheetCardHtml();
   patch($('#view'), h);
   const roleOn = ($('#u-role .chip.on') || {dataset: {}}).dataset.v;
   const w = $('#u-store-wrap'); if (w) w.hidden = roleOn !== 'store';
+}
+/* Google Sheet copy of every order: the server writes it (functions/sheet.js); here the Admin links the sheet */
+const sheetRobot = () => ((window.DO_CONFIG || {}).messagingSenderId || 'PROJECT-NUMBER') + '-compute@developer.gserviceaccount.com';
+function sheetCardHtml(){
+  const c = S.sheetCfg || {}, st = c.status || {};
+  let h = `<div class="card" id="sheet-card"><h3>📊 Google Sheet backup</h3><p class="small muted" style="margin-top:-4px">Every order is copied to your Google Sheet automatically — when it is placed (details, estimate, photo) and again when it is dispatched (actual weights, diamonds by size, factory bill). Tabs: <b>All orders</b> (both together) · <b>Orders placed</b> · <b>Dispatched</b>.</p>`;
+  if (c.id && !S.sheetEdit) {
+    h += `<p class="small" style="margin:0 0 10px">${st.working ? '⏳ ' : st.ok === false ? '<span style="color:var(--bad)">⚠️ ' : '✓ '}${esc(st.msg || 'Linked')}${st.ok === false ? '</span>' : ''}${st.at ? ' · ' + esc(fmtWhen(st.at)) : ''}</p>
+      <div class="btns"><a class="btn sm primary" href="${esc(c.url || 'https://docs.google.com/spreadsheets/d/' + c.id)}" target="_blank" rel="noopener">Open the sheet</a><button class="btn sm" data-act="sheet-sync">Copy all orders again</button><button class="btn sm" data-act="sheet-edit">Change</button></div>`;
+    if (st.ok === false) h += `<p class="small muted" style="margin:10px 0 0">The sheet must be shared (Editor) with <b style="word-break:break-all">${esc(sheetRobot())}</b> <button class="btn sm" data-act="copy" data-t="${esc(sheetRobot())}">Copy</button></p>`;
+  } else {
+    h += `<ol class="small" style="margin:0 0 10px;padding-left:20px;line-height:1.55">
+      <li>Create a blank Google Sheet (e.g. in the Deeva Diamonds Google account) and name it “Deeva Orders”.</li>
+      <li>Tap <b>Share</b>, add this address as <b>Editor</b>, untick “Notify people”, then <b>Share</b>:<br><b style="word-break:break-all">${esc(sheetRobot())}</b> <button class="btn sm" data-act="copy" data-t="${esc(sheetRobot())}">Copy</button></li>
+      <li>Copy the sheet’s link and paste it below.</li></ol>
+      <div class="fld"><label for="sh-url">Google Sheet link</label><input class="in" id="sh-url" inputmode="url" autocapitalize="none" placeholder="https://docs.google.com/spreadsheets/d/…" value="${esc(c.url || '')}"></div>
+      <div class="btns"><button class="btn primary" data-act="sheet-save">Save and copy all orders</button>${c.id ? '<button class="btn" data-act="sheet-cancel">Cancel</button>' : ''}</div>`;
+  }
+  return h + `</div>`;
+}
+async function saveSheet(){
+  const url = ($('#sh-url') || {}).value || '';
+  const m = /\/spreadsheets\/d\/([A-Za-z0-9_-]{20,})/.exec(url) || /^([A-Za-z0-9_-]{30,})$/.exec(url.trim());
+  if (!m) return toast('Please paste the full Google Sheet link.', 'bad');
+  const now = Date.now();
+  const ok = await commit(B.db.set('config/sheet', {id: m[1], url: url.trim(), syncReq: now, at: now, by: S.authUser.uid, byName: myName(), status: {ok: true, working: true, msg: 'Waiting for the server to copy all orders…', at: now}}));
+  if (ok) { S.sheetEdit = false; toast('Saved. All orders are being copied to the sheet.'); render(); }
+}
+async function syncSheet(){
+  const now = Date.now();
+  const ok = await write('config/sheet', {syncReq: now, status: {ok: true, working: true, msg: 'Waiting for the server to copy all orders…', at: now}});
+  if (ok) toast('All orders are being copied to the sheet again.');
 }
 function sheetStore(sid){
   const s = sid ? S.stores[sid] : {};
@@ -3229,6 +3263,10 @@ document.addEventListener('click', e => {
     case 'pdf-wa': makeReceiptPdf(oid || (S.sheet && S.sheet.id), true); break;
     case 'fpdf': makeFactoryPdf(t.dataset.id || oid || (S.sheet && S.sheet.id)); break;
     case 'dp-part-add': dpPartAdd(t.dataset.g); break;
+    case 'sheet-save': saveSheet(); break;
+    case 'sheet-sync': syncSheet(); break;
+    case 'sheet-edit': S.sheetEdit = true; render(); break;
+    case 'sheet-cancel': S.sheetEdit = false; render(); break;
     case 'dp-part-del': dpPartDel(t.dataset.key); break;
     case 'dp-extra-add': dpExtraAdd(); break;
     case 'dp-grp-del': dpGroupDel(t.dataset.g); break;
