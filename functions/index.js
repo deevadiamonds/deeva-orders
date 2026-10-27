@@ -86,7 +86,6 @@ exports.orderUpdated = onDocumentUpdated('orders/{orderId}', async (event) => {
   if (!a || !b) return;
   const id = event.params.orderId, by = a.updatedBy, no = a.no, store = a.storeId;
   const newLogs = Object.entries(a.log || {}).filter(([k]) => !(b.log || {})[k]).map(([, v]) => v);
-  const who = (l) => (l && l.name) || '';
 
   if (b.status !== a.status) {
     if (a.status === 'query') return notify({ storeId: store }, by, '❓ Query · ' + no, short((a.query && a.query.text) || '', 200), id);
@@ -110,6 +109,7 @@ exports.orderUpdated = onDocumentUpdated('orders/{orderId}', async (event) => {
     await notify({ roles: ['admin', 'subadmin'], storeId: store }, by, 'Factory update · ' + no + ' (' + (STAGE[a.stage] || a.stage) + ')', short(l.text, 200), id);
   }
   for (const l of newLogs.filter(x => (x.type === 'note' || x.type === 'media') && x.role !== 'factory' && a.factoryVisible)) {
-    await notify({ roles: ['factory'] }, by, 'Note · ' + no + ' · ' + who(l), short(l.text, 200), id);
+    /* the factory never sees who at the store or office wrote it — only the store */
+    await notify({ roles: ['factory'] }, by, 'Note · ' + no + ' · Deeva Diamonds' + (a.storeName ? ' — ' + a.storeName : ''), short(l.text, 200), id);
   }
 });

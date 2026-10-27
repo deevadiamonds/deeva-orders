@@ -37,6 +37,12 @@ mandatory fields, and the same record goes to Darshana/Admin for approval and th
 | `store` | one manager per store (`users.storeId`), e.g. Nishant = VIP Road Raipur | only HIS store's orders: create, see client + price + payments, edit until approved, reply to queries, CAD OK / change, date/priority change any time, notes & media, payments + receipt photo, final bill, "Store पर मिल गया", Delivered, receipt PDF |
 | `factory` | one factory person | only approved orders (`factoryVisible == true`), only product details + factory media + voice notes. **Never** client name/phone, price, payments, internal notes, queries. Updates stage, adds photos (CAD), dispatches (time punch) |
 
+**Who sees whom (owner's rule, 27 Oct 2026):** the factory never sees a store person or the office by name or phone —
+only "Deeva Diamonds — <store>" and the store address (`whoLabel()`, `mediaWho()`, `deevaLabel()`); a store manager never
+sees the factory person — only "Factory" — and never the factory bill. `users` reads: Admin / Sub Admin all; store manager
+only `role in [admin, subadmin]` (WhatsApp buttons); factory only its own doc. Media items carry `role` of the uploader.
+Today's rate (`config/rates`) may be set by Admin, Sub Admin or a store manager (📈 banner on the Orders page).
+
 ## Stores
 
 `stores/{sid}` = `{name, city, address, phone, active, at}`. First setup creates the store "Raipur" (VIP Road address). Names are short ("Raipur", "Bilaspur", "Raipur A"); the
@@ -80,6 +86,13 @@ labourRate, labour (= net × rate), other, total}` — admin + sub admin + facto
 Default touch by purity: `TOUCH` (14KT 58.5 …), editable. Final bill (`sheetFinal`) starts from the slip: gross, net
 (`calc.netWt` overrides the computed net), actual carats (`calc.dct{n}`, `calc.gct{n}` override the ordered ct), with the
 client's own rates (diamond ₹/ct, making, booked gold rate).
+
+Factory bill PDF: `factoryBillHtml()` + `makeFactoryPdf()` — offered right after dispatch and on the slip ("📄 Save factory
+bill PDF", factory + Admin / Sub Admin): order no., bill to Deeva Diamonds — store + address, item, actual weights, hallmark,
+gold fine / money, every line, labour, other, total. Saved on the phone: APK `DeevaApp.savePdf` → Downloads › Deeva Orders;
+browser download (iPhone: share sheet → Save to Files). `htmlToPdf()` is shared with the client receipt.
+Receipt to the client: only the Android app can put the PDF straight into the client's chat (`sharePdfWhatsApp`, jid
+extra); a browser downloads it and opens the chat (WhatsApp does not let websites attach files).
 
 ## Data model (Firestore)
 
@@ -136,6 +149,9 @@ Storage: `orders/{orderId}/{mediaId}.{ext}` (any active user reads; image/video/
   only when `android/app/google-services.json` exists). `MainActivity.java` loads `APP_URL`, bridge
   `window.DeevaApp`: `isApp, isForeground, notifyUser, copy, listen(lang), sharePdf(b64, name, text), requestPushToken() → window.__doPushToken, retry`; file chooser with camera; grants mic to
   the page for voice notes; Android back closes open sheets via `window.__doBack()`. Web changes reach APK users without a new APK.
+- `storage.rules` read `users/{uid}` from Firestore, so the Storage service agent needs `roles/firebaserules.firestoreServiceAgent`
+  (granted by `firebase.yml`; without it every upload says "permission denied"). `tools/storage-selftest.js` (run by
+  `firebase.yml`) signs in as the Admin with a custom token and uploads a 1-px PNG — annotation "Upload self-test".
 - `firestore.rules`, `storage.rules`, `firestore.indexes.json` (factoryVisible + status index; the app falls back to a
   one-field query while the index is missing), `firebase.json`, `.firebaserc`.
 - `.github/workflows/pages.yml` (site), `apk.yml` (APK release, needs secrets `DO_KEYSTORE_B64` / `DO_KEYSTORE_PASS`),

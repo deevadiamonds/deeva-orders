@@ -8,5 +8,6 @@
     <string name="speak_now">Please speak…</string>
     <string name="no_speech">Voice typing is not available on this phone</string>
     <string name="pdf_saved">PDF saved:</string>
+    <string name="pdf_saved_downloads">Saved in Downloads › Deeva Orders:</string>
     <string name="pdf_failed">The PDF could not be saved</string>
 </resources>

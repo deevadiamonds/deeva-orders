@@ -1,5 +1,7 @@
 rules_version = '2';
 // Deeva Orders — photos, videos, voice notes and client signatures.
+// These rules read users/{uid} from Firestore: the Storage service agent needs the role
+// roles/firebaserules.firestoreServiceAgent (granted by .github/workflows/firebase.yml), otherwise every upload is refused.
 service firebase.storage {
   match /b/{bucket}/o {
     function person() { return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data; }
@@ -8,7 +10,7 @@ service firebase.storage {
         && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
         && person().active == true;
     }
-    function staff() { return active() && person().role in ['admin', 'store']; }
+    function staff() { return active() && person().role in ['admin', 'subadmin', 'store']; }
 
     // order photos / videos / voice notes (store, admin and factory)
     match /orders/{orderId}/{file} {

@@ -833,7 +833,11 @@ function startSession(u){
   S.unsubs.push(unsubMe);
 }
 function startData(){
-  S.unsubs.push(B.db.watchQuery('users', [], list => { S.users = Object.fromEntries(list.map(x => [x.id, x.data])); render(); }, e => console.error(e)));
+  /* people: Admin / Sub Admin see everyone; a store manager sees only the Admin / Sub Admin (for WhatsApp buttons); the factory sees no one */
+  const onUsers = list => { S.users = Object.fromEntries(list.map(x => [x.id, x.data])); render(); };
+  if (isAdmin()) S.unsubs.push(B.db.watchQuery('users', [], onUsers, e => console.error(e)));
+  else if (isStore()) S.unsubs.push(B.db.watchQuery('users', [['role', 'in', ['admin', 'subadmin']]], onUsers, e => console.error(e)));
+  else S.users = {};
   S.unsubs.push(B.db.watchQuery('stores', [], list => { S.stores = Object.fromEntries(list.map(x => [x.id, x.data])); render(); }, e => console.error(e)));
   if (staff()) S.unsubs.push(B.db.watchDoc('config/brand', s => { S.brand = s.exists ? s.data : null; }, () => {}));
   if (staff()) S.unsubs.push(B.db.watchDoc('config/rates', s => { S.rates = s.exists ? s.data : null; if (F && FORMKEY) syncFormVis(); render(); }, () => {}));
@@ -989,6 +993,20 @@ function usersWith(r){
   return Object.entries(S.users).filter(([, u]) => u.active && roles.includes(u.role)).map(([uid, u]) => Object.assign({uid}, u))
     .sort((a, b) => roles.indexOf(a.role) - roles.indexOf(b.role));
 }
+/* who did something, as this viewer may see it: the factory never sees a store person or the office by name — only
+   "Deeva Diamonds — <store>"; a store manager never sees the factory person — only "Factory" */
+function deevaLabel(o){ const n = o && (storeName(o.storeId) || o.storeName); return 'Deeva Diamonds' + (n ? ' — ' + n : ''); }
+function whoLabel(name, r, o){
+  if (isFactory()) return r === 'factory' ? (name || 'Factory') : deevaLabel(o);
+  if (isStore() && r === 'factory') return 'Factory';
+  return (name || '') + (r ? ' (' + (ROLES[r] || r) + ')' : '');
+}
+function mediaWho(m, o){
+  const mine = m.by && S.authUser && m.by === S.authUser.uid;
+  if (isFactory()) return mine ? (m.byName || '') : (m.role === 'factory' ? 'Factory' : deevaLabel(o));
+  if (isStore()) { if (mine || m.role === 'store' || (m.role && m.role !== 'factory') || (!m.role && S.users[m.by])) return m.byName || ''; return 'Factory'; }
+  return m.byName || '';
+}
 /* how a person is shown: store managers carry their store's name */
 function personName(u){ if (!u) return ''; return u.role === 'store' && u.storeId && storeName(u.storeId) ? u.name + ' · ' + storeName(u.storeId) : u.name; }
 
@@ -1063,7 +1081,7 @@ function renderHome(){
   if (isStore() && myStore()) h += `<p class="small muted" style="margin:-4px 2px 10px">🏬 ${esc(storeName(myStore()))}</p>`;
   if (staff()) {
     const fresh = S.rates && S.rates.day === today();
-    h += `<div class="banner" style="${fresh ? 'background:var(--card);border-color:var(--line)' : ''}"><span class="grow small">📈 ${fresh ? 'Today’s rate: ' + esc(ratesLine()) : (S.rates ? 'The rate on file is from ' + esc(fmtDay(S.rates.day)) + ' — today’s rate has not been entered yet' : 'Today’s gold rate has not been set')}</span>${isAdmin() ? `<button class="btn sm ${fresh ? '' : 'primary'}" data-act="rates-open">${fresh ? 'Change' : 'Set'}</button>` : ''}</div>`;
+    h += `<div class="banner" style="${fresh ? 'background:var(--card);border-color:var(--line)' : ''}"><span class="grow small">📈 ${fresh ? 'Today’s rate: ' + esc(ratesLine()) : (S.rates ? 'The rate on file is from ' + esc(fmtDay(S.rates.day)) + ' — today’s rate has not been entered yet' : 'Today’s gold rate has not been set')}</span><button class="btn sm ${fresh ? '' : 'primary'}" data-act="rates-open">${fresh ? 'Change' : 'Set'}</button></div>`;
   }
   if (multi) h += `<div class="filters">` + [['all', 'All stores']].concat(stores.map(s => [s.id, s.name])).map(x => `<button class="fchip ${S.storeFilter === x[0] ? 'on' : ''}" data-act="store-filter" data-v="${esc(x[0])}">🏬 ${esc(x[1])}</button>`).join('') + `</div>`;
   h += `<div class="filters">` + fl.map(f => {
@@ -1124,11 +1142,11 @@ function specBlock(o){
   if (o.factoryNote) h += `<div class="full"><span class="lbl" style="margin:0 0 3px">Note for the factory (added at approval)</span>${esc(o.factoryNote)}</div>`;
   return h + `</div>`;
 }
-function galleryHtml(items, internal){
+function galleryHtml(items, internal, o){
   if (!items.length) return '';
   return `<div class="gal">` + items.map(m => {
     const voice = m.voiceUrl ? `<audio id="gv-${esc(m.id)}" src="${esc(m.voiceUrl)}" controls preload="none" style="display:block;width:100%;margin:6px 0 0"></audio>` : '';
-    const cap = `<div class="cap">${internal ? '<span class="lock">🔒 Store / Admin only</span><br>' : ''}${m.voiceUrl ? '<span class="small" style="font-weight:600">🎙️ Voice note on this reference:</span>' + voice : ''}${esc(m.desc || '')}<small>${esc(m.byName || '')} · ${esc(fmtWhen(m.at))}${m.stage ? ' · ' + esc(STAGE_SHORT[m.stage] || m.stage) : ''}</small></div>`;
+    const cap = `<div class="cap">${internal ? '<span class="lock">🔒 Store / Admin only</span><br>' : ''}${m.voiceUrl ? '<span class="small" style="font-weight:600">🎙️ Voice note on this reference:</span>' + voice : ''}${esc(m.desc || '')}<small>${esc(mediaWho(m, o))} · ${esc(fmtWhen(m.at))}${m.stage ? ' · ' + esc(STAGE_SHORT[m.stage] || m.stage) : ''}</small></div>`;
     if (m.kind === 'image') return `<div class="gi ${m.voiceUrl ? 'wide' : ''}"><img src="${esc(m.url)}" alt="" loading="lazy" data-act="zoom" data-src="${esc(m.url)}" data-cap="${esc(m.desc || '')}" ${m.voiceUrl ? 'style="aspect-ratio:4/3"' : ''}>${cap}</div>`;
     if (m.kind === 'video') return `<div class="gi wide"><video id="v-${esc(m.id)}" src="${esc(m.url)}" controls playsinline preload="metadata"></video>${cap}</div>`;
     return `<div class="gi wide" style="padding:0 9px"><audio id="a-${esc(m.id)}" src="${esc(m.url)}" controls preload="none"></audio>${cap.replace('class="cap"', 'class="cap" style="padding:6px 0 8px"')}</div>`;
@@ -1148,7 +1166,7 @@ function timelineHtml(o, p){
   if (isFactory()) items = items.filter(x => !['query','reply','created','price','payment'].includes(x.type) && (!o.approvedAt || x.at >= o.approvedAt));
   items.sort((a, b) => (b.at || 0) - (a.at || 0));
   if (!items.length) return '<p class="muted small">Nothing yet.</p>';
-  return `<ul class="tl">` + items.map(x => `<li><span class="ic">${LOGICON[x.type] || '•'}</span><div class="tx">${x.priv ? '<span class="lock">🔒</span> ' : ''}${esc(x.text)}<small>${esc(x.name || '')}${x.role ? ' (' + esc(ROLES[x.role] || x.role) + ')' : ''} · ${esc(fmtWhen(x.at))}</small></div></li>`).join('') + `</ul>`;
+  return `<ul class="tl">` + items.map(x => `<li><span class="ic">${LOGICON[x.type] || '•'}</span><div class="tx">${x.priv ? '<span class="lock">🔒</span> ' : ''}${esc(x.text)}<small>${esc(whoLabel(x.name, x.role, o))} · ${esc(fmtWhen(x.at))}</small></div></li>`).join('') + `</ul>`;
 }
 function canEdit(o){ return (isAdmin() && !['delivered','cancelled'].includes(o.status)) || (isStore() && ['review','query'].includes(o.status)); }
 function renderOrder(id){
@@ -1162,7 +1180,7 @@ function renderOrder(id){
   /* header */
   h += `<div class="dhead"><div class="row" style="margin:0"><span class="no">${esc(o.no)}</span><span class="grow"></span>${o.priority === 'urgent' ? '<span class="pill bad">Urgent</span>' : ''}${statusPill(o)}</div>
     <div class="sub">${esc(itemLine(o))}</div>
-    <div class="sub">Ordered ${esc(fmtDay(o.orderDay))} · by ${esc(String(o.createdByName || '').split(' · ')[0])}${o.storeName || storeName(o.storeId) ? ' · 🏬 ' + esc(storeName(o.storeId) || o.storeName) : ''}</div>`;
+    <div class="sub">Ordered ${esc(fmtDay(o.orderDay))}${isFactory() ? ' · 🏬 ' + esc(deevaLabel(o)) : ' · by ' + esc(String(o.createdByName || '').split(' · ')[0]) + (o.storeName || storeName(o.storeId) ? ' · 🏬 ' + esc(storeName(o.storeId) || o.storeName) : '')}</div>${isFactory() && S.stores[o.storeId] && S.stores[o.storeId].address ? `<div class="sub">📍 ${esc(S.stores[o.storeId].address)}</div>` : ''}`;
   const dues = [];
   if (!isFactory() && o.deliveryDay) dues.push(['Client delivery', o.deliveryDay, (o.delivered && o.delivered.at) || null]);
   if (o.factoryDue) dues.push(['Factory due (dispatch)', o.factoryDue, dispatchedAt(o) || null]);
@@ -1206,10 +1224,10 @@ function renderOrder(id){
   h += slipBlock(o, S.fbill[id]);
   /* media */
   const fm = mediaList(o.media), im = staff() && p ? mediaList(p.media) : [];
-  h += `<div class="card"><h3>📷 Photos · Video · Voice note <span class="tag muted small">${fm.length + im.length}</span></h3>${fm.length || im.length ? galleryHtml(fm, false) + (im.length ? '<div style="height:10px"></div>' + galleryHtml(im, true) : '') : '<p class="muted small">No photos or videos.</p>'}
+  h += `<div class="card"><h3>📷 Photos · Video · Voice note <span class="tag muted small">${fm.length + im.length}</span></h3>${fm.length || im.length ? galleryHtml(fm, false, o) + (im.length ? '<div style="height:10px"></div>' + galleryHtml(im, true, o) : '') : '<p class="muted small">No photos or videos.</p>'}
     ${o.status !== 'cancelled' && o.status !== 'delivered' ? `<button class="btn sm" style="margin-top:10px" data-act="note-open">＋ Add photo / video / voice note / note</button>` : ''}</div>`;
   /* tracker */
-  if (o.status !== 'review' && o.status !== 'query' && o.status !== 'cancelled') h += `<div class="card"><h3>🔧 Factory tracker</h3>${stepsHtml(o)}${o.cadRequired ? `<p class="small muted" style="margin:8px 0 0">CAD approval required: ${o.cad && o.cad.ok ? '✓ OK (' + esc(o.cad.by || '') + ')' : 'pending'}</p>` : ''}</div>`;
+  if (o.status !== 'review' && o.status !== 'query' && o.status !== 'cancelled') h += `<div class="card"><h3>🔧 Factory tracker</h3>${stepsHtml(o)}${o.cadRequired ? `<p class="small muted" style="margin:8px 0 0">CAD approval required: ${o.cad && o.cad.ok ? '✓ OK' + (isFactory() ? '' : ' (' + esc(o.cad.by || '') + ')') : 'pending'}</p>` : ''}</div>`;
   /* price */
   if (staff() && p) h += priceBlock(o, p);
   if (staff() && p && p.internalNote) h += `<div class="card"><h3>🔒 Internal note <span class="tag muted small">Store / Admin only</span></h3><p style="margin:0;white-space:pre-wrap">${esc(p.internalNote)}</p></div>`;
@@ -1221,7 +1239,7 @@ function renderOrder(id){
 }
 function dispatchText(o){
   const d = o.dispatch || {}, a = d.actual || {};
-  return [fmtWhen(d.at), d.mode, d.ref ? 'Ref: ' + d.ref : '', a.grossWt ? 'Gross ' + fmtG(a.grossWt) + ' · Net ' + fmtG(a.netWt) : (d.grossWt ? 'Gross ' + d.grossWt + 'g' : ''), a.hallmark ? 'Hallmark ' + (a.hallmark === 'yes' ? '✓' : '✗') : '', d.note, d.byName ? '— ' + d.byName : ''].filter(Boolean).join(' · ');
+  return [fmtWhen(d.at), d.mode, d.ref ? 'Ref: ' + d.ref : '', a.grossWt ? 'Gross ' + fmtG(a.grossWt) + ' · Net ' + fmtG(a.netWt) : (d.grossWt ? 'Gross ' + d.grossWt + 'g' : ''), a.hallmark ? 'Hallmark ' + (a.hallmark === 'yes' ? '✓' : '✗') : '', d.note, d.byName && !isStore() ? '— ' + d.byName : ''].filter(Boolean).join(' · ');
 }
 /* ordered vs actual (everyone who can see the order) + factory's bill (admin / sub admin / factory) */
 function slipBlock(o, bill){
@@ -1250,7 +1268,8 @@ function slipBlock(o, bill){
     if (bill.labour) b += row('Labour — ' + fmtG(bill.netWt) + ' × ' + money(bill.labourRate), money2(bill.labour));
     if (bill.other) b += row('Other', money2(bill.other));
     b += row('<b>Factory total</b>', '<b>' + money2(bill.total) + '</b>' + (bill.goldMode === 'fine' ? ' <small>+ fine ' + fmtG(bill.fine) + '</small>' : ''), 'net');
-    h += `<div class="lbl" style="margin-top:12px">🔒 Factory bill ${isFactory() ? '' : '<span class="small muted" style="font-weight:400">(Admin / Sub Admin only)</span>'}</div><div class="wbox" style="margin:0">${b}</div>`;
+    h += `<div class="lbl" style="margin-top:12px">🔒 Factory bill ${isFactory() ? '' : '<span class="small muted" style="font-weight:400">(Admin / Sub Admin only)</span>'}</div><div class="wbox" style="margin:0">${b}</div>
+      <button class="btn sm" data-act="fpdf" style="margin-top:10px">📄 Save factory bill PDF</button>`;
   }
   return h + `</div>`;
 }
@@ -1579,7 +1598,10 @@ async function doDispatch(){
     lines: v.lines.map(l => ({kind: l.kind, n: l.n, type: l.type, ct: l.ct, pcs: l.pcs, rate: l.rate, amt: l.amt})), labourRate: v.lrate, labour: Math.round(v.labour * 100) / 100, other: v.other,
     total: Math.round(v.total * 100) / 100, at: now, by: S.authUser.uid, byName: myName()};
   const ok = await batch([{op: 'update', path: 'orders/' + id, data: stamp(upd)}, {op: 'set', path: 'orders/' + id + '/factory/bill', data: bill}]);
-  if (ok) { closeSheet(); toast('Dispatch recorded: ' + fmtWhen(now)); }
+  if (ok) {
+    S.fbill[id] = bill;
+    openSheet('🚚 Dispatch recorded', `<p>${esc(o.no)} · ${esc(fmtWhen(now))}</p><p class="small muted">Save the factory bill as a PDF on this phone. It carries the order number, so you can quote it on your invoice later. You can save it again at any time from the order page.</p><button class="btn primary big" data-act="fpdf" data-id="${esc(id)}">📄 Save factory bill PDF</button>`, {id});
+  }
 }
 function sheetSchedule(id){
   const o = getOrder(id);
@@ -1812,27 +1834,105 @@ function receiptHtml(o, p, seal){
     <div style="margin-top:12px;padding-top:7px;border-top:2px solid #e7b150;font-size:10px;color:${MUTE};text-align:center">Lab-grown diamond jewellery · IGI certified diamonds · BIS hallmarked gold${st.address ? '<br>' + esc(st.address) : ''}${st.phone ? ' · WhatsApp +91 ' + esc(st.phone) : ''}</div>
   </div></div>`;
 }
+async function htmlToPdf(html, width){
+  await Promise.all(LIBS.map(loadScript));
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-12000px;top:0;width:' + (width || 560) + 'px;background:#fff;z-index:-1';
+  wrap.innerHTML = html;
+  document.body.appendChild(wrap);
+  await Promise.all(Array.from(wrap.querySelectorAll('img')).map(i => i.complete ? null : new Promise(r => { i.onload = i.onerror = r; })));
+  try { await document.fonts.ready; } catch (e) {}
+  const canvas = await window.html2canvas(wrap.firstElementChild, {scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false});
+  wrap.remove();
+  /* one page, A5 width, as long as the content (never cut into pages) */
+  const pw = 419.53, ph = Math.max(595.28, canvas.height * pw / canvas.width);
+  const pdf = new window.jspdf.jsPDF({unit: 'pt', format: [pw, ph], orientation: 'portrait'});
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, canvas.height * pw / canvas.width);
+  return {pdf, canvas};
+}
+/* factory's own bill for one order — for the factory's records and its invoice later; never shown to the store or the client */
+function factoryBillHtml(o, bill){
+  const s = o.spec || {}, d = o.dispatch || {}, a = d.actual || {};
+  const st = (o.storeId && S.stores[o.storeId]) || {};
+  const G = '#0d3b25', GOLD = '#b8862e', INK = '#1b2620', MUTE = '#5d655f', LINE = '#e3dccb';
+  const lab = t => `<div style="font:700 10px Montserrat,Arial,sans-serif;letter-spacing:1.6px;color:${GOLD};text-transform:uppercase;margin-bottom:3px">${t}</div>`;
+  const item = [jtypeOf(s) + (s.qty && s.qty !== '1' ? ' × ' + s.qty : ''), [s.purity, s.metalColor].filter(Boolean).join(' '), s.size && s.size !== 'NA' ? 'Size ' + s.size : ''].filter(Boolean).join(' · ');
+  const tr = (k, val, strong) => `<tr><td style="padding:4px 0;${strong ? 'font-weight:700;color:' + G : 'color:' + INK}">${k}</td><td style="padding:4px 0;text-align:right;white-space:nowrap;font-weight:${strong ? 700 : 600};${strong ? 'color:' + G : ''}">${val}</td></tr>`;
+  let rows = bill.goldMode === 'fine'
+    ? tr('Fine gold — net ' + fmtG(bill.netWt) + ' × ' + esc(bill.touch) + '%', '<b>' + fmtG(bill.fine) + '</b>')
+    : tr('Gold — net ' + fmtG(bill.netWt) + ' × ' + money(bill.goldRate) + '/g', money2(bill.goldAmt));
+  (bill.lines || []).forEach(l => {
+    const x = l.kind === 'd' ? (a.dias || []).find(q => q.n === l.n) : null;
+    const cert = x && x.cert === 'yes' ? ' · certified' + (x.certNo ? ' ' + esc(x.certNo) : '') : '';
+    rows += tr((l.kind === 'd' ? 'Diamond ' : 'Gemstone ') + l.n + (l.type ? ' · ' + esc(l.type) : '') + ' — ' + esc(l.ct) + ' ct' + (l.pcs ? ' / ' + esc(l.pcs) + ' pc' : '') + cert + (l.rate ? ' × ' + money(l.rate) + '/ct' : ''), l.amt ? money2(l.amt) : '—');
+  });
+  if (bill.labour) rows += tr('Labour — net ' + fmtG(bill.netWt) + ' × ' + money(bill.labourRate) + '/g', money2(bill.labour));
+  if (bill.other) rows += tr('Other', money2(bill.other));
+  rows += `<tr><td colspan="2" style="border-top:1px solid ${LINE};padding:0"></td></tr>` + tr('Total amount', money2(bill.total), true);
+  if (bill.goldMode === 'fine') rows += tr('Fine gold to be settled', fmtG(bill.fine), true);
+  const ct = xs => r3((xs || []).reduce((t, x) => t + num(x.ct), 0));
+  return `<div style="width:560px;background:#fff;color:${INK};font-family:Mukta,Montserrat,Arial,sans-serif;font-size:13px;line-height:1.4">
+  <div style="background:linear-gradient(120deg,#0f5330,#0a271b);padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:14px">
+    <div style="color:#f6eedc"><div style="font:700 10.5px Montserrat,Arial,sans-serif;letter-spacing:2.6px;color:#e7b150">FACTORY BILL</div><div style="font-size:11.5px;opacity:.85">Dispatched ${esc(fmtWhen(d.at || bill.at))}</div></div>
+    <div style="text-align:right;color:#f6eedc"><div style="font:700 10.5px Montserrat,Arial,sans-serif;letter-spacing:2.6px;color:#e7b150">ORDER NO.</div><div style="font:700 21px 'Playfair Display',Georgia,serif">${esc(o.no)}</div></div>
+  </div>
+  <div style="padding:14px 26px 18px">
+    <div style="display:flex;gap:18px;padding-bottom:10px;border-bottom:1px solid ${LINE}">
+      <div style="flex:1;min-width:0">${lab('Bill to')}<div style="font-weight:700;font-size:14.5px">${esc(deevaLabel(o))}</div><div style="color:${MUTE}">${esc(st.address || '')}</div></div>
+      <div style="flex:1;min-width:0;text-align:right">${lab('Prepared by')}<div style="font-weight:700;font-size:14.5px">${esc(bill.byName || 'Factory')}</div><div style="color:${MUTE}">${esc([d.mode, d.ref ? 'Ref: ' + d.ref : ''].filter(Boolean).join(' · '))}</div></div>
+    </div>
+    <div style="padding:10px 0;border-bottom:1px solid ${LINE}">${lab('Item')}
+      <div style="font-weight:700;font-size:14.5px">${esc(item)}</div>
+      <div style="margin-top:3px;color:${MUTE}">Gross <b style="color:${INK}">${fmtG(a.grossWt)}</b> · Net gold <b style="color:${INK}">${fmtG(a.netWt)}</b>${(a.dias || []).length ? ' · Diamonds ' + ct(a.dias) + ' ct' : ''}${(a.gems || []).length ? ' · Gemstones ' + ct(a.gems) + ' ct' : ''}</div>
+      <div style="margin-top:3px;color:${MUTE}">Hallmark: <b style="color:${INK}">${a.hallmark === 'yes' ? 'Yes' + (a.huid ? ' · HUID ' + esc(a.huid) : '') : 'No'}</b></div>
+      ${d.note ? `<div style="margin-top:3px;color:${MUTE}">${esc(d.note)}</div>` : ''}
+    </div>
+    <div style="padding:9px 0 4px">${lab('Bill')}<table style="width:100%;border-collapse:collapse;font-size:12.5px">${rows}</table></div>
+    <div style="margin-top:12px;padding-top:7px;border-top:2px solid #e7b150;font-size:10px;color:${MUTE};text-align:center">Reference: ${esc(o.no)} · Factory copy · Created ${esc(fmtWhen(Date.now()))}</div>
+  </div></div>`;
+}
+async function makeFactoryPdf(id){
+  const o = getOrder(id), bill = S.fbill[id];
+  if (!o || !bill) return toast('The factory bill is still loading.', 'bad');
+  if (S.pdfBusy) return; S.pdfBusy = true;
+  toast('Preparing the factory bill PDF…');
+  try {
+    const {pdf, canvas} = await htmlToPdf(factoryBillHtml(o, bill));
+    const name = 'Factory-Bill-' + o.no + '.pdf';
+    if (window.__demoPdfPreview) {
+      const lb = document.createElement('div'); lb.className = 'lightbox'; lb.style.overflow = 'auto'; lb.style.placeItems = 'start center';
+      lb.innerHTML = `<div style="max-width:560px;width:100%"><img src="${canvas.toDataURL('image/jpeg', 0.9)}" alt="Factory bill" style="max-height:none;width:100%"><p>${esc(name)} — in the live app this PDF is saved on the phone</p></div><button aria-label="Close">✕</button>`;
+      lb.addEventListener('click', () => lb.remove()); document.body.appendChild(lb);
+    } else await savePdfFile(pdf.output('blob'), name);
+    if (S.sheet && S.sheet.id === id && $('#sheet [data-act="fpdf"]')) closeSheet();
+  } catch (e) { console.error(e); toast('The PDF could not be created — ' + (e.message || errText(e)), 'bad'); }
+  S.pdfBusy = false;
+}
+/* keep a PDF on this phone: the Android app saves it to Downloads › Deeva Orders; a browser downloads it */
+async function savePdfFile(blob, name){
+  if (NATIVE && (NATIVE.savePdf || NATIVE.sharePdf)) {
+    const b64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(',')[1]); fr.readAsDataURL(blob); });
+    if (NATIVE.savePdf) NATIVE.savePdf(b64, name); else NATIVE.sharePdf(b64, name, '');
+    return;
+  }
+  const file = new File([blob], name, {type: 'application/pdf'});
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent) && navigator.canShare && navigator.canShare({files: [file]})) {
+    try { await navigator.share({files: [file], title: name}); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  toast('PDF saved: ' + name + ' (Downloads)');
+}
 async function makeReceiptPdf(id, toWhatsApp){
   const o = getOrder(id), p = getPriv(id);
   if (!o || !p) return toast('The order is still loading.', 'bad');
   if (S.pdfBusy) return; S.pdfBusy = true;
   toast('Preparing the receipt PDF…');
   try {
-    await Promise.all(LIBS.map(loadScript));
     const st = (o.storeId && S.stores[o.storeId]) || {};
     const seal = sealData(st.city);
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'position:fixed;left:-12000px;top:0;width:560px;background:#fff;z-index:-1';
-    wrap.innerHTML = receiptHtml(o, p, seal);
-    document.body.appendChild(wrap);
-    await Promise.all(Array.from(wrap.querySelectorAll('img')).map(i => i.complete ? null : new Promise(r => { i.onload = i.onerror = r; })));
-    try { await document.fonts.ready; } catch (e) {}
-    const canvas = await window.html2canvas(wrap.firstElementChild, {scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false});
-    wrap.remove();
-    /* one page, A5 width, as long as the receipt (never cut into pages) */
-    const pw = 419.53, ph = Math.max(595.28, canvas.height * pw / canvas.width);
-    const pdf = new window.jspdf.jsPDF({unit: 'pt', format: [pw, ph], orientation: 'portrait'});
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pw, canvas.height * pw / canvas.width);
+    const {pdf, canvas} = await htmlToPdf(receiptHtml(o, p, seal));
     const name = 'Deeva-' + o.no + '.pdf';
     if (window.__demoPdfPreview) {   /* demo page: the viewer cannot download, so show the receipt instead */
       const lb = document.createElement('div'); lb.className = 'lightbox'; lb.style.overflow = 'auto'; lb.style.placeItems = 'start center';
@@ -1861,7 +1961,7 @@ async function sharePdf(blob, name, text, phone, toWhatsApp){
   const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
   if (toWhatsApp && phone) {
-    openSheet('Send receipt on WhatsApp', `<p>The PDF has been saved to this device (${esc(name)}). Open the client’s chat and attach the PDF using 📎.</p><a class="btn wa big" target="_blank" rel="noopener" href="${esc(waLink(phone, text))}">Open the client’s WhatsApp chat</a>`, {});
+    openSheet('Send receipt on WhatsApp', `<p>The PDF has been saved to this device (${esc(name)}). Open the client’s chat and attach the PDF using 📎.</p><a class="btn wa big" target="_blank" rel="noopener" href="${esc(waLink(phone, text))}">Open the client’s WhatsApp chat</a><p class="small muted" style="margin:10px 0 0">A browser cannot place a file inside a WhatsApp chat. In the Deeva Orders Android app, this button opens the client’s chat with the PDF already attached.</p>`, {});
   } else toast('PDF downloaded. Attach it in WhatsApp and send it to the client' + (phone ? ' (' + phone + ')' : '') + '.');
 }
 /* ---------- media picker (photo / video / voice note) ---------- */
@@ -1897,7 +1997,7 @@ function makePicker(containerId, orderId, opts){
   const el = () => document.getElementById(containerId);
   P.busy = () => Object.values(items).some(m => m.status === 'up' || m.vstatus === 'up') || !!rec;
   P.done = () => Object.values(items).filter(m => m.status === 'ok').map(m => {
-    const d = {kind: m.kind, url: m.url, path: m.path, desc: (m.desc || '').trim(), by: m.by || S.authUser.uid, byName: m.byName || myName(), at: m.at, size: m.size || 0};
+    const d = {kind: m.kind, url: m.url, path: m.path, desc: (m.desc || '').trim(), by: m.by || S.authUser.uid, byName: m.byName || myName(), role: m.role || role(), at: m.at, size: m.size || 0};
     if (m.voiceUrl) { d.voiceUrl = m.voiceUrl; d.voicePath = m.voicePath || ''; }
     if (m.stage) d.stage = m.stage; else if (opts.stage && opts.stage()) d.stage = opts.stage();
     if (opts.allowInternal) d.factory = m.factory !== false;
@@ -2244,7 +2344,7 @@ function diaRateLabel(n){
 }
 function rateHint(){
   const r = S.rates, pur = F && F.spec.purity;
-  if (!r || !r.gold) return isAdmin() ? 'Today’s rate is not set — set it under Team › 📈 Today’s Rate.' : 'Today’s rate is not set — please ask the Admin to set it. Until then, enter the rate manually.';
+  if (!r || !r.gold) return 'Today’s rate is not set — tap “Set” beside 📈 on the Orders page. Until then, enter the rate manually.';
   const v = pur && r.gold[pur];
   const stale = r.day !== today() ? ' ⚠️ This rate is from ' + fmtDay(r.day) : '';
   return (pur ? (v ? 'Today’s rate for ' + pur + ': ' + money(v) + '/g' : 'No rate set for ' + pur) : 'Select the purity first') + (r.making ? ' · Making ' + money(r.making) + '/g' : '') + stale;
@@ -3033,6 +3133,7 @@ document.addEventListener('click', e => {
     case 'sched-open': sheetSchedule(oid); break;
     case 'pdf': makeReceiptPdf(oid || (S.sheet && S.sheet.id), false); break;
     case 'pdf-wa': makeReceiptPdf(oid || (S.sheet && S.sheet.id), true); break;
+    case 'fpdf': makeFactoryPdf(t.dataset.id || oid || (S.sheet && S.sheet.id)); break;
     case 'sched-do': doSchedule(); break;
     case 'cancel-open': sheetCancel(oid); break;
     case 'cancel-do': doCancel(); break;

@@ -6,7 +6,7 @@ name: Firebase (rules + notifications)
 on:
   push:
     branches: [main]
-    paths: ['firestore.rules', 'storage.rules', 'firestore.indexes.json', 'firebase.json', '.firebaserc', 'functions/**', '.github/workflows/firebase.yml']
+    paths: ['firestore.rules', 'storage.rules', 'firestore.indexes.json', 'firebase.json', '.firebaserc', 'functions/**', 'tools/storage-selftest.js', '.github/workflows/firebase.yml']
   workflow_dispatch:
 
 concurrency:
@@ -66,7 +66,22 @@ jobs:
             gcloud projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:$PN-compute@developer.gserviceaccount.com" --role="$r" --condition=None --quiet >/dev/null 2>>"$RUNNER_TEMP/iam.log" || echo "could not add $r" >> "$RUNNER_TEMP/iam.log"
           done
           gcloud projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:service-$PN@gcp-sa-pubsub.iam.gserviceaccount.com" --role=roles/iam.serviceAccountTokenCreator --condition=None --quiet >/dev/null 2>>"$RUNNER_TEMP/iam.log" || true
-          if [ -s "$RUNNER_TEMP/iam.log" ]; then echo "::warning title=IAM::$(head -c 1500 "$RUNNER_TEMP/iam.log" | tr '\n' ' ')"; fi
+          # storage.rules look up users/{uid} in Firestore: the Storage service agent must be allowed to read Firestore for rules,
+          # otherwise every photo / video / voice-note upload is refused ("permission denied")
+          curl -s -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -d '{}' \
+            "https://serviceusage.googleapis.com/v1beta1/projects/$PN/services/firebasestorage.googleapis.com:generateServiceIdentity" >/dev/null || true
+          SAGENT="serviceAccount:service-$PN@gcp-sa-firebasestorage.iam.gserviceaccount.com"
+          for i in 1 2 3; do
+            if gcloud projects add-iam-policy-binding "$PROJECT" --member="$SAGENT" --role=roles/firebaserules.firestoreServiceAgent --condition=None --quiet >/dev/null 2>"$RUNNER_TEMP/sagent.log"; then break; fi
+            sleep 20
+          done
+          if gcloud projects get-iam-policy "$PROJECT" --flatten='bindings[].members' --filter="bindings.role:roles/firebaserules.firestoreServiceAgent AND bindings.members:$SAGENT" --format='value(bindings.role)' | grep -q firestoreServiceAgent; then
+            echo "::notice title=Storage rules::Storage may read Firestore for the upload rules"
+          else
+            echo "::error title=Storage rules::Could not let Storage read Firestore — uploads will be refused. $(tr '\n' ' ' < "$RUNNER_TEMP/sagent.log" | head -c 600)"
+          fi
+          ERR=$(grep -v '^Updated IAM policy' "$RUNNER_TEMP/iam.log" | tr '\n' ' ' | head -c 1500)
+          if [ -n "$ERR" ]; then echo "::warning title=IAM::$ERR"; fi
 
       - name: Deploy security rules and indexes
         if: steps.cred.outputs.ok == 'true'
@@ -79,6 +94,21 @@ jobs:
         if: steps.cred.outputs.ok == 'true'
         working-directory: functions
         run: npm install --no-audit --no-fund
+
+      - name: Upload self-test (photo into Storage, as the app does)
+        if: steps.cred.outputs.ok == 'true'
+        continue-on-error: true
+        run: |
+          for i in 1 2 3 4 5 6; do
+            R=$(NODE_PATH=functions/node_modules node tools/storage-selftest.js 2>&1 | tail -n 1)
+            case "$R" in
+              PASS*) echo "::notice title=Upload self-test::Photo upload works (attempt $i)"; exit 0 ;;
+              SKIP*) echo "::notice title=Upload self-test::Skipped — the Admin account has not been set up yet"; exit 0 ;;
+            esac
+            echo "attempt $i: $R"; sleep 30
+          done
+          echo "::error title=Upload self-test::Photo upload is still refused — $R"
+          exit 1
 
       - name: Deploy notification functions
         if: steps.cred.outputs.ok == 'true'

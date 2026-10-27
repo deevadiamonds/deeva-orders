@@ -127,6 +127,13 @@ async def main():
 
         # ---- 3. store creates an order
         await login('nishant', 'nishant1')
+        await pg.click('.banner [data-act="rates-open"]')
+        await pg.fill('#rt-22KT', '13300')
+        await pg.click('[data-act="rates-save"]')
+        await pg.wait_for_function("!document.querySelector('#sheet .sheet')")
+        rt = await pg.evaluate("__fake.store['config/rates']")
+        assert rt['byName'].startswith('Nishant') and rt['gold']['22KT'] == 13300 and rt['gold']['14KT'] == 8544, rt
+        print('ok  store manager sets today\'s gold rate')
         await pg.evaluate("location.hash='#/new'")
         await pg.wait_for_selector('#f-client-name')
         await pg.click('[data-act="f-review"]')
@@ -271,8 +278,9 @@ async def main():
         await pg.click('.ocard')
         await pg.wait_for_selector('.alertbox.ok [data-act="stage-quick"]')
         t = await text()
-        for secret in ['Nitu', '9777365551', '52,000', '26,000', 'Clarity VVS1 ya', 'receipt']:
+        for secret in ['Nitu', '9777365551', '52,000', '26,000', 'Clarity VVS1 ya', 'receipt', 'Nishant', '9000000002', 'Darshana', '9000000001']:
             assert secret not in t, 'factory can see ' + secret
+        assert 'Deeva Diamonds — Raipur' in t and 'Currency Tower' in t, 'factory sees the store and its address'
         for need in ['VVS2', 'Round — Portuguese cut', 'Diamond 1 · Solitaire', 'Diamond 2 · Side', 'Ruby', 'Centre stone set slightly higher', 'Client reference', 'Light weight chain', '🏬']:
             assert need in t, need
         assert await pg.eval_on_selector_all('.gal audio', 'l => l.length') >= 1
@@ -338,6 +346,25 @@ async def main():
         await pg.wait_for_function("document.querySelector('#dp-media').innerText.includes('✓ Upload')")
         await pg.click('[data-act="dispatch-do"]')
         await pg.wait_for_function("document.querySelector('.dhead').innerText.includes('Dispatched')")
+        await pg.wait_for_selector('#sheet [data-act="fpdf"]')
+        await pg.evaluate('''(libs) => {
+          libs.forEach(src => { const s = document.createElement('script'); s.dataset.lib = src; document.head.appendChild(s); });
+          window.html2canvas = async (el) => { window.__fbill = el.outerHTML; const c = document.createElement('canvas'); c.width = 1120; c.height = 1500; return c; };
+          window.jspdf = {jsPDF: function(o){ this.addImage = () => {}; this.output = () => new Blob(['%PDF'], {type: 'application/pdf'}); }};
+        }''', LIBS)
+        async with pg.expect_download(timeout=8000) as dl:
+            await pg.click('#sheet [data-act="fpdf"]')
+        fname = (await dl.value).suggested_filename
+        await pg.wait_for_function("!document.querySelector('#sheet .sheet')")
+        fb = await pg.evaluate('window.__fbill')
+        if SHOTS: SHOTS.mkdir(parents=True, exist_ok=True); (SHOTS / 'factory-bill.html').write_text('<base href="file://' + str(ROOT / 'web') + '/">' + fb, encoding='utf8')
+        for x in ['FACTORY BILL', 'Deeva Diamonds — Raipur', 'Currency Tower', '2.051 g', '₹14,848.4', 'IGI123', 'AB1234', '59%']:
+            assert x in fb, (x, fb[:400])
+        for x in ['Nitu', '9777365551', 'Nishant']:
+            assert x not in fb, 'factory PDF shows ' + x
+        assert fname.startswith('Factory-Bill-') and fname.endswith('.pdf'), fname
+        assert await pg.eval_on_selector_all('[data-act="fpdf"]', 'l => l.length') == 1, 'PDF button on the slip'
+        print('ok  factory bill PDF saved with order number (' + fname + '), store + address, no client / store person')
         bill = await pg.evaluate("Object.entries(__fake.store).find(([k]) => k.endsWith('/factory/bill'))[1]")
         assert bill['goldMode'] == 'fine' and abs(bill['fine'] - 2.051) < 1e-9 and bill['total'] == 14848.4, bill
         st = await order_doc(); a = st['dispatch']['actual']
@@ -358,6 +385,9 @@ async def main():
         await pg.click('.ocard')
         await pg.wait_for_function("document.body.innerText.includes('Dispatch Slip')")
         t = await text()
+        for secret in ['Raju', '9000000003', 'Factory bill', '14,848']:
+            assert secret not in t, 'store can see ' + secret
+        print('ok  store sees no factory person and no factory bill')
         assert '0.42 ct / 1 pc' in t and 'Factory total' not in t and '14,848' not in t and 'Fine gold' not in t, 'store must not see factory money'
         print('ok  store sees actual weights / carats / hallmark but not the factory bill')
         await pg.click('[data-act="recv"]')

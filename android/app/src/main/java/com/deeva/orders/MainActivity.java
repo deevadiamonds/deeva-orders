@@ -416,6 +416,16 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** Keeps a PDF on the phone (Downloads › Deeva Orders) without sharing it — e.g. the factory's own bill. */
+    private void savePdfOnly(String b64, String name) {
+        try {
+            Uri uri = savePdf(b64, name);
+            if (uri != null) Toast.makeText(this, getString(R.string.pdf_saved_downloads) + " " + name, Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.pdf_failed, Toast.LENGTH_LONG).show();
+        }
+    }
+
     /** Opens the client's chat in WhatsApp Business (or WhatsApp) with the PDF attached; falls back to the share sheet. */
     private void savePdfAndWhatsApp(String b64, String name, String text, String phone) {
         try {
@@ -475,6 +485,11 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void sharePdf(final String b64, final String name, final String text) {
             runOnUiThread(() -> savePdfAndShare(b64, name, text));
+        }
+
+        @JavascriptInterface
+        public void savePdf(final String b64, final String name) {
+            runOnUiThread(() -> savePdfOnly(b64, name));
         }
 
         @JavascriptInterface
