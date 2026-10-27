@@ -10,6 +10,17 @@ Android strings. British spelling (colour, jewellery, centre, cancelled), senten
 **Completely separate from Team Kaam** (his task app): own GitHub repo, own Firebase project, own logins. Never share code
 paths, Firebase projects or users between the two.
 
+## Where things live
+
+| What | Where |
+|---|---|
+| Repo | `github.com/deevadiamonds/deeva-orders`, branch `main`, public |
+| Live app | https://deevadiamonds.github.io/deeva-orders/ — `.github/workflows/pages.yml` on push to `web/**` |
+| APK | https://github.com/deevadiamonds/deeva-orders/releases/latest/download/DeevaOrders.apk — `apk.yml` on push to `android/**`; secrets `DO_KEYSTORE_B64` / `DO_KEYSTORE_PASS` (alias `deevaorders`, key made 27 Oct 2026, owner holds the only copy) |
+| Firebase | project `deeva-orders` (number 395857273671, Blaze): Auth Email/Password, Firestore asia-south1, Storage `deeva-orders.firebasestorage.app` (US-CENTRAL1), Functions asia-south1, FCM. Web config + VAPID in `web/config.js`; Android `android/app/google-services.json` |
+| Rules, indexes, storage rules, functions | auto-deployed by `firebase.yml` (secret `FIREBASE_SERVICE_ACCOUNT` = `github-deploy@deeva-orders.iam.gserviceaccount.com`, role Owner). Read failures via `gh api repos/deevadiamonds/deeva-orders/check-runs/<job_id>/annotations` |
+| Go-live guide (Hindi) | Claude Doc https://claude.ai/artifact/DLnzTmKMQZhYG6jJjoo1Vu |
+
 ## The problem it solves
 
 Before: store manager (Nishant) filled a paper "Custom Jewellery Order Form", then re-typed it into a WhatsApp message to

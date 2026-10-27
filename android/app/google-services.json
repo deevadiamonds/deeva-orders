@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "395857273671",
+    "project_id": "deeva-orders",
+    "storage_bucket": "deeva-orders.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:395857273671:android:5a0a92148c2f7cd955e262",
+        "android_client_info": {
+          "package_name": "com.deeva.orders"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqZzyal-Pvc-mEBvzMZ81PAIFr3qFvGQw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
