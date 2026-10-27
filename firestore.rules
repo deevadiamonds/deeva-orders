@@ -135,13 +135,14 @@ service cloud.firestore {
         && request.resource.data.seq is int
         && getAfter(/databases/$(database)/documents/counters/$(request.resource.data.ym)).data.n == request.resource.data.seq;
       allow update: if isAdmin() || (isStore() && storeUpdate()) || (isFactory() && factoryUpdate());
-      allow delete: if false;
+      // permanent delete: the main Admin only (test or wrong entries); delivered orders stay in Past Orders
+      allow delete: if isOwner();
 
       // factory's own bill for this order (gold fine / money, diamond amounts, labour, total) — admin, sub admin and the factory; never the store
       match /factory/{doc} {
         allow read, create, update: if isAdmin()
           || (isFactory() && get(/databases/$(database)/documents/orders/$(id)).data.factoryVisible == true);
-        allow delete: if false;
+        allow delete: if isOwner();
       }
 
       // client name/phone, price, payments, signature, internal notes & receipts — never visible to the factory
@@ -150,7 +151,7 @@ service cloud.firestore {
         allow create: if isAdmin() || (isStore() && request.resource.data.storeId == myStore());
         allow update: if isAdmin()
           || (isStore() && resource.data.storeId == myStore() && request.resource.data.storeId == resource.data.storeId);
-        allow delete: if false;
+        allow delete: if isOwner();
       }
     }
 

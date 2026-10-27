@@ -14,7 +14,7 @@
  * Device tokens: pushTokens/{token} = { uid, role, storeId, platform, at }. The person who made the change is never notified.
  * Client name, phone and price are never put into a notification.
  */
-const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentUpdated, onDocumentWritten, onDocumentDeleted } = require('firebase-functions/v2/firestore');
 const { setGlobalOptions, logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 
@@ -82,6 +82,25 @@ exports.orderCreated = onDocumentCreated('orders/{orderId}', async (event) => {
   if (!o) return;
   await notify({ roles: ['admin', 'subadmin'] }, o.createdBy, 'New order · ' + (o.storeName || o.createdByName || ''), o.no + ' — ' + itemLine(o) + ' · awaiting approval', event.params.orderId);
   await toSheet(event.params.orderId, o, 'placed');
+});
+
+/* the main Admin deleted an order permanently: remove what belongs to it (private + factory docs, photos / videos /
+   voice notes, Google Sheet rows) and give its number back if it was the month's latest (so test orders do not use up numbers) */
+exports.orderDeleted = onDocumentDeleted({ document: 'orders/{orderId}', timeoutSeconds: 120 }, async (event) => {
+  const id = event.params.orderId, o = (event.data && event.data.data()) || {};
+  await Promise.all(['private/info', 'factory/bill'].map(d => db.doc('orders/' + id + '/' + d).delete().catch(() => {})));
+  const bucket = admin.storage().bucket();
+  await Promise.all(['orders/' + id + '/', 'private/' + id + '/'].map(prefix => bucket.deleteFiles({ prefix }).catch(e => logger.warn('files', { prefix, err: e.message }))));
+  await sheet.removeOrder(db, o.no).catch(e => logger.warn('sheet remove', { err: e.message }));
+  if (o.ym) {
+    await db.runTransaction(async tx => {
+      const snap = await tx.get(db.collection('orders').where('ym', '==', o.ym));
+      const max = snap.docs.reduce((m, d) => Math.max(m, Number(d.data().seq) || 0), 0);
+      const ref = db.doc('counters/' + o.ym), cur = await tx.get(ref);
+      if (cur.exists && (cur.data().n || 0) > max) tx.set(ref, { n: max });
+    }).catch(e => logger.warn('counter', { err: e.message }));
+  }
+  logger.info('order deleted', { id, no: o.no });
 });
 
 /* Admin saved the sheet link or asked for "Sync all again": rewrite the three tabs from the database */

@@ -682,6 +682,7 @@ function parseRoute(){
   if (p[0] === 'edit' && p[1]) return {v: 'form', mode: 'edit', id: p[1]};
   if (p[0] === 'team') return {v: 'team'};
   if (p[0] === 'dash') return {v: 'dash'};
+  if (p[0] === 'past') return {v: 'past'};
   if (p[0] === 'activity') return {v: 'activity'};
   if (p[0] === 'account') return {v: 'account'};
   return {v: 'home'};
@@ -712,6 +713,7 @@ function doRender(){
   else if (r.v === 'dash') { if (!isAdmin()) return go('#/'); renderDash(); }
   else if (r.v === 'activity') { if (!isAdmin()) return go('#/'); renderActivity(); }
   else if (r.v === 'account') renderAccount();
+  else if (r.v === 'past') renderPast();
   if (r.v !== 'order' && r.v !== 'form') $('#stickbar').innerHTML = '';
 }
 
@@ -731,6 +733,7 @@ function renderTop(){
   const v = S.route.v; const att = attentionCount();
   const tabs = [['#/', 'Orders' + (att ? `<i>${att}</i>` : ''), v === 'home' || v === 'order']];
   if (staff()) tabs.push(['#/new', '＋ New Order', v === 'form' && S.route.mode === 'new']);
+  tabs.push(['#/past', 'Past Orders', v === 'past']);
   if (isAdmin()) tabs.push(['#/dash', 'Dashboard', v === 'dash']);
   if (isAdmin()) tabs.push(['#/activity', 'Activity', v === 'activity']);
   if (isAdmin()) tabs.push(['#/team', 'Team', v === 'team']);
@@ -1104,13 +1107,35 @@ function renderHome(){
   if (S.firstOrders) h += `<div class="empty">Loading orders…</div>`;
   else if (!list.length) h += `<div class="empty"><b>${all.length ? 'No orders match this filter' : 'No active orders'}</b>${staff() && !all.length ? 'Tap “Create New Order” above to begin.' : ''}</div>`;
   else h += list.map(([id, o]) => orderCard(id, o, getPriv(id))).join('');
-  h += `<div style="margin-top:18px">`;
-  if (!S.history) h += `<button class="btn big" data-act="hist-load" ${S.histLoading ? 'disabled' : ''}>${S.histLoading ? 'Loading…' : 'View past orders (' + (isFactory() ? 'Delivered' : 'Delivered / Cancelled') + ')'}</button>`;
+  h += `<a class="btn big" href="#/past" style="margin-top:18px">🗂️ Past orders — ${isFactory() ? 'received at store, delivered' : 'delivered'} or cancelled →</a>`;
+  patch($('#view'), h);
+}
+/* past orders: delivered or cancelled (factory: also received at the store). Never removed — only the Admin can delete an order permanently. */
+function renderPast(){
+  if (!S.histLoading && (!S.history || Date.now() - (S.histAt || 0) > 30e3)) loadHistory();
+  const stores = storeList();
+  const multi = (isAdmin() || isFactory()) && stores.length > 1;
+  const inStore = o => !multi || S.storeFilter === 'all' || o.storeId === S.storeFilter;
+  const q = S.q.trim().toLowerCase();
+  const match = (id, o) => { if (!q) return true; const p = getPriv(id) || {}; return [o.no, itemLine(o), p.client && p.client.name, p.client && p.client.phone].join(' ').toLowerCase().includes(q); };
+  let h = `<div class="view-title">🗂️ Past Orders</div><p class="small muted" style="margin:-6px 2px 10px">${isFactory() ? 'Orders received at the store, delivered or cancelled.' : 'Delivered and cancelled orders, with their full history, payments, photos and bills.'} Nothing is removed from here automatically.</p>`;
+  if (multi) h += `<div class="filters">` + [['all', 'All stores']].concat(stores.map(x => [x.id, x.name])).map(x => `<button class="fchip ${S.storeFilter === x[0] ? 'on' : ''}" data-act="store-filter" data-v="${esc(x[0])}">🏬 ${esc(x[1])}</button>`).join('') + `</div>`;
+  h += `<input class="search" id="q" type="search" placeholder="${staff() ? 'Search by order no., client name or phone' : 'Search by order no. or item'}" value="${esc(S.q)}">`;
+  if (!S.history) h += `<div class="empty">${S.histLoading ? 'Loading past orders…' : 'No past orders.'}</div>`;
   else {
-    const hl = S.history.filter(x => match(x.id, x.data) && inStore(x.data));
-    h += `<div class="view-title" style="font-size:18px">Past Orders (${hl.length})</div>` + (hl.length ? hl.map(x => orderCard(x.id, x.data, getPriv(x.id) || x.priv)).join('') : '<div class="empty">No past orders.</div>');
+    const hl = S.history.filter(x => S.orders[x.id] == null && match(x.id, x.data) && inStore(x.data));
+    if (!hl.length) h += `<div class="empty"><b>No past orders${q ? ' match your search' : ' yet'}</b>${q ? '' : 'Orders appear here once they are delivered or cancelled.'}</div>`;
+    else {
+      let mon = '';
+      hl.forEach(x => {
+        const at = (x.data.delivered && x.data.delivered.at) || (x.data.cancel && x.data.cancel.at) || (x.data.received && x.data.received.at) || x.data.updatedAt || x.data.createdAt || 0;
+        const m = at ? EMON[new Date(at).getMonth()] + ' ' + new Date(at).getFullYear() : '';
+        if (m !== mon) { mon = m; h += `<div class="lbl" style="margin:14px 2px 6px">${esc(m)}</div>`; }
+        h += orderCard(x.id, x.data, getPriv(x.id) || x.priv);
+      });
+    }
+    h += `<button class="btn sm" data-act="hist-load" style="margin-top:12px" ${S.histLoading ? 'disabled' : ''}>${S.histLoading ? 'Loading…' : '↻ Refresh'}</button>`;
   }
-  h += `</div>`;
   patch($('#view'), h);
 }
 async function loadHistory(){
@@ -1129,7 +1154,7 @@ async function loadHistory(){
     if (staff()) {
       await Promise.all(list.slice(0, 200).map(async x => { try { const p = await B.db.get('orders/' + x.id + '/private/info'); x.priv = p.data; S.extraPriv[x.id] = p.data; } catch (e) {} }));
     }
-    S.history = list;
+    S.history = list; S.histAt = Date.now();
   } catch (e) { toast(errText(e), 'bad'); }
   S.histLoading = false; render();
 }
@@ -1243,6 +1268,7 @@ function renderOrder(id){
   /* timeline */
   h += `<div class="card"><h3>🕑 Full history</h3>${timelineHtml(o, staff() ? p : null)}</div>`;
   if (isAdmin() && ACTIVE.includes(o.status)) h += `<div class="center"><button class="btn ghost sm danger" data-act="cancel-open">Cancel order</button></div>`;
+  if (isOwner()) h += `<div class="center"><button class="btn ghost sm danger" data-act="del-open" style="margin-top:4px">🗑️ Delete this order permanently</button></div>`;
   patch(view, h);
   renderOrderBar(id, o, p);
 }
@@ -1801,6 +1827,25 @@ async function doFinal(){
   const fc = calcSaved(S.sheet.calc, S.sheet.spec);
   const ok = await write('orders/' + id + '/private/info', {price: {final: amt, finalCalc: fc}, log: {[logKey()]: logEntry('price', 'Final bill: ' + money(amt) + (fc ? ' (gross ' + fmtG(fc.gross) + ', net gold ' + fmtG(fc.net) + ')' : ''))}});
   if (ok) { closeSheet(); toast('Final bill saved.'); }
+}
+/* permanent delete — the main Admin only (test or wrong entries); the server also removes photos and the Google Sheet rows */
+function sheetDelete(id){
+  const o = getOrder(id); if (!o) return;
+  openSheet('🗑️ Delete ' + o.no + ' permanently?', `<p>This removes the order completely: product details, client, estimate, payments, photos, videos, voice notes, the factory bill and its rows in the Google Sheet. Use it only for test or wrong entries — a delivered order should stay in Past Orders.</p>
+    <p class="small muted">If it is deleted by mistake, it can still be restored from the daily backup for 30 days (ask Claude).</p>
+    <div class="fld"><label for="del-no">To confirm, type the order number: <b>${esc(o.no)}</b></label><input class="in" id="del-no" autocapitalize="characters" autocomplete="off" placeholder="${esc(o.no)}"></div>
+    <div class="btns"><button class="btn danger" data-act="del-do">Delete permanently</button><button class="btn" data-act="sheet-close">Keep the order</button></div>`, {id});
+}
+async function doDelete(){
+  const id = S.sheet.id, o = getOrder(id); if (!o) return;
+  if (($('#del-no').value || '').trim().toUpperCase() !== String(o.no).toUpperCase()) return toast('The order number does not match.', 'bad');
+  const ok = await batch([{op: 'delete', path: 'orders/' + id + '/private/info'}, {op: 'delete', path: 'orders/' + id + '/factory/bill'}, {op: 'delete', path: 'orders/' + id}]);
+  if (!ok) return;
+  closeSheet();
+  if (S.history) S.history = S.history.filter(x => x.id !== id);
+  delete S.extra[id]; delete S.extraPriv[id];
+  toast(o.no + ' has been deleted permanently.');
+  go('#/');
 }
 function sheetCancel(id){
   openSheet('Cancel order', `<div class="fld"><label for="cn-why">Reason <span class="req">*</span></label>${textArea('cn-why', 'e.g. The client withdrew the order', '')}</div><button class="btn danger big" data-act="cancel-do">Cancel order</button>`, {id});
@@ -3264,6 +3309,8 @@ document.addEventListener('click', e => {
     case 'fpdf': makeFactoryPdf(t.dataset.id || oid || (S.sheet && S.sheet.id)); break;
     case 'dp-part-add': dpPartAdd(t.dataset.g); break;
     case 'sheet-save': saveSheet(); break;
+    case 'del-open': sheetDelete(oid); break;
+    case 'del-do': doDelete(); break;
     case 'sheet-sync': syncSheet(); break;
     case 'sheet-edit': S.sheetEdit = true; render(); break;
     case 'sheet-cancel': S.sheetEdit = false; render(); break;

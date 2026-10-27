@@ -221,4 +221,23 @@ async function rebuild(db, appUrl) {
   }
 }
 
-module.exports = { onOrder, rebuild, robotEmail, placedRow, dispatchedRow, allRow, HEAD, T_ALL, T_PLACED, T_DISP };
+/* an order deleted permanently by the Admin: remove its rows from all three tabs */
+async function removeOrder(db, no) {
+  const c = await config(db); if (!c || !no) return;
+  try {
+    const tabs = await ensureTabs(c.id);
+    const reqs = [];
+    for (const [t, col] of [[T_ALL, 'B'], [T_PLACED, 'A'], [T_DISP, 'A']]) {
+      const v = await api('GET', API + c.id + '/values/' + q(t) + '!' + col + ':' + col);
+      const rows = (v.values || []).map((r, i) => (i > 0 && r[0] === no ? i : -1)).filter(i => i > 0).sort((a, b) => b - a);
+      rows.forEach(i => reqs.push({ deleteDimension: { range: { sheetId: tabs.ids.get(t), dimension: 'ROWS', startIndex: i, endIndex: i + 1 } } }));
+    }
+    if (reqs.length) await api('POST', API + c.id + ':batchUpdate', { requests: reqs });
+    await mark(db, true, 'Removed ' + no + ' (deleted by the Admin)');
+  } catch (e) {
+    await mark(db, false, e.message);
+    throw e;
+  }
+}
+
+module.exports = { onOrder, rebuild, removeOrder, robotEmail, placedRow, dispatchedRow, allRow, HEAD, T_ALL, T_PLACED, T_DISP };

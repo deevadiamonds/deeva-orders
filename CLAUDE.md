@@ -100,7 +100,12 @@ extra); a browser downloads it and opens the chat (WhatsApp does not let website
 ## Backups and the Google Sheet copy (owner's request, 27 Oct 2026)
 
 - Database: Firestore daily backups (kept 30 days) + 7-day point-in-time recovery; photos/videos: Storage soft delete 30 days.
-  Set (idempotently) by `firebase.yml` → annotation "Backups". Rules never allow deleting orders or files.
+  Set (idempotently) by `firebase.yml` → annotation "Backups".
+- Past Orders (`#/past`, tab for everyone): delivered + cancelled (factory: also received) loaded on demand, grouped by month;
+  nothing is ever removed automatically. Only the main Admin (`isOwner()`, role `admin`, not the Sub Admin) can delete an order
+  permanently: "🗑️ Delete this order permanently" on the order page, order no. typed to confirm → batch delete of the order +
+  private/info + factory/bill (rules: delete only `isOwner()`). The function `orderDeleted` then removes its Storage files,
+  its Google Sheet rows, and lowers `counters/{ym}` to the highest remaining seq (deleted test orders give their numbers back).
 - Google Sheet: `functions/sheet.js` (called from `orderCreated` / `orderUpdated`, plus `sheetSetup` on `config/sheet`).
   Admin pastes the sheet link under Team › 📊 Google Sheet backup (`config/sheet` = `{id, url, syncReq, status{ok,msg,at,working,count}}`,
   Admin / Sub Admin read only). The owner shares the sheet (Editor) with the functions' account
