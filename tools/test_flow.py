@@ -145,6 +145,9 @@ async def main():
         print('ok  store manager sets today\'s gold rate')
         await pg.evaluate("location.hash='#/new'")
         await pg.wait_for_selector('#f-client-name')
+        assert await pg.eval_on_selector_all('#view .mic, #view [data-act="mic"]', 'l => l.length') == 0, 'no dictation mic on the form'
+        assert await pg.eval_on_selector_all('#view [data-act="rec"]', 'l => l.length') >= 1, 'voice note stays'
+        print('ok  no 🎤 dictation on any field; voice note recording stays')
         await pg.click('[data-act="f-review"]')
         await pg.wait_for_selector('#sheet .miss-list li')
         n_miss = await pg.eval_on_selector_all('#sheet .miss-list li', 'l => l.length')

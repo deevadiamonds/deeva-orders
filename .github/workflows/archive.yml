@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['.github/workflows/archive.yml']
+    paths: ['.github/workflows/archive.yml', 'tools/archive-status.js']
 
 concurrency:
   group: archive
@@ -77,3 +77,16 @@ jobs:
           SIZE=$(gcloud storage du -s "$ARCHIVE" --readable-sizes 2>>"$RUNNER_TEMP/ls.log" | awk '{print $1" "$2}')
           if [ -s "$RUNNER_TEMP/ls.log" ]; then echo "::warning title=Archive listing::$(tr '\n' ' ' < "$RUNNER_TEMP/ls.log" | head -c 600)"; fi
           echo "::notice title=Archive::Copy of $STAMP saved in $ARCHIVE (Asia multi-region) · $COPIES weekly database copies · $FILES files · total $SIZE"
+          printf 'COPIES=%s\nFILES=%s\nSIZE=%s\n' "$COPIES" "$FILES" "$SIZE" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        if: always() && steps.cred.outputs.ok == 'true'
+        with:
+          node-version: '22'
+
+      - name: Show the result in the app (Team page)
+        if: always() && steps.cred.outputs.ok == 'true'
+        run: |
+          (cd functions && npm ci --no-audit --no-fund >/dev/null 2>&1 || npm install --no-audit --no-fund >/dev/null 2>&1)
+          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" NODE_PATH=functions/node_modules \
+            node tools/archive-status.js "${{ job.status }}" "${STAMP:-}" "${COPIES:-0}" "${FILES:-0}" "${SIZE:-}" "$ARCHIVE"

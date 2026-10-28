@@ -853,6 +853,7 @@ function startData(){
   if (staff()) S.unsubs.push(B.db.watchDoc('config/brand', s => { S.brand = s.exists ? s.data : null; }, () => {}));
   if (staff()) S.unsubs.push(B.db.watchDoc('config/rates', s => { S.rates = s.exists ? s.data : null; if (F && FORMKEY) syncFormVis(); render(); }, () => {}));
   if (isAdmin()) S.unsubs.push(B.db.watchDoc('config/sheet', s => { S.sheetCfg = s.exists ? s.data : null; render(); }, () => {}));
+  if (isAdmin()) S.unsubs.push(B.db.watchDoc('config/archive', s => { S.archive = s.exists ? s.data : null; render(); }, () => {}));
   const onErr = e => { console.error(e); toast('Orders could not be loaded — ' + errText(e), 'bad'); };
   /* two-field queries; while Firebase still builds an index, fall back to one field + filter here */
   let cur = null;
@@ -1396,7 +1397,8 @@ function closeSheet(){
   if (S.sheet && S.sheet.picker) S.sheet.picker.stopRec();
   S.sheet = null; $('#sheet').innerHTML = ''; document.body.style.overflow = '';
 }
-function micBtn(forId){ return `<button type="button" class="mic" data-act="mic" data-for="${forId}" aria-label="Dictate">🎤</button>`; }
+/* owner's decision (29 Oct 2026): no 🎤 dictation on any field — the only recording is the voice note with photos / videos */
+function micBtn(){ return ''; }
 function textArea(id, ph, val){ return `<div class="inp"><textarea id="${id}" placeholder="${esc(ph || '')}">${esc(val || '')}</textarea>${micBtn(id)}</div>`; }
 
 function sheetApprove(id){
@@ -1427,7 +1429,7 @@ async function doApprove(){
   } else { closeSheet(); toast('Approved — the order has been sent to the factory.'); }
 }
 function sheetQuery(id){
-  openSheet('Send query to the store', `<p class="small muted" style="margin-top:-6px">Describe what is missing or unclear — type or dictate.</p>
+  openSheet('Send query to the store', `<p class="small muted" style="margin-top:-6px">Describe what is missing or unclear.</p>
     <div class="fld">${textArea('qr-text', 'e.g. Is the chain 16 or 18 inches? The form and the message differ.', '')}</div>
     <button class="btn primary big" data-act="query-do">❓ Send query</button>`, {id});
 }
@@ -1444,7 +1446,7 @@ async function doQuery(){
 function sheetReply(id){
   const o = getOrder(id);
   openSheet('Reply to query', `<div class="alertbox bad" style="margin-bottom:10px"><p style="margin:0">${esc((o.query && o.query.text) || '')}</p></div>
-    <div class="fld">${textArea('rp-text', 'Type or dictate your reply', '')}</div>
+    <div class="fld">${textArea('rp-text', 'Type your reply', '')}</div>
     <p class="small muted">To change the order details, use “Edit details”. Every change is recorded in the history.</p>
     <button class="btn primary big" data-act="reply-do">💬 Send reply</button>`, {id});
 }
@@ -2880,7 +2882,7 @@ function renderTeam(){
   h += `<div class="card"><h3>📈 Today’s Rate <button class="btn sm tag" data-act="rates-open">Set</button></h3><p class="small muted" style="margin:0">${S.rates ? esc(ratesLine()) + ' · ' + esc(fmtDay(S.rates.day)) : 'Not set yet.'}</p></div>`;
   const b = S.brand || {};
   h += `<div class="card"><h3>🧾 Authorised signature on receipts</h3>${b.signData ? `<img class="sigimg" src="${esc(b.signData)}" alt=""><p class="small muted" style="margin:6px 0 10px">${esc(b.signName || '')}</p>` : '<p class="small muted" style="margin-top:0">No signature yet — receipts will carry the Deeva seal only.</p>'}<button class="btn sm" data-act="brand-sign">✍️ Signature ${b.signData ? 'Change' : 'set'}</button></div>`;
-  h += sheetCardHtml();
+  h += sheetCardHtml() + archiveCardHtml();
   patch($('#view'), h);
   const roleOn = ($('#u-role .chip.on') || {dataset: {}}).dataset.v;
   const w = $('#u-store-wrap'); if (w) w.hidden = roleOn !== 'store';
@@ -2902,6 +2904,17 @@ function sheetCardHtml(){
       <div class="fld"><label for="sh-url">Google Sheet link</label><input class="in" id="sh-url" inputmode="url" autocapitalize="none" placeholder="https://docs.google.com/spreadsheets/d/…" value="${esc(c.url || '')}"></div>
       <div class="btns"><button class="btn primary" data-act="sheet-save">Save and copy all orders</button>${c.id ? '<button class="btn" data-act="sheet-cancel">Cancel</button>' : ''}</div>`;
   }
+  return h + `</div>`;
+}
+/* the weekly permanent archive (.github/workflows/archive.yml) reports here */
+function archiveCardHtml(){
+  const a = S.archive || {};
+  const pid = (window.DO_CONFIG || {}).projectId || 'deeva-orders';
+  let h = `<div class="card" id="archive-card"><h3>🗄️ Permanent archive</h3><p class="small muted" style="margin-top:-4px">Every Monday at 3 am, a full copy of all orders, clients, payments and bills, and every photo, video and voice note, is saved in a separate Google Cloud archive (several data centres in Asia). Each copy is kept for 10 years and cannot be deleted.</p>`;
+  if (!a.at) h += `<p class="small" style="margin:0">The first copy will appear here after the next run.</p>`;
+  else if (a.ok === false) h += `<p class="small" style="margin:0;color:var(--bad)">⚠️ The last copy (${esc(fmtWhen(a.at))}) did not finish — Claude can check it.</p>`;
+  else h += `<p class="small" style="margin:0 0 10px">✓ Last copy: <b>${esc(fmtWhen(a.at))}</b> · ${esc(String(a.copies || 0))} database ${a.copies === 1 ? 'copy' : 'copies'} kept · ${esc(String(a.files || 0))} photos / videos / voice notes · ${esc(a.size || '')}</p>`;
+  if (a.bucket) h += `<a class="btn sm" href="https://console.cloud.google.com/storage/browser/${esc(a.bucket)}?project=${esc(pid)}" target="_blank" rel="noopener">Open the archive in Google Cloud</a>`;
   return h + `</div>`;
 }
 async function saveSheet(){
@@ -3201,12 +3214,9 @@ function renderActivity(){
 /* ---------- account ---------- */
 function notifLater(){ try { return localStorage.getItem('do.notif.later') === '1'; } catch (e) { return false; } }
 function renderAccount(){
-  const lang = micLang();
   let h = `<div class="view-title">My Account</div>
   <div class="card"><div class="row"><span class="who" style="pointer-events:none;background:var(--g8)"><span class="av">${esc(initial(myName()))}</span><span>${esc(myName())}</span><em>${esc(ROLES[role()])}</em></span></div>
     <p class="small muted" style="margin:10px 0 0">Login ID: ${esc((S.me && S.me.loginId) || '')}</p></div>
-  <div class="card"><h3>🎤 Dictation language</h3><div class="chips">${[['en-IN','English (India)'],['hi-IN','Hindi']].map(x => `<button class="chip ${lang === x[0] ? 'on' : ''}" data-act="mic-lang" data-v="${x[0]}">${x[1]}</button>`).join('')}</div>
-    <p class="small muted" style="margin:8px 0 0">Choose Hindi if you prefer to speak in Hindi; English words such as “rose gold” and “pendant” are still recognised.</p></div>
   <div class="card"><h3>🔑 Change password</h3><div class="err" id="pw-err" hidden></div>
     <div class="fld"><label for="pw-cur">Current password</label><input class="in" id="pw-cur" type="password" autocomplete="current-password"></div>
     <div class="fld"><label for="pw-new">New password</label><input class="in" id="pw-new" type="password" autocomplete="new-password"></div>

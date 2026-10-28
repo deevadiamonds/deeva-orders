@@ -33,7 +33,7 @@ service cloud.firestore {
     // config/brand: Deeva signature on receipts (Admin) · config/rates: today's gold rate (Admin, Sub Admin or a store manager)
     // config/sheet: the Google Sheet backup link (Admin / Sub Admin only; the server writes its status)
     match /config/{doc} {
-      allow read: if active() && (doc != 'sheet' || isAdmin());
+      allow read: if active() && (!(doc in ['sheet', 'archive']) || isAdmin());
       allow write: if (isAdmin() && doc != 'admin') || (doc == 'rates' && isStore());
     }
 

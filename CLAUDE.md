@@ -5,7 +5,8 @@ Sisodiya (always "Sisodiya"; brand always "Deeva", never "Diva"). He talks in Hi
 *what* should change, Claude does code, test and deploy, then explains in plain Hindi what changed and what he must do himself.
 **All UI text is formal English** (owner's decision, 27 Oct 2026) — the app, notifications, WhatsApp messages, receipts,
 Android strings. British spelling (colour, jewellery, centre, cancelled), sentence case, polite and plain ("Please enter…",
-"Awaiting approval"). Dates as "27 Oct". Dictation defaults to English (India); Hindi stays selectable under My Account.
+"Awaiting approval"). Dates as "27 Oct". **No 🎤 dictation on any field** (owner's decision, 29 Oct 2026: `micBtn()` returns
+'' and the dictation-language card is gone); the only recording is the voice note with photos / videos (`makePicker`).
 
 **Completely separate from Team Kaam** (his task app): own GitHub repo, own Firebase project, own logins. Never share code
 paths, Firebase projects or users between the two.
@@ -106,6 +107,8 @@ extra); a browser downloads it and opens the chat (WhatsApp does not let website
   `gs://deeva-orders-archive-asia-395857273671/database/<date>` + `gcloud storage rsync` of all photos / videos / voice notes into
   `…/files` (adds only). Bucket in the ASIA multi-region (export needs `asia` or `asia-south1`), Nearline, retention policy 10 years (unlocked), soft delete 90 days.
   Restore = `gcloud firestore import <folder>` (into the live or a new database).
+  Each run writes `config/archive` = `{at, ok, stamp, copies, files, size, bucket}` (`tools/archive-status.js`) → Team page card
+  "🗄️ Permanent archive" with a Google Cloud console link (Admin / Sub Admin read only).
 - Past Orders (`#/past`, tab for everyone): delivered + cancelled (factory: also received) loaded on demand, grouped by month;
   nothing is ever removed automatically. Only the main Admin (`isOwner()`, role `admin`, not the Sub Admin) can delete an order
   permanently: "🗑️ Delete this order permanently" on the order page, order no. typed to confirm → batch delete of the order +
@@ -148,8 +151,8 @@ Storage: `orders/{orderId}/{mediaId}.{ext}` (any active user reads; image/video/
   hash routes (`#/`, `#/new`, `#/o/<id>`, `#/edit/<id>`, `#/team`, `#/account`), `render()` → `doRender()`, `patch()` keeps
   typed text/focus, one delegated click handler on `data-act`, bottom sheets (`openSheet`). The order form is rendered once
   per visit (`renderForm`), values live in `F`, a draft is kept in localStorage `do.draft`.
-  `makePicker()` = photo/video/voice-note uploader (MediaRecorder for voice notes). `micStart()` = speech-to-text on every
-  text field (Web Speech API in Chrome; in the APK `DeevaApp.listen()` → Google voice typing → `window.__doSpeech`).
+  `makePicker()` = photo/video/voice-note uploader (MediaRecorder for voice notes). `micStart()` (dictation) is no longer
+  reachable — `micBtn()` returns '' by the owner's decision; keep it that way unless he asks for dictation back.
 - `web/config.js` — `self.DO_CONFIG` (Firebase web config + `vapidKey`), shared by the page and `sw.js`.
 - `web/sw.js` (app-shell cache, never touches Firebase traffic; imports `config.js` + firebase-messaging for closed-app
   notifications), `web/manifest.webmanifest`, `web/icons/*` (from the official Deeva logo: gold mark on Deeva green).
