@@ -39,11 +39,14 @@ window.__demoPdfPreview = true;
     ['u_darshana', 'darshana-x1@demo', 'Darshana', 'subadmin', 'darshana', '9000000002', ''],
     ['u_nishant', 'nishant-x2@demo', 'Nishant', 'store', 'nishant', '9000000003', 's_rpr'],
     ['u_ravi', 'ravi-x5@demo', 'Ravi (demo)', 'store', 'ravi', '9000000005', 's_bsp'],
-    ['u_factory', 'factory-x3@demo', 'Factory (Raju)', 'factory', 'factory', '9000000004', '']
+    ['u_factory', 'factory-x3@demo', 'Raju', 'factory', 'factory', '9000000004', ''],
+    ['u_bhavin', 'bhavin-x6@demo', 'Bhavin', 'factory', 'bhavin', '9000000006', '']
   ];
+  F.store['factories/f_kk'] = {name: 'KK Diamonds', contact: 'Kamal', phone: '', city: 'Mumbai', active: true, at: now - 300 * D};
+  F.store['factories/f_vm'] = {name: 'Vermil', contact: 'Bhavin bhai', phone: '', city: 'Surat', active: true, at: now - 200 * D};
   people.forEach(([uid, email, name, role, lid, phone, storeId]) => {
     F.account(email, 'demo123', uid);
-    F.store['users/' + uid] = {name, role, storeId, loginId: lid, phone, active: true, at: now - 300 * D, by: 'u_mayuresh'};
+    F.store['users/' + uid] = Object.assign({name, role, storeId, loginId: lid, phone, active: true, at: now - 300 * D, by: 'u_mayuresh'}, uid === 'u_factory' ? {factoryId: 'f_kk'} : uid === 'u_bhavin' ? {factoryId: 'f_vm'} : {});
     if (!lid.includes('@')) F.store['logins/' + lid] = {email, uid};
   });
   F.store['config/admin'] = {uid: 'u_mayuresh', at: now - 300 * D};
@@ -80,7 +83,8 @@ window.__demoPdfPreview = true;
       status: st, factoryVisible: st !== 'review' && st !== 'query', stage: '', priority: rr() < 0.2 ? 'urgent' : 'normal', deliveryDay: dayAt(createdAt + (makeDays + 4) * D), factoryDue: dayAt(approvedAt + (makeDays + (rr() < 0.25 ? -2 : 1)) * D),
       cadRequired: true, cad: {ok: true, by: 'Nishant', at: approvedAt + 2 * D}, factoryAck: true, approvedAt, approvedBy: 'Darshana',
       spec, media: {}, edited: {}, query: {open: false}, updatedAt: createdAt, updatedBy: 'u_factory', log: {}}, extra.o || {});
-    if (['dispatched', 'received', 'delivered'].includes(st) && !o.dispatch) { const at = approvedAt + makeDays * D; o.dispatch = {at, by: 'u_factory', byName: 'Factory (Raju)', mode: 'Courier', ref: 'DTDC ' + Math.round(1000 + rr() * 8000), grossWt: String(item[8]), note: 'Hallmark done'}; o.stage = 'dispatched'; o.stageAt = {dispatched: at}; o.updatedAt = at; }
+    if (o.factoryVisible && !o.factoryId) o.factoryId = id === 'o4' ? 'f_vm' : (id === 'o1' || id === 'o3') ? 'f_kk' : (nn.seq % 3 === 0 ? 'f_vm' : 'f_kk');
+    if (['dispatched', 'received', 'delivered'].includes(st) && !o.dispatch) { const at = approvedAt + makeDays * D; o.dispatch = {at, by: 'u_factory', byName: 'Raju · KK Diamonds', mode: 'Courier', ref: 'DTDC ' + Math.round(1000 + rr() * 8000), grossWt: String(item[8]), note: 'Hallmark done'}; o.stage = 'dispatched'; o.stageAt = {dispatched: at}; o.updatedAt = at; }
     if (o.dispatch && !o.dispatch.actual) {
       const dias = [1, 2, 3, 4].filter(i => parseFloat(spec['dia' + i + 'Ct']) > 0).map(i => ({n: i, type: spec['dia' + i + 'Type'], ct: Math.round(parseFloat(spec['dia' + i + 'Ct']) * (1 + (rr() - 0.4) * 0.1) * 100) / 100, pcs: spec['dia' + i + 'Pcs'] || '1', cert: spec['dia' + i + 'Type'] === 'Solitaire' ? 'yes' : 'no', certNo: spec['dia' + i + 'Type'] === 'Solitaire' ? 'IGI LG' + Math.round(100000 + rr() * 800000) : ''}));
       const gems = [1, 2].filter(i => spec['gem' + i + 'Type']).map(i => ({n: i, type: spec['gem' + i + 'Type'], ct: parseFloat(spec['gem' + i + 'Ct']) || 0, pcs: spec['gem' + i + 'Pcs'] || '1'}));
@@ -103,7 +107,7 @@ window.__demoPdfPreview = true;
       gems.forEach(x => lines.push({kind: 'g', n: x.n, type: x.type, ct: x.ct, pcs: x.pcs, rate: 0, amt: 900}));
       const labour = Math.round(net * 850 * 100) / 100;
       const total = lines.reduce((a, l) => a + l.amt, 0) + labour + 250;
-      F.store['orders/' + id + '/factory/bill'] = {orderNo: nn.no, goldMode: 'fine', purity: item[2], netWt: net, touch, fine: Math.round(net * touch / 100 * 1000) / 1000, goldRate: 0, goldAmt: 0, lines, labourRate: 850, labour, other: 250, total, at: o.dispatch.at, by: 'u_factory', byName: 'Factory (Raju)'};
+      F.store['orders/' + id + '/factory/bill'] = {orderNo: nn.no, goldMode: 'fine', purity: item[2], netWt: net, touch, fine: Math.round(net * touch / 100 * 1000) / 1000, goldRate: 0, goldAmt: 0, lines, labourRate: 850, labour, other: 250, total, at: o.dispatch.at, by: 'u_factory', byName: 'Raju · KK Diamonds'};
     }
     if (st === 'delivered') o.delivered = {at: o.dispatch.at + 2 * D, by: 'Nishant'};
     o.log[k()] = L(createdAt, o.createdBy, o.createdByName, 'store', 'created', 'Order created — ' + item[0]);
@@ -125,8 +129,8 @@ window.__demoPdfPreview = true;
   makeOrder('o1', now - 4 * D, 'factory', 's_rpr', ITEMS[0], 'Ananya Jain', {
     spec: {engraving: 'R ♥ A', dia2Type: 'Side', dia2Ct: '0.10', dia2Pcs: '12', dia2Shape: 'Round', dia2Color: 'F-G', dia2Clarity: 'VS', design: 'Oval solitaire on a slim 2 mm band.', stoneNote: 'Set the centre stone slightly higher'},
     o: {stage: 'cad_approval', stageAt: {new: now - 3 * D, received: now - 3 * D + 2 * H, cad: now - 2 * D, cad_approval: now - 3 * H}, approvedAt: now - 3 * D, factoryDue: day(9), deliveryDay: day(12), cad: {}, priority: 'normal',
-      media: {m1: {kind: 'image', url: ring, path: 'demo', desc: 'Client reference — slimmer band', by: 'u_nishant', byName: 'Nishant', at: now - 4 * D}, m2: {kind: 'image', url: cad, path: 'demo', desc: 'CAD v1', by: 'u_factory', byName: 'Factory (Raju)', at: now - 3 * H, stage: 'cad_approval'}},
-      log: {k90: L(now - 3 * D, 'u_darshana', 'Darshana', 'admin', 'approved', 'Approved and sent to the factory · CAD approval required'), k91: L(now - 3 * H, 'u_factory', 'Factory (Raju)', 'factory', 'stage', 'Sent for CAD approval\n📎 1 photo')}}
+      media: {m1: {kind: 'image', url: ring, path: 'demo', desc: 'Client reference — slimmer band', by: 'u_nishant', byName: 'Nishant', at: now - 4 * D}, m2: {kind: 'image', url: cad, path: 'demo', desc: 'CAD v1', by: 'u_factory', byName: 'Raju · KK Diamonds', at: now - 3 * H, stage: 'cad_approval'}},
+      log: {k90: L(now - 3 * D, 'u_darshana', 'Darshana', 'admin', 'approved', 'Approved and sent to the factory · CAD approval required'), k91: L(now - 3 * H, 'u_factory', 'Raju · KK Diamonds', 'factory', 'stage', 'Sent for CAD approval\n📎 1 photo')}}
   });
   makeOrder('o2', now - 2 * H, 'review', 's_rpr', ITEMS[1], 'Riya Agrawal', {
     spec: {gem1Type: 'Ruby', gem1Color: 'Red', gem1Shape: 'Round', gem1Ct: '0.20', gem1Size: '2 mm', gem1Pcs: '4', design: 'Same as the client’s reference image, but without the drop at the bottom.'},
@@ -134,8 +138,8 @@ window.__demoPdfPreview = true;
   });
   makeOrder('o3', now - 14 * D, 'dispatched', 's_rpr', ITEMS[2], 'Pooja Sharma', {
     spec: {dia2Type: 'Side', dia2Ct: '0.24', dia2Pcs: '20', dia2Shape: 'Round', dia2Color: 'F-G', dia2Clarity: 'VS'},
-    o: {priority: 'urgent', deliveryDay: day(1), factoryDue: day(-1), approvedAt: now - 13 * D, dispatch: {at: now - 20 * H, by: 'u_factory', byName: 'Factory (Raju)', mode: 'Courier', ref: 'DTDC 7731', note: 'Screw back'}, stage: 'dispatched', stageAt: {dispatched: now - 20 * H},
-      media: {m4: {kind: 'image', url: earr, path: 'demo', desc: 'Finished piece', by: 'u_factory', byName: 'Factory (Raju)', at: now - 20 * H, stage: 'dispatched'}}}
+    o: {priority: 'urgent', deliveryDay: day(1), factoryDue: day(-1), approvedAt: now - 13 * D, dispatch: {at: now - 20 * H, by: 'u_factory', byName: 'Raju · KK Diamonds', mode: 'Courier', ref: 'DTDC 7731', note: 'Screw back'}, stage: 'dispatched', stageAt: {dispatched: now - 20 * H},
+      media: {m4: {kind: 'image', url: earr, path: 'demo', desc: 'Finished piece', by: 'u_factory', byName: 'Raju · KK Diamonds', at: now - 20 * H, stage: 'dispatched'}}}
   });
   makeOrder('o4', now - 6 * D, 'factory', 's_bsp', ITEMS[3], 'Kavita Soni', {o: {stage: 'setting', stageAt: {setting: now - D}, approvedAt: now - 5 * D, factoryDue: day(-1), deliveryDay: day(3)}});
   F.preLogin('nishant-x2@demo');
@@ -143,7 +147,7 @@ window.__demoPdfPreview = true;
 </script>"""
 
 DEMO_BAR = """<div class="demo-bar" id="demo-bar"><div class="demo-in"><span class="demo-tag">DEMO</span><span class="demo-txt">Sample data · view as:</span>
-<span class="demo-btns"><button type="button" data-demo="nishant-x2@demo" class="on">Nishant · Store</button><button type="button" data-demo="darshana-x1@demo">Darshana · Sub Admin</button><button type="button" data-demo="factory-x3@demo">Factory</button><button type="button" data-demo="ravi-x5@demo">Ravi · Bilaspur</button><button type="button" data-demo="mayuresh@demo">Mayuresh · Admin</button></span></div></div>"""
+<span class="demo-btns"><button type="button" data-demo="nishant-x2@demo" class="on">Nishant · Store</button><button type="button" data-demo="darshana-x1@demo">Darshana · Sub Admin</button><button type="button" data-demo="factory-x3@demo">Factory · KK</button><button type="button" data-demo="bhavin-x6@demo">Factory · Vermil</button><button type="button" data-demo="ravi-x5@demo">Ravi · Bilaspur</button><button type="button" data-demo="mayuresh@demo">Mayuresh · Admin</button></span></div></div>"""
 DEMO_CSS = """<style>
 .demo-bar{background:var(--gold-soft);border-bottom:1px solid var(--gold);padding-block:7px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .demo-in{max-width:680px;margin:0 auto;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13.5px;color:var(--ink)}

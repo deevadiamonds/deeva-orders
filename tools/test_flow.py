@@ -93,10 +93,11 @@ async def main():
         sids = await pg.evaluate("Object.keys(__fake.store).filter(k => k.startsWith('stores/')).map(k => [k.split('/')[1], __fake.store[k].name])")
         raipur = [s for s in sids if s[1] == 'Raipur'][0][0]; bilaspur = [s for s in sids if s[1] == 'Bilaspur'][0][0]
 
-        async def add(name, role, lid, pw, phone, store=None, expect_ok=True):
+        async def add(name, role, lid, pw, phone, store=None, expect_ok=True, fac=None):
             await pg.fill('#u-name', name)
             await pg.click(f'#u-role [data-v="{role}"]')
             if store: await pg.click(f'#u-store [data-v="{store}"]')
+            if fac: await pg.click(f'#u-fac [data-v="{fac}"]')
             await pg.fill('#u-lid', lid); await pg.fill('#u-pw', pw); await pg.fill('#u-phone', phone)
             await pg.click('#u-add')
             if not expect_ok:
@@ -109,7 +110,20 @@ async def main():
         assert 'already has Nishant' in msg, msg
         await pg.fill('#u-name', ''); await pg.fill('#u-lid', ''); await pg.fill('#u-pw', '')
         await add('Ravi', 'store', 'ravi', 'ravi1234', '9000000005', bilaspur)
-        await add('Factory Raju', 'factory', 'factory', 'factory1', '9000000003')
+        # factories (vendors): each with its own logins
+        for fname, contact in [('KK Diamonds', 'Kamal'), ('Vermil', 'Bhavin bhai')]:
+            await pg.click('[data-act="fac-new"]')
+            await pg.fill('#fc-name', fname); await pg.fill('#fc-contact', contact)
+            await pg.click('[data-act="fac-save"]')
+            await pg.wait_for_function("!document.querySelector('#sheet .sheet')")
+        fids = await pg.evaluate("Object.fromEntries(Object.keys(__fake.store).filter(k => k.startsWith('factories/')).map(k => [__fake.store[k].name, k.split('/')[1]]))")
+        kk, vm = fids['KK Diamonds'], fids['Vermil']
+        await add('Factory Raju', 'factory', 'factory', 'factory1', '9000000003', fac=kk)
+        await add('Bhavin', 'factory', 'bhavin', 'bhavin12', '9000000006', fac=vm)
+        fu = await pg.evaluate("Object.values(__fake.store).filter(d => d && d.role === 'factory').map(d => d.name + ':' + d.factoryId)")
+        assert sorted(fu) == sorted(['Factory Raju:' + kk, 'Bhavin:' + vm]), fu
+        assert 'KK Diamonds' in await pg.inner_text('#fac-card') and 'Raju' in await pg.inner_text('#fac-card')
+        print('ok  two factories (KK Diamonds, Vermil), each with its own login')
         await pg.click('.card [data-act="rates-open"]')
         await pg.fill('#rt-14KT', '8544'); await pg.fill('#rt-18KT', '10950'); await pg.fill('#rt-making', '2000')
         await pg.click('[data-act="rates-save"]')
@@ -280,12 +294,23 @@ async def main():
         await pg.click('.alertbox [data-act="approve-open"]')
         await pg.fill('#ap-note', 'Light weight chain')
         await pg.click('[data-act="approve-do"]')
+        await pg.wait_for_function("document.querySelector('#toasts').innerText.includes('choose the factory')")
+        await pg.click(f'#ap-fac [data-v="{kk}"]')
+        await pg.click('[data-act="approve-do"]')
         await pg.wait_for_selector('#sheet a.wa', timeout=3000)
+        assert 'Raju' in await pg.inner_text('#sheet') and 'Bhavin' not in await pg.inner_text('#sheet'), 'WhatsApp only to the chosen factory'
         await close_sheet()
+        assert (await order_doc())['factoryId'] == kk
+        assert '🏭 KK Diamonds' in await pg.inner_text('.dhead'), 'Admin sees the factory'
         print('ok  query -> edit (diff logged) -> reply -> approve')
         await logout()
 
         # ---- 6. factory
+        await login('bhavin', 'bhavin12')
+        await pg.wait_for_function("document.querySelector('#view').innerText.includes('No active orders')")
+        assert await pg.eval_on_selector_all('.ocard', 'l => l.length') == 0, 'Vermil must not see KK orders'
+        print('ok  another factory (Vermil) sees nothing of KK Diamonds’ order')
+        await logout()
         await login('factory', 'factory1')
         await pg.click('.ocard')
         await pg.wait_for_selector('.alertbox.ok [data-act="stage-quick"]')
@@ -413,7 +438,7 @@ async def main():
         await pg.click('.ocard')
         await pg.wait_for_function("document.body.innerText.includes('Dispatch Slip')")
         t = await text()
-        for secret in ['Raju', '9000000003', 'Factory bill', '14,848']:
+        for secret in ['Raju', '9000000003', 'Factory bill', '14,848', 'KK Diamonds', 'Vermil']:
             assert secret not in t, 'store can see ' + secret
         print('ok  store sees no factory person and no factory bill')
         assert '0.42 ct / 1 pc' in t and 'Factory total' not in t and '14,848' not in t and 'Fine gold' not in t, 'store must not see factory money'
@@ -493,7 +518,7 @@ async def main():
         await pg.evaluate("location.hash='#/activity'")
         await pg.wait_for_function("document.body.innerText.includes('All Activity') && document.querySelectorAll('#view .ocard').length > 10")
         t = await text()
-        for need in ['Nishant · Raipur (Store)', 'Factory Raju (Factory)', 'Darshana (Sub Admin)', 'Diamond 1 clarity: VVS1 → VVS2', 'Payment ₹25,000 (Cash)', 'Nitu Pansari']:
+        for need in ['Nishant · Raipur (Store)', 'Factory Raju · KK Diamonds (Factory)', 'Darshana (Sub Admin)', 'Diamond 1 clarity: VVS1 → VVS2', 'Payment ₹25,000 (Cash)', 'Nitu Pansari']:
             assert need in t, need
         await pg.click('[data-act="act-who"][data-v="money"]')
         await pg.wait_for_function("document.querySelectorAll('#view .ocard').length >= 2 && !document.querySelector('#view').innerText.includes('Dispatched —')")

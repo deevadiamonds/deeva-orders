@@ -22,9 +22,9 @@ const ORDER_HEAD = ['Order no.', 'Order date', 'Store', 'Taken by', 'Client', 'P
 const DISP_HEAD = ['Dispatched on', 'Actual gross g', 'Actual net g', 'Diamonds (actual, by size)', 'Gemstones (actual)', 'Hallmark / HUID', 'Shipping', 'Dispatch note',
   'Factory gold', 'Factory stones ₹', 'Factory labour ₹', 'Factory other ₹', 'Factory total ₹', 'Dispatch photo'];
 const HEAD = {
-  [T_ALL]: ['Status'].concat(ORDER_HEAD, DISP_HEAD),
+  [T_ALL]: ['Status'].concat(ORDER_HEAD, DISP_HEAD, ['Factory']),
   [T_PLACED]: ORDER_HEAD,
-  [T_DISP]: ['Order no.', 'Store', 'Client', 'Item', 'Purity', 'Agreed amount ₹'].concat(DISP_HEAD, ['Open in app'])
+  [T_DISP]: ['Order no.', 'Store', 'Client', 'Item', 'Purity', 'Agreed amount ₹'].concat(DISP_HEAD, ['Open in app', 'Factory'])
 };
 
 const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
@@ -103,11 +103,11 @@ function dispCols(o, bill) {
     bill ? (b.goldMode === 'fine' ? 'Fine ' + r3(b.fine) + ' g (' + b.touch + '%)' : 'Money ₹' + r2(b.goldAmt)) : '', bill ? r2(diaAmt) : '', bill ? r2(b.labour) : '', bill ? r2(b.other) : '', bill ? r2(b.total) : '',
     image(img && img.url)];
 }
-const allRow = (id, o, p, bill, appUrl) => [STATUS[o.status] || o.status].concat(orderCols(id, o, p, appUrl), dispCols(o, bill));
+const allRow = (id, o, p, bill, appUrl) => [STATUS[o.status] || o.status].concat(orderCols(id, o, p, appUrl), dispCols(o, bill), [txt(o.factoryName || '')]);
 const placedRow = (id, o, p, appUrl) => orderCols(id, o, p, appUrl);
 function dispatchedRow(id, o, p, bill, appUrl) {
   const s = o.spec || {}, pr = (p && p.price) || {};
-  return [txt(o.no), txt(o.storeName || ''), txt(((p && p.client) || {}).name), txt(jtype(s)), txt(s.purity), n(pr.est) || ''].concat(dispCols(o, bill), [appUrl + '#/o/' + id]);
+  return [txt(o.no), txt(o.storeName || ''), txt(((p && p.client) || {}).name), txt(jtype(s)), txt(s.purity), n(pr.est) || ''].concat(dispCols(o, bill), [appUrl + '#/o/' + id, txt(o.factoryName || '')]);
 }
 
 /* ---------- sheet plumbing ---------- */
@@ -162,8 +162,19 @@ async function upsertAll(id, tabs, no, row) {
 }
 
 /* ---------- reading an order ---------- */
+const FAC = { at: 0, names: {} };
+async function facName(db, fid) {
+  if (!fid) return '';
+  if (Date.now() - FAC.at > 5 * 60e3 || !(fid in FAC.names)) {
+    const snap = await db.collection('factories').get();
+    FAC.names = Object.fromEntries(snap.docs.map(d => [d.id, d.data().name || '']));
+    FAC.at = Date.now();
+  }
+  return FAC.names[fid] || '';
+}
 async function load(db, id, o) {
   const [ps, bs] = await Promise.all([db.doc('orders/' + id + '/private/info').get(), o.dispatch && o.dispatch.at ? db.doc('orders/' + id + '/factory/bill').get() : null]);
+  o.factoryName = o.factoryVisible ? await facName(db, o.factoryId) : '';
   return { p: ps.exists ? ps.data() : {}, bill: bs && bs.exists ? bs.data() : null };
 }
 async function config(db) {

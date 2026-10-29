@@ -18,7 +18,8 @@ service cloud.firestore {
     function isOwner() { return active() && me().role == 'admin'; }
     function isAdmin() { return active() && me().role in ['admin', 'subadmin']; }
     function isStore() { return active() && me().role == 'store' && me().get('storeId', '') != ''; }
-    function isFactory() { return active() && me().role == 'factory'; }
+    function isFactory() { return active() && me().role == 'factory' && me().get('factoryId', '') != ''; }
+    function myFactory() { return me().get('factoryId', ''); }
     function staff() { return isAdmin() || isStore(); }
     function myStore() { return me().get('storeId', ''); }
 
@@ -53,6 +54,12 @@ service cloud.firestore {
         || (active() && uid == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['micLang']));
       allow delete: if false;
+    }
+
+    // factories (vendors): Admin / Sub Admin manage them; a factory login reads only its own factory
+    match /factories/{fid} {
+      allow read: if isAdmin() || (isFactory() && fid == myFactory());
+      allow write: if isAdmin();
     }
 
     match /stores/{sid} {
@@ -95,7 +102,7 @@ service cloud.firestore {
         // before approval: may correct details and answer a query
         (o.status in ['review', 'query']
           && (n.status == o.status || (o.status == 'query' && n.status == 'review'))
-          && !k.hasAny(['approvedAt', 'approvedBy', 'factoryDue', 'factoryNote', 'stage', 'stageAt',
+          && !k.hasAny(['approvedAt', 'approvedBy', 'factoryId', 'factoryDue', 'factoryNote', 'stage', 'stageAt',
                         'dispatch', 'cadRequired', 'cad', 'factoryAck', 'factoryAckAt', 'cancel']))
         ||
         // after approval: notes/photos, CAD decision, date/priority, received at store, delivered
@@ -115,6 +122,7 @@ service cloud.firestore {
       let cadOk = !(o.get('cadRequired', false) == true && o.get('cad', {}).get('ok', false) != true);
       return sameIdentity()
         && o.factoryVisible == true && n.factoryVisible == true
+        && o.get('factoryId', '') == myFactory() && n.get('factoryId', '') == myFactory()
         && o.status in ['factory', 'dispatched']
         && k.hasOnly(['stage', 'stageAt', 'log', 'media', 'updatedAt', 'updatedBy', 'dispatch', 'status', 'factoryAck', 'factoryAckAt'])
         && (n.status == o.status || (o.status == 'factory' && n.status == 'dispatched'))
@@ -125,7 +133,7 @@ service cloud.firestore {
     match /orders/{id} {
       allow read: if isAdmin()
         || (isStore() && resource.data.storeId == myStore())
-        || (isFactory() && resource.data.factoryVisible == true);
+        || (isFactory() && resource.data.factoryVisible == true && resource.data.get('factoryId', '') == myFactory());
       allow create: if staff()
         && (isAdmin() || request.resource.data.storeId == myStore())
         && exists(/databases/$(database)/documents/stores/$(request.resource.data.storeId))
@@ -141,7 +149,8 @@ service cloud.firestore {
       // factory's own bill for this order (gold fine / money, diamond amounts, labour, total) — admin, sub admin and the factory; never the store
       match /factory/{doc} {
         allow read, create, update: if isAdmin()
-          || (isFactory() && get(/databases/$(database)/documents/orders/$(id)).data.factoryVisible == true);
+          || (isFactory() && get(/databases/$(database)/documents/orders/$(id)).data.factoryVisible == true
+              && get(/databases/$(database)/documents/orders/$(id)).data.get('factoryId', '') == myFactory());
         allow delete: if isOwner();
       }
 

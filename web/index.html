@@ -553,7 +553,7 @@ const LABEL = Object.fromEntries(EDIT_FIELDS.map(f => [f[0], f[1]]));
 const S = {
   authUser: null, me: null, users: {}, orders: {}, priv: {}, extra: {}, extraPriv: {}, history: null, histLoading: false,
   route: {v: 'loading'}, filter: 'all', q: '', firstOrders: true, unsubs: [], privUnsubs: {}, viewUnsubs: [], viewId: null,
-  needSetup: false, settingUp: false, booted: false, micFor: null, stores: {}, storeFilter: 'all', brand: null,
+  needSetup: false, settingUp: false, booted: false, micFor: null, stores: {}, storeFilter: 'all', factories: {}, factoryFilter: 'all', brand: null,
   pushToken: null, pushOn: false, dash: null, dashLoading: false, dashStore: 'all', dashRange: 12,
   actStore: 'all', actWho: 'all', actQ: '', actLimit: 150, fbill: {}, fbUnsub: null, fbFor: null
 };
@@ -568,6 +568,10 @@ const getOrder = id => S.orders[id] || S.extra[id] || null;
 const getPriv = id => S.priv[id] || S.extraPriv[id] || null;
 const uname = uid => (S.users[uid] && S.users[uid].name) || '';
 const myStore = () => (S.me && S.me.storeId) || '';
+const myFactory = () => (S.me && S.me.factoryId) || '';
+/* factories (vendors): each has its own logins and sees only the orders given to it; only Admin / Sub Admin see the list */
+const factoryName = id => (S.factories[id] && S.factories[id].name) || '';
+const factoryList = () => Object.entries(S.factories).filter(([, f]) => f.active !== false).map(([id, f]) => Object.assign({id}, f)).sort((a, b) => (a.at || 0) - (b.at || 0));
 const storeList = () => Object.entries(S.stores).map(([id, s]) => Object.assign({id}, s)).filter(s => s.active !== false).sort((a, b) => (a.at || 0) - (b.at || 0));
 const storeName = id => (S.stores[id] && S.stores[id].name) || '';
 
@@ -590,7 +594,7 @@ function errText(e){
 }
 function handleWriteErr(e){ console.error(e); toast('Could not save — ' + errText(e), 'bad'); }
 function logEntry(type, text, extra){
-  return Object.assign({at: Date.now(), by: S.authUser.uid, name: myName(), role: role(), type, text: text || ''}, extra || {});
+  return Object.assign({at: Date.now(), by: S.authUser.uid, name: myName(), role: role(), type, text: text || ''}, isFactory() ? {fid: myFactory()} : {}, extra || {});
 }
 const logKey = () => 'k' + Date.now() + Math.random().toString(36).slice(2, 6);
 function stamp(o){ o.updatedAt = Date.now(); o.updatedBy = S.authUser.uid; return o; }
@@ -853,6 +857,8 @@ function startData(){
   if (staff()) S.unsubs.push(B.db.watchDoc('config/brand', s => { S.brand = s.exists ? s.data : null; }, () => {}));
   if (staff()) S.unsubs.push(B.db.watchDoc('config/rates', s => { S.rates = s.exists ? s.data : null; if (F && FORMKEY) syncFormVis(); render(); }, () => {}));
   if (isAdmin()) S.unsubs.push(B.db.watchDoc('config/sheet', s => { S.sheetCfg = s.exists ? s.data : null; render(); }, () => {}));
+  if (isAdmin()) S.unsubs.push(B.db.watchQuery('factories', [], list => { S.factories = Object.fromEntries(list.map(x => [x.id, x.data])); render(); }, e => console.error(e)));
+  else if (isFactory() && myFactory()) S.unsubs.push(B.db.watchDoc('factories/' + myFactory(), s => { S.factories = s.exists ? {[myFactory()]: s.data} : {}; render(); }, () => {}));
   if (isAdmin()) S.unsubs.push(B.db.watchDoc('config/archive', s => { S.archive = s.exists ? s.data : null; render(); }, () => {}));
   const onErr = e => { console.error(e); toast('Orders could not be loaded — ' + errText(e), 'bad'); };
   /* two-field queries; while Firebase still builds an index, fall back to one field + filter here */
@@ -864,7 +870,8 @@ function startData(){
     });
   };
   if (isFactory()) {
-    subscribe([['factoryVisible', '==', true], ['status', 'in', ['factory', 'dispatched']]], [[['factoryVisible', '==', true]], x => ['factory', 'dispatched'].includes(x.data.status)]);
+    if (!myFactory()) { S.firstOrders = false; toast('This login has not been linked to a factory yet. Please contact the Admin.', 'bad'); }
+    else subscribe([['factoryVisible', '==', true], ['factoryId', '==', myFactory()], ['status', 'in', ['factory', 'dispatched']]], [[['factoryVisible', '==', true], ['factoryId', '==', myFactory()]], x => ['factory', 'dispatched'].includes(x.data.status)]);
   } else if (isStore()) {
     if (!myStore()) { S.firstOrders = false; toast('You have not been assigned to a store. Please contact the Admin.', 'bad'); }
     else subscribe([['storeId', '==', myStore()], ['status', 'in', ACTIVE]], [[['storeId', '==', myStore()]], x => ACTIVE.includes(x.data.status)]);
@@ -1009,8 +1016,8 @@ function usersWith(r){
 /* who did something, as this viewer may see it: the factory never sees a store person or the office by name — only
    "Deeva Diamonds — <store>"; a store manager never sees the factory person — only "Factory" */
 function deevaLabel(o){ const n = o && (storeName(o.storeId) || o.storeName); return 'Deeva Diamonds' + (n ? ' — ' + n : ''); }
-function whoLabel(name, r, o){
-  if (isFactory()) return r === 'factory' ? (name || 'Factory') : deevaLabel(o);
+function whoLabel(name, r, o, fid){
+  if (isFactory()) return r === 'factory' ? (fid && fid !== myFactory() ? 'Factory' : (name || 'Factory')) : deevaLabel(o);
   if (isStore() && r === 'factory') return 'Factory';
   return (name || '') + (r ? ' (' + (ROLES[r] || r) + ')' : '');
 }
@@ -1021,7 +1028,7 @@ function mediaWho(m, o){
   return m.byName || '';
 }
 /* how a person is shown: store managers carry their store's name */
-function personName(u){ if (!u) return ''; return u.role === 'store' && u.storeId && storeName(u.storeId) ? u.name + ' · ' + storeName(u.storeId) : u.name; }
+function personName(u){ if (!u) return ''; if (u.role === 'factory' && u.factoryId && factoryName(u.factoryId)) return u.name + ' · ' + factoryName(u.factoryId); return u.role === 'store' && u.storeId && storeName(u.storeId) ? u.name + ' · ' + storeName(u.storeId) : u.name; }
 
 /* ---------- home ---------- */
 function homeFilters(){
@@ -1068,7 +1075,7 @@ function orderCard(id, o, p){
   return `<a class="ocard ${needsMe(o) ? 'hot' : ''}" href="#/o/${esc(id)}">
     <div class="oc-top"><span class="ono">${esc(o.no)}</span>${o.priority === 'urgent' ? '<span class="pill bad">Urgent</span>' : ''}${flag}${statusPill(o)}</div>
     ${name ? `<div class="oc-name">${esc(name)}</div>` : ''}
-    <div class="oc-item">${esc(itemLine(o))}</div>${(isAdmin() || isFactory()) && storeList().length > 1 ? `<div class="small muted">🏬 ${esc(storeName(o.storeId) || o.storeName || '')}</div>` : ''}
+    <div class="oc-item">${esc(itemLine(o))}</div>${(isAdmin() || isFactory()) && storeList().length > 1 ? `<div class="small muted">🏬 ${esc(storeName(o.storeId) || o.storeName || '')}</div>` : ''}${isAdmin() && o.factoryVisible && o.factoryId ? `<div class="small muted">🏭 ${esc(factoryName(o.factoryId))}</div>` : ''}
     <div class="oc-foot">${stage}${day && o.status !== 'cancelled' ? `<span class="small muted">${label} ${esc(fmtDay(day))}</span>${o.status === 'delivered' ? '' : dueChip(day, done)}` : ''}</div>
   </a>`;
 }
@@ -1077,7 +1084,8 @@ function renderHome(){
   if (!fl.some(f => f[0] === S.filter)) S.filter = 'all';
   const stores = storeList();
   const multi = (isAdmin() || isFactory()) && stores.length > 1;
-  const inStore = o => !multi || S.storeFilter === 'all' || o.storeId === S.storeFilter;
+  const facs = isAdmin() ? factoryList() : [];
+  const inStore = o => (!multi || S.storeFilter === 'all' || o.storeId === S.storeFilter) && (facs.length < 2 || S.factoryFilter === 'all' || o.factoryId === S.factoryFilter);
   const all = Object.entries(S.orders).filter(([, o]) => inStore(o));
   const q = S.q.trim().toLowerCase();
   const match = (id, o) => {
@@ -1097,6 +1105,7 @@ function renderHome(){
     h += `<div class="banner" style="${fresh ? 'background:var(--card);border-color:var(--line)' : ''}"><span class="grow small">📈 ${fresh ? 'Today’s rate: ' + esc(ratesLine()) : (S.rates ? 'The rate on file is from ' + esc(fmtDay(S.rates.day)) + ' — today’s rate has not been entered yet' : 'Today’s gold rate has not been set')}</span><button class="btn sm ${fresh ? '' : 'primary'}" data-act="rates-open">${fresh ? 'Change' : 'Set'}</button></div>`;
   }
   if (multi) h += `<div class="filters">` + [['all', 'All stores']].concat(stores.map(s => [s.id, s.name])).map(x => `<button class="fchip ${S.storeFilter === x[0] ? 'on' : ''}" data-act="store-filter" data-v="${esc(x[0])}">🏬 ${esc(x[1])}</button>`).join('') + `</div>`;
+  if (facs.length > 1) h += `<div class="filters">` + [['all', 'All factories']].concat(facs.map(f => [f.id, f.name])).map(x => `<button class="fchip ${S.factoryFilter === x[0] ? 'on' : ''}" data-act="factory-filter" data-v="${esc(x[0])}">🏭 ${esc(x[1])}</button>`).join('') + `</div>`;
   h += `<div class="filters">` + fl.map(f => {
     const c = all.filter(([, o]) => f[2](o)).length;
     const alert = (f[0] === 'late' || f[0] === 'query' || f[0] === 'review' || f[0] === 'new' || f[0] === 'cad') && c > 0;
@@ -1142,10 +1151,11 @@ function renderPast(){
 async function loadHistory(){
   S.histLoading = true; render();
   try {
-    const filters = isFactory() ? [['factoryVisible', '==', true], ['status', 'in', ['received', 'delivered', 'cancelled']]] : [['status', 'in', ['delivered', 'cancelled']]];
+    if (isFactory() && !myFactory()) { S.history = []; S.histAt = Date.now(); S.histLoading = false; render(); return; }
+    const filters = isFactory() ? [['factoryVisible', '==', true], ['factoryId', '==', myFactory()], ['status', 'in', ['received', 'delivered', 'cancelled']]] : [['status', 'in', ['delivered', 'cancelled']]];
     let list;
     const done = isFactory() ? ['received', 'delivered', 'cancelled'] : ['delivered', 'cancelled'];
-    const one = isFactory() ? [['factoryVisible', '==', true]] : isStore() ? [['storeId', '==', myStore()]] : null;
+    const one = isFactory() ? [['factoryVisible', '==', true], ['factoryId', '==', myFactory()]] : isStore() ? [['storeId', '==', myStore()]] : null;
     try { list = await B.db.getQuery('orders', one ? one.concat([['status', 'in', done]]) : filters); }
     catch (e) {
       if (!one || !/failed-precondition/.test((e && e.code) || '')) throw e;
@@ -1198,10 +1208,11 @@ function stepsHtml(o){
 const LOGICON = {schedule:'📅', created:'📝', edited:'✏️', query:'❓', reply:'💬', approved:'✅', stage:'🔧', note:'🗒️', cad_ok:'👍', cad_change:'↩️', factory_seen:'👀', dispatched:'🚚', received:'🏬', delivered:'🎁', cancelled:'✖️', reopened:'↺', payment:'💰', price:'₹', media:'📎'};
 function timelineHtml(o, p){
   let items = Object.values(o.log || {}).concat(Object.values((p && p.log) || {}).map(x => Object.assign({priv: true}, x)));
-  if (isFactory()) items = items.filter(x => !['query','reply','created','price','payment'].includes(x.type) && (!o.approvedAt || x.at >= o.approvedAt));
+  if (isFactory()) items = items.filter(x => !['query','reply','created','price','payment'].includes(x.type) && (!o.approvedAt || x.at >= o.approvedAt) && !(x.fid && x.fid !== myFactory()));
+  if (!isAdmin()) items = items.filter(x => x.type !== 'factory_change');
   items.sort((a, b) => (b.at || 0) - (a.at || 0));
   if (!items.length) return '<p class="muted small">Nothing yet.</p>';
-  return `<ul class="tl">` + items.map(x => `<li><span class="ic">${LOGICON[x.type] || '•'}</span><div class="tx">${x.priv ? '<span class="lock">🔒</span> ' : ''}${esc(x.text)}<small>${esc(whoLabel(x.name, x.role, o))} · ${esc(fmtWhen(x.at))}</small></div></li>`).join('') + `</ul>`;
+  return `<ul class="tl">` + items.map(x => `<li><span class="ic">${LOGICON[x.type] || '•'}</span><div class="tx">${x.priv ? '<span class="lock">🔒</span> ' : ''}${esc(x.text)}<small>${esc(whoLabel(x.name, x.role, o, x.fid))} · ${esc(fmtWhen(x.at))}</small></div></li>`).join('') + `</ul>`;
 }
 function canEdit(o){ return (isAdmin() && !['delivered','cancelled'].includes(o.status)) || (isStore() && ['review','query'].includes(o.status)); }
 function renderOrder(id){
@@ -1220,6 +1231,7 @@ function renderOrder(id){
   if (!isFactory() && o.deliveryDay) dues.push(['Client delivery', o.deliveryDay, (o.delivered && o.delivered.at) || null]);
   if (o.factoryDue) dues.push(['Factory due (dispatch)', o.factoryDue, dispatchedAt(o) || null]);
   if (dues.length) h += `<div class="dues">` + dues.map(d => `<div class="due"><small>${esc(d[0])}</small><b>${esc(fmtDay(d[1]))}</b>${o.status === 'cancelled' ? '' : dueChip(d[1], d[2])}</div>`).join('') + `</div>`;
+  if (isAdmin() && o.factoryVisible) h += `<div class="sub">🏭 ${esc(factoryName(o.factoryId) || 'No factory chosen')}${o.status === 'factory' ? ' <button class="btn sm" data-act="fac-change" style="margin-left:6px;padding:3px 10px;background:transparent;color:var(--cream);border-color:rgba(231,177,80,.55)">Change factory</button>' : ''}</div>`;
   if (staff() && ['review', 'query', 'factory', 'dispatched', 'received'].includes(o.status)) h += `<button class="btn sm" data-act="sched-open" style="margin-top:10px;background:transparent;color:var(--cream);border-color:rgba(231,177,80,.55)">📅 Change date / priority</button>`;
   h += `</div>`;
 
@@ -1335,7 +1347,7 @@ function priceBlock(o, p){
   return h + `</div>`;
 }
 function pingBtns(id, o, toRole){
-  return usersWith(toRole).filter(u => u.phone && u.uid !== S.authUser.uid).map(u =>
+  return usersWith(toRole).filter(u => u.phone && u.uid !== S.authUser.uid && (toRole !== 'factory' || u.factoryId === o.factoryId)).map(u =>
     `<a class="btn sm wa" target="_blank" rel="noopener" href="${esc(waLink(u.phone, pingText(id, o, toRole)))}">WhatsApp: ${esc(u.name)}</a>`).join('');
 }
 function pingText(id, o, toRole){
@@ -1405,7 +1417,11 @@ function sheetApprove(id){
   const o = getOrder(id);
   const def = o.deliveryDay ? addDays(o.deliveryDay, -3) : addDays(today(), 12);
   const fd = def < today() ? today() : def;
+  const facs = factoryList();
+  if (!facs.length) return toast('Please add a factory first (Team › Factories).', 'bad');
+  const pre = facs.length === 1 ? facs[0].id : (o.factoryId || '');
   openSheet('Approve and send to factory', `
+    <div class="lbl">Which factory? <span class="req">*</span></div><div class="chips" id="ap-fac" style="margin-bottom:12px">${facs.map(f => `<button type="button" class="chip ${pre === f.id ? 'on' : ''}" data-act="pick1" data-g="ap-fac" data-v="${esc(f.id)}">🏭 ${esc(f.name)}</button>`).join('')}</div>
     <div class="fld"><label for="ap-due">Factory dispatch due date <span class="req">*</span></label><input class="in" type="date" id="ap-due" value="${fd}" min="${today()}">
       <div class="hint">Client delivery: ${esc(fmtDay(o.deliveryDay))}. The factory will see this date, and its day counter will run from it.</div></div>
     <label class="check"><input type="checkbox" id="ap-cad" checked><span><b>CAD approval required</b><br><span class="small muted">The factory will share the CAD; casting begins only after it is approved.</span></span></label>
@@ -1414,19 +1430,38 @@ function sheetApprove(id){
 }
 async function doApprove(){
   const id = S.sheet.id, o = getOrder(id);
+  const fid = (($('#ap-fac .chip.on') || {}).dataset || {}).v || '';
+  if (!fid) return toast('Please choose the factory.', 'bad');
   const due = $('#ap-due').value; if (!due) return toast('Please enter the factory due date.', 'bad');
   const cad = $('#ap-cad').checked, note = $('#ap-note').value.trim();
   const now = Date.now();
   const ok = await write('orders/' + id, stamp({
-    status: 'factory', factoryVisible: true, stage: 'new', stageAt: {new: now}, approvedAt: now, approvedBy: myName(),
+    status: 'factory', factoryVisible: true, factoryId: fid, stage: 'new', stageAt: {new: now}, approvedAt: now, approvedBy: myName(),
     factoryDue: due, cadRequired: cad, factoryNote: note, factoryAck: true, query: {open: false},
     log: {[logKey()]: logEntry('approved', 'Approved and sent to the factory. Factory due: ' + fmtDay(due) + (cad ? ' · CAD approval required' : '') + (note ? '\nNote: ' + note : ''))}
   }));
   if (!ok) return;
-  const f = usersWith('factory').filter(u => u.phone);
+  const f = usersWith('factory').filter(u => u.phone && u.factoryId === fid);
   if (f.length) {
-    openSheet('Notify the factory', `<p>The order is now in the factory’s app. You may also notify them on WhatsApp:</p><div class="btns">${pingBtns(id, Object.assign({}, o, {factoryDue: due}), 'factory')}</div><button class="btn big" style="margin-top:10px" data-act="sheet-close">Done</button>`, {id});
-  } else { closeSheet(); toast('Approved — the order has been sent to the factory.'); }
+    openSheet('Notify ' + factoryName(fid), `<p>The order is now in ${esc(factoryName(fid))}’s app. You may also notify them on WhatsApp:</p><div class="btns">${pingBtns(id, Object.assign({}, o, {factoryDue: due, factoryId: fid}), 'factory')}</div><button class="btn big" style="margin-top:10px" data-act="sheet-close">Done</button>`, {id});
+  } else { closeSheet(); toast('Approved — the order has been sent to ' + factoryName(fid) + '.'); }
+}
+function sheetFactoryChange(id){
+  const o = getOrder(id), facs = factoryList().filter(f => f.id !== o.factoryId);
+  if (!facs.length) return toast('There is no other factory. Add one under Team › Factories.', 'bad');
+  openSheet('Move ' + o.no + ' to another factory', `<p class="small muted" style="margin-top:-6px">Now with: <b>${esc(factoryName(o.factoryId) || '—')}</b>. The order disappears from that factory’s app and starts again as a new order in the factory you choose. The store is not told.</p>
+    <div class="lbl">New factory <span class="req">*</span></div><div class="chips" id="fc-fac" style="margin-bottom:12px">${facs.map(f => `<button type="button" class="chip" data-act="pick1" data-g="fc-fac" data-v="${esc(f.id)}">🏭 ${esc(f.name)}</button>`).join('')}</div>
+    <div class="fld"><label for="fc-why">Reason (for the Admin record)</label>${textArea('fc-why', 'e.g. The first factory cannot meet the date', '')}</div>
+    <button class="btn primary big" data-act="fac-change-do">Move the order</button>`, {id});
+}
+async function doFactoryChange(){
+  const id = S.sheet.id, o = getOrder(id);
+  const fid = (($('#fc-fac .chip.on') || {}).dataset || {}).v || '';
+  if (!fid) return toast('Please choose the new factory.', 'bad');
+  const why = $('#fc-why').value.trim(), now = Date.now();
+  const ok = await write('orders/' + id, stamp({factoryId: fid, stage: 'new', stageAt: {new: now}, factoryAck: true,
+    log: {[logKey()]: logEntry('factory_change', 'Moved from ' + (factoryName(o.factoryId) || '—') + ' to ' + factoryName(fid) + (why ? '\n' + why : ''))}}));
+  if (ok) { closeSheet(); toast(o.no + ' is now with ' + factoryName(fid) + '.'); }
 }
 function sheetQuery(id){
   openSheet('Send query to the store', `<p class="small muted" style="margin-top:-6px">Describe what is missing or unclear.</p>
@@ -1711,7 +1746,7 @@ async function doDispatch(){
   if (items.length) { upd.media = {}; items.forEach(m => { const x = Object.assign({}, m); delete x.id; upd.media[m.id] = x; }); }
   const bill = {orderNo: o.no, goldMode: v.mode, purity: o.spec && o.spec.purity || '', netWt: r3(v.net), touch: v.touch, fine: r3(v.fine), goldRate: v.grate, goldAmt: Math.round(v.goldAmt * 100) / 100,
     lines: v.lines.map(l => ({kind: l.kind, n: l.n, type: l.type, size: l.size || '', shape: l.shape || '', color: l.color || '', clarity: l.clarity || '', ct: l.ct, pcs: l.pcs, rate: l.rate, amt: l.amt})), labourRate: v.lrate, labour: Math.round(v.labour * 100) / 100, other: v.other,
-    total: Math.round(v.total * 100) / 100, at: now, by: S.authUser.uid, byName: myName()};
+    total: Math.round(v.total * 100) / 100, at: now, by: S.authUser.uid, byName: myName(), factoryId: o.factoryId || '', factoryName: factoryName(o.factoryId)};
   const ok = await batch([{op: 'update', path: 'orders/' + id, data: stamp(upd)}, {op: 'set', path: 'orders/' + id + '/factory/bill', data: bill}]);
   if (ok) {
     S.fbill[id] = bill;
@@ -2016,7 +2051,7 @@ function factoryBillHtml(o, bill){
   <div style="padding:14px 26px 18px">
     <div style="display:flex;gap:18px;padding-bottom:10px;border-bottom:1px solid ${LINE}">
       <div style="flex:1;min-width:0">${lab('Bill to')}<div style="font-weight:700;font-size:14.5px">${esc(deevaLabel(o))}</div><div style="color:${MUTE}">${esc(st.address || '')}</div></div>
-      <div style="flex:1;min-width:0;text-align:right">${lab('Prepared by')}<div style="font-weight:700;font-size:14.5px">${esc(bill.byName || 'Factory')}</div><div style="color:${MUTE}">${esc([d.mode, d.ref ? 'Ref: ' + d.ref : ''].filter(Boolean).join(' · '))}</div></div>
+      <div style="flex:1;min-width:0;text-align:right">${lab('From')}<div style="font-weight:700;font-size:14.5px">${esc(bill.factoryName || factoryName(o.factoryId) || 'Factory')}</div><div style="color:${MUTE}">${esc(String(bill.byName || '').split(' · ')[0])}</div><div style="color:${MUTE}">${esc([d.mode, d.ref ? 'Ref: ' + d.ref : ''].filter(Boolean).join(' · '))}</div></div>
     </div>
     <div style="padding:10px 0;border-bottom:1px solid ${LINE}">${lab('Item')}
       <div style="font-weight:700;font-size:14.5px">${esc(item)}</div>
@@ -2867,17 +2902,23 @@ function renderTeam(){
   h += `<div class="card"><h3>🏬 Stores <button class="btn sm tag" data-act="store-new">＋ New Store</button></h3>` +
     (stores.length ? stores.map(s => { const m = mgr(s.id); return `<div class="urow"><span class="av">🏬</span><div class="nm"><b>${esc(s.name)}</b><small>${esc([s.city, s.address].filter(Boolean).join(' · '))}<br>Manager: ${m ? esc(m.name) + ' (' + esc(m.loginId) + ')' : '<span style="color:var(--bad)">Not assigned</span>'}</small></div><button class="btn sm" data-act="store-edit" data-sid="${esc(s.id)}">Change</button></div>`; }).join('') : '<p class="muted small">No stores yet.</p>') +
     `<p class="small muted" style="margin:8px 0 0">Each store has a single manager who can create orders. A manager sees only their own store’s orders.</p></div>`;
+  const facs = factoryList();
+  const facUsers = fid => list.filter(u => u.active && u.role === 'factory' && u.factoryId === fid);
+  h += `<div class="card" id="fac-card"><h3>🏭 Factories <button class="btn sm tag" data-act="fac-new">＋ New Factory</button></h3>` +
+    (facs.length ? facs.map(f => { const us = facUsers(f.id); return `<div class="urow"><span class="av">🏭</span><div class="nm"><b>${esc(f.name)}</b><small>${esc([f.contact, f.city, f.phone ? '📱 ' + f.phone : ''].filter(Boolean).join(' · '))}<br>Logins: ${us.length ? us.map(u => esc(u.name) + ' (' + esc(u.loginId) + ')').join(', ') : '<span style="color:var(--bad)">none yet</span>'}</small></div><button class="btn sm" data-act="fac-edit" data-fid="${esc(f.id)}">Change</button></div>`; }).join('') : '<p class="muted small">No factories yet.</p>') +
+    `<p class="small muted" style="margin:8px 0 0">Each factory has its own logins and sees only the orders you send to it — never another factory’s orders, the client, the price or the store’s staff. You choose the factory when approving an order.</p></div>`;
   h += `<div class="card"><h3>Add a team member</h3>
     <div class="err" id="u-err" hidden></div>
     <div class="fld"><label for="u-name">Name</label><input class="in" id="u-name" placeholder="e.g. Nishant"></div>
     <div class="lbl">Role</div><div class="chips" id="u-role" style="margin-bottom:6px">${[['store','Store manager'],['subadmin','Sub Admin (approvals, full access)'],['factory','Factory']].concat(isOwner() ? [['admin','Admin']] : []).map((r, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="u-role" data-v="${r[0]}">${r[1]}</button>`).join('')}</div>
+    <div id="u-fac-wrap" hidden><div class="lbl">Which factory?</div><div class="chips" id="u-fac" style="margin-bottom:6px">${facs.length ? facs.map((f, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="u-fac" data-v="${esc(f.id)}">${esc(f.name)}</button>`).join('') : '<span class="small muted">Add a factory first (above).</span>'}</div></div>
     <div id="u-store-wrap"><div class="lbl">Which store?</div><div class="chips" id="u-store" style="margin-bottom:6px">${stores.map((s, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="u-store" data-v="${esc(s.id)}">${esc(s.name)}</button>`).join('')}</div></div>
     <p class="small muted" style="margin:0 0 12px">Store manager: creates and views their own store’s orders, including prices and payments. Sub Admin: approves orders and has full access to all stores, the dashboard and activity (but cannot change the Admin’s account). Factory: sees product details, photos, videos and voice notes, and updates the stage — never prices or client details.</p>
     <div class="two"><div class="fld"><label for="u-lid">Login ID</label><input class="in" id="u-lid" autocapitalize="none" placeholder="nishant"></div>
     <div class="fld"><label for="u-pw">Password</label><input class="in" id="u-pw" placeholder="At least 6"></div></div>
     <div class="fld"><label for="u-phone">WhatsApp number</label><input class="in" id="u-phone" type="tel" inputmode="numeric" placeholder="10 digits"></div>
     <button class="btn primary big" data-act="u-add" id="u-add">Create login</button></div>`;
-  h += `<div class="card"><h3>All members</h3>` + list.map(u => `<div class="urow ${u.active ? '' : 'off'}"><span class="av">${esc(initial(u.name))}</span><div class="nm"><b>${esc(u.name)} ${u.uid === S.authUser.uid ? '<span class="pill gold">You</span>' : ''}</b><small>${esc(ROLES[u.role] || u.role)}${u.role === 'store' && u.storeId ? ' · ' + esc(storeName(u.storeId)) : ''} · ID: ${esc(u.loginId || '')}${u.phone ? ' · 📱 ' + esc(u.phone) : ''}${u.active ? '' : ' · Disabled'}</small></div>
+  h += `<div class="card"><h3>All members</h3>` + list.map(u => `<div class="urow ${u.active ? '' : 'off'}"><span class="av">${esc(initial(u.name))}</span><div class="nm"><b>${esc(u.name)} ${u.uid === S.authUser.uid ? '<span class="pill gold">You</span>' : ''}</b><small>${esc(ROLES[u.role] || u.role)}${u.role === 'store' && u.storeId ? ' · ' + esc(storeName(u.storeId)) : ''}${u.role === 'factory' ? ' · ' + (u.factoryId && factoryName(u.factoryId) ? esc(factoryName(u.factoryId)) : '<span style="color:var(--bad)">no factory</span>') : ''} · ID: ${esc(u.loginId || '')}${u.phone ? ' · 📱 ' + esc(u.phone) : ''}${u.active ? '' : ' · Disabled'}</small></div>
     ${u.uid !== S.authUser.uid && u.active && (isOwner() || u.role !== 'admin') ? `<button class="btn sm" data-act="u-menu" data-uid="${esc(u.uid)}">⋯</button>` : ''}</div>`).join('') + `</div>`;
   h += `<div class="card"><h3>📈 Today’s Rate <button class="btn sm tag" data-act="rates-open">Set</button></h3><p class="small muted" style="margin:0">${S.rates ? esc(ratesLine()) + ' · ' + esc(fmtDay(S.rates.day)) : 'Not set yet.'}</p></div>`;
   const b = S.brand || {};
@@ -2886,6 +2927,7 @@ function renderTeam(){
   patch($('#view'), h);
   const roleOn = ($('#u-role .chip.on') || {dataset: {}}).dataset.v;
   const w = $('#u-store-wrap'); if (w) w.hidden = roleOn !== 'store';
+  const wf = $('#u-fac-wrap'); if (wf) wf.hidden = roleOn !== 'factory';
 }
 /* Google Sheet copy of every order: the server writes it (functions/sheet.js); here the Admin links the sheet */
 const sheetRobot = () => ((window.DO_CONFIG || {}).messagingSenderId || 'PROJECT-NUMBER') + '-compute@developer.gserviceaccount.com';
@@ -2930,6 +2972,22 @@ async function syncSheet(){
   const ok = await write('config/sheet', {syncReq: now, status: {ok: true, working: true, msg: 'Waiting for the server to copy all orders…', at: now}});
   if (ok) toast('All orders are being copied to the sheet again.');
 }
+function sheetFactory(fid){
+  const f = fid ? S.factories[fid] : {};
+  openSheet(fid ? 'Edit Factory' : 'New Factory', `<div class="fld"><label for="fc-name">Factory name</label><input class="in" id="fc-name" value="${esc(f.name || '')}" placeholder="e.g. KK Diamonds"></div>
+    <div class="two"><div class="fld"><label for="fc-contact">Contact person</label><input class="in" id="fc-contact" value="${esc(f.contact || '')}"></div><div class="fld"><label for="fc-phone">Phone</label><input class="in" id="fc-phone" inputmode="numeric" value="${esc(f.phone || '')}"></div></div>
+    <div class="two"><div class="fld"><label for="fc-city">City</label><input class="in" id="fc-city" value="${esc(f.city || '')}"></div><div></div></div>
+    <p class="small muted" style="margin-top:0">Only the Admin and Sub Admin see this list. The store never sees which factory makes an order.</p>
+    <button class="btn primary big" data-act="fac-save">Save</button>`, {fid: fid || ''});
+}
+async function saveFactory(){
+  const fid = S.sheet.fid, name = $('#fc-name').value.trim();
+  if (!name) return toast('Please enter the factory name.', 'bad');
+  if (factoryList().some(f => f.id !== fid && f.name.toLowerCase() === name.toLowerCase())) return toast('A factory with this name already exists.', 'bad');
+  const d = {name, contact: $('#fc-contact').value.trim(), phone: phone10($('#fc-phone').value), city: $('#fc-city').value.trim()};
+  const ok = fid ? await write('factories/' + fid, d) : await commit(B.db.set('factories/' + B.db.newId('factories'), Object.assign(d, {active: true, at: Date.now()})));
+  if (ok) { closeSheet(); toast('Factory saved.'); }
+}
 function sheetStore(sid){
   const s = sid ? S.stores[sid] : {};
   openSheet(sid ? 'Edit Store' : 'New Store', `<div class="fld"><label for="st-name">Store name</label><input class="in" id="st-name" value="${esc(s.name || '')}" placeholder="Deeva Diamonds — Bilaspur"></div>
@@ -2962,7 +3020,9 @@ async function addUser(){
   const name = $('#u-name').value.trim(), lid = $('#u-lid').value.trim().toLowerCase(), pw = $('#u-pw').value, phone = phone10($('#u-phone').value);
   const roleV = (($('#u-role .chip.on') || {}).dataset || {}).v || 'store';
   const storeId = roleV === 'store' ? ((($('#u-store .chip.on') || {}).dataset || {}).v || '') : '';
+  const factoryId = roleV === 'factory' ? ((($('#u-fac .chip.on') || {}).dataset || {}).v || '') : '';
   if (!name) return showErr('#u-err', 'Please enter a name.');
+  if (roleV === 'factory' && !factoryId) return showErr('#u-err', 'Select a factory (create one first with “New Factory” above).');
   if (roleV === 'store' && !storeId) return showErr('#u-err', 'Select a store (create one first with “New Store” above).');
   if (roleV === 'store') {
     const ex = Object.values(S.users).find(u => u.active && u.role === 'store' && u.storeId === storeId);
@@ -2979,7 +3039,7 @@ async function addUser(){
     const uid = await B.auth.createUser(email, pw);
     await B.db.batch([
       {op: 'set', path: 'logins/' + lid, data: {email, uid, at: Date.now()}},
-      {op: 'set', path: 'users/' + uid, data: {name, role: roleV, storeId, loginId: lid, phone, active: true, at: Date.now(), by: S.authUser.uid}}
+      {op: 'set', path: 'users/' + uid, data: Object.assign({name, role: roleV, storeId, loginId: lid, phone, active: true, at: Date.now(), by: S.authUser.uid}, factoryId ? {factoryId} : {})}
     ]);
     ['#u-name', '#u-lid', '#u-pw', '#u-phone'].forEach(s => { $(s).value = ''; });
     showCred(name, lid, pw, phone);
@@ -2997,6 +3057,7 @@ function userMenu(uid){
   const u = S.users[uid];
   openSheet(u.name, `<div class="fld"><label for="um-phone">WhatsApp number</label><div class="inp"><input id="um-phone" type="tel" inputmode="numeric" value="${esc(u.phone || '')}"><button class="btn sm" data-act="um-phone" style="flex:none">Save</button></div></div>
     <div class="lbl">Role</div><div class="chips" id="um-role" style="margin-bottom:8px">${Object.entries(ROLES).filter(([k]) => isOwner() || k !== 'admin').map(([k, v]) => `<button class="chip ${u.role === k ? 'on' : ''}" data-act="um-role" data-v="${k}">${v}</button>`).join('')}</div>
+    ${u.role === 'factory' ? `<div class="lbl">Factory</div><div class="chips" style="margin-bottom:8px">${factoryList().map(f => `<button class="chip ${u.factoryId === f.id ? 'on' : ''}" data-act="um-factory" data-v="${esc(f.id)}">${esc(f.name)}</button>`).join('')}</div>` : ''}
     ${u.role === 'store' ? `<div class="lbl">Store</div><div class="chips" style="margin-bottom:8px">${storeList().map(s => `<button class="chip ${u.storeId === s.id ? 'on' : ''}" data-act="um-store" data-v="${esc(s.id)}">${esc(s.name)}</button>`).join('')}</div>` : ''}
     <div class="btns" style="margin-top:14px"><button class="btn" data-act="um-newpw">🔑 Set a new password</button><button class="btn danger" data-act="um-off">Disable login</button></div>`, {uid});
 }
@@ -3160,6 +3221,20 @@ function renderDash(){
       return `<tr><td>${esc(s.name)}</td><td>${rp.length}</td><td>${money(rp.reduce((a, r) => a + total(r), 0))}</td><td>${ad}</td><td>${ot}</td><td>${rs.filter(r => ACTIVE.includes(r.o.status)).length}</td></tr>`;
     }).join('') + `</table></div></div>`;
   }
+  /* factory-wise (vendors) */
+  const facs = factoryList();
+  if (facs.length) {
+    const rowsF = S.dash.rows.filter(r => r.o.status !== 'cancelled' && r.o.factoryVisible);
+    h += `<div class="card"><h3>Factory-wise</h3><div class="scroll-x"><table class="tbl"><tr><th>Factory</th><th>With factory now</th><th>Late now</th><th>Dispatched</th><th>Average days</th><th>On time</th></tr>` + facs.map(f => {
+      const rs = rowsF.filter(r => r.o.factoryId === f.id);
+      const now2 = rs.filter(r => r.o.status === 'factory'), late = now2.filter(r => r.o.factoryDue && diffDays(r.o.factoryDue, today()) < 0);
+      const mk = rs.filter(r => r.o.dispatch && r.o.dispatch.at && r.o.approvedAt && inRange(r.o.dispatch.at));
+      const ad = mk.length ? (mk.reduce((a, r) => a + days(r), 0) / mk.length).toFixed(1) : '—';
+      const withDue = mk.filter(r => r.o.factoryDue);
+      const ot = withDue.length ? Math.round(withDue.filter(r => dayOf(new Date(r.o.dispatch.at)) <= r.o.factoryDue).length / withDue.length * 100) + '%' : '—';
+      return `<tr><td>${esc(f.name)}</td><td>${now2.length}</td><td>${late.length ? '<b style="color:var(--bad)">' + late.length + '</b>' : 0}</td><td>${mk.length}</td><td>${ad}</td><td>${ot}</td></tr>`;
+    }).join('') + `</table></div></div>`;
+  }
   /* what sells */
   const types = {}; period.forEach(r => { const t = jtypeOf(r.o.spec); if (t) types[t] = (types[t] || 0) + 1; });
   const tl = Object.entries(types).sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -3259,7 +3334,7 @@ document.addEventListener('click', e => {
     case 'pick1': {
       e.preventDefault();
       $$('#' + t.dataset.g + ' .chip').forEach(c => c.classList.toggle('on', c === t));
-      if (t.dataset.g === 'u-role') { const w = $('#u-store-wrap'); if (w) w.hidden = t.dataset.v !== 'store'; }
+      if (t.dataset.g === 'u-role') { const w = $('#u-store-wrap'); if (w) w.hidden = t.dataset.v !== 'store'; const wf = $('#u-fac-wrap'); if (wf) wf.hidden = t.dataset.v !== 'factory'; }
       if (S.sheet && ['dp-mode', 'py-mode', 'sc-pri'].includes(t.dataset.g)) S.sheet.mode = t.dataset.v;
       if (S.sheet && S.sheet.lines && /^dp-/.test(t.dataset.g)) dpUpdate();
       break;
@@ -3341,6 +3416,13 @@ document.addEventListener('click', e => {
     case 'um-newpw-do': userNewPwDo(); break;
     case 'um-store': { const v = t.dataset.v, uid = S.sheet.uid; const ex = Object.entries(S.users).find(([k, u]) => k !== uid && u.active && u.role === 'store' && u.storeId === v); if (ex) { toast(storeName(v) + ' already has ' + ex[1].name + ' as its manager.', 'bad'); break; } write('users/' + uid, {storeId: v}).then(ok => { if (ok) { closeSheet(); toast('Store changed.'); } }); break; }
     case 'store-new': sheetStore(''); break;
+    case 'fac-new': sheetFactory(''); break;
+    case 'fac-edit': sheetFactory(t.dataset.fid); break;
+    case 'fac-save': saveFactory(); break;
+    case 'fac-change': sheetFactoryChange(oid); break;
+    case 'fac-change-do': doFactoryChange(); break;
+    case 'factory-filter': S.factoryFilter = t.dataset.v; render(); break;
+    case 'um-factory': { const v = t.dataset.v, uid = S.sheet.uid; write('users/' + uid, {factoryId: v}).then(ok => { if (ok) { closeSheet(); toast(S.users[uid].name + ' now works for ' + factoryName(v) + '.'); } }); break; }
     case 'store-edit': sheetStore(t.dataset.sid); break;
     case 'store-save': saveStore(); break;
     case 'brand-sign': sheetBrandSign(); break;

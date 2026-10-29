@@ -6,7 +6,7 @@ name: Firebase (rules + notifications)
 on:
   push:
     branches: [main]
-    paths: ['firestore.rules', 'storage.rules', 'firestore.indexes.json', 'firebase.json', '.firebaserc', 'functions/**', 'tools/storage-selftest.js', 'tools/sheet-status.js', '.github/workflows/firebase.yml']
+    paths: ['firestore.rules', 'storage.rules', 'firestore.indexes.json', 'firebase.json', '.firebaserc', 'functions/**', 'tools/storage-selftest.js', 'tools/sheet-status.js', 'tools/migrate-factories.js', '.github/workflows/firebase.yml']
   workflow_dispatch:
 
 concurrency:
@@ -111,6 +111,10 @@ jobs:
         if: steps.cred.outputs.ok == 'true'
         working-directory: functions
         run: npm install --no-audit --no-fund
+
+      - name: Data update (factories)
+        if: steps.cred.outputs.ok == 'true'
+        run: echo "::notice title=Data update::$(NODE_PATH=functions/node_modules node tools/migrate-factories.js 2>&1 | tail -n 1)"
 
       - name: Upload self-test (photo into Storage, as the app does)
         if: steps.cred.outputs.ok == 'true'

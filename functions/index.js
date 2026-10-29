@@ -4,7 +4,8 @@
  *   new order            → admin + sub admin (all "admins" below means both)
  *   query sent           → that store's manager
  *   query answered       → admins
- *   approved             → factory + that store
+ *   approved             → the chosen factory (only its own logins) + that store
+ *   moved to another factory → the new factory
  *   CAD sent for approval→ admins + that store
  *   CAD OK / change      → factory
  *   order changed after approval / date or priority changed → factory
@@ -49,10 +50,15 @@ async function tokensFor(who, exceptUid) {
     snap.forEach(d => { if (d.data().role === 'store') out.set(d.id, d); });
   }
   const docs = [...out.values()].filter(d => d.data().uid !== exceptUid);
-  /* ignore tokens of people whose login was closed */
+  /* ignore tokens of people whose login was closed; a factory login hears only about its own factory's orders */
   const uids = [...new Set(docs.map(d => d.data().uid))];
   const live = new Set();
-  await Promise.all(uids.map(async u => { const s = await db.doc('users/' + u).get(); if (s.exists && s.data().active) live.add(u); }));
+  await Promise.all(uids.map(async u => {
+    const s = await db.doc('users/' + u).get(); if (!s.exists || !s.data().active) return;
+    const x = s.data();
+    if (x.role === 'factory' && (!who.factoryId || x.factoryId !== who.factoryId)) return;
+    live.add(u);
+  }));
   return docs.filter(d => live.has(d.data().uid));
 }
 
@@ -119,23 +125,27 @@ exports.orderUpdated = onDocumentUpdated('orders/{orderId}', async (event) => {
   const newLogs = Object.entries(a.log || {}).filter(([k]) => !(b.log || {})[k]).map(([, v]) => v);
   /* Google Sheet: dispatched → a new row in "Dispatched"; any other status change refreshes the order's row in "All orders" */
   if (b.status !== a.status) await toSheet(id, a, a.status === 'dispatched' ? 'dispatched' : 'status');
+  if (a.factoryVisible && b.factoryVisible && a.factoryId && b.factoryId && b.factoryId !== a.factoryId) {
+    await toSheet(id, a, 'status');
+    return notify({ roles: ['factory'], factoryId: a.factoryId }, by, '📦 New order · ' + no, itemLine(a) + (a.factoryDue ? ' · dispatch by ' + a.factoryDue : ''), id);
+  }
 
   if (b.status !== a.status) {
     if (a.status === 'query') return notify({ storeId: store }, by, '❓ Query · ' + no, short((a.query && a.query.text) || '', 200), id);
     if (b.status === 'query' && a.status === 'review') return notify({ roles: ['admin', 'subadmin'] }, by, '💬 Query answered · ' + no, short((a.query && a.query.reply) || '', 200), id);
-    if (a.status === 'factory' && !b.factoryVisible) return notify({ roles: ['factory'], storeId: store }, by, '✅ Approved · ' + no, itemLine(a) + (a.factoryDue ? ' · dispatch by ' + a.factoryDue : ''), id);
+    if (a.status === 'factory' && !b.factoryVisible) return notify({ roles: ['factory'], storeId: store, factoryId: a.factoryId }, by, '✅ Approved · ' + no, itemLine(a) + (a.factoryDue ? ' · dispatch by ' + a.factoryDue : ''), id);
     if (a.status === 'dispatched') return notify({ roles: ['admin', 'subadmin'], storeId: store }, by, '🚚 Dispatched · ' + no, itemLine(a) + ' — dispatched by the factory', id);
     if (a.status === 'delivered') return notify({ roles: ['admin', 'subadmin'] }, by, '🎁 Delivered · ' + no, itemLine(a), id);
     if (a.status === 'received') return;
   }
   if (b.stage !== a.stage) {
     if (a.stage === 'cad_approval') return notify({ roles: ['admin', 'subadmin'], storeId: store }, by, 'CAD approval required · ' + no, 'The factory has shared the CAD — please review and approve', id);
-    if (b.stage === 'cad_approval' && a.stage === 'casting') return notify({ roles: ['factory'] }, by, '👍 CAD approved · ' + no, 'Please begin casting', id);
-    if (b.stage === 'cad_approval' && a.stage === 'cad') return notify({ roles: ['factory'] }, by, '↩️ CAD changes requested · ' + no, short((a.cad && a.cad.note) || '', 200), id);
+    if (b.stage === 'cad_approval' && a.stage === 'casting') return notify({ roles: ['factory'], factoryId: a.factoryId }, by, '👍 CAD approved · ' + no, 'Please begin casting', id);
+    if (b.stage === 'cad_approval' && a.stage === 'cad') return notify({ roles: ['factory'], factoryId: a.factoryId }, by, '↩️ CAD changes requested · ' + no, short((a.cad && a.cad.note) || '', 200), id);
   }
   if (a.factoryVisible && b.factoryAck !== false && a.factoryAck === false) {
     const e = newLogs.find(l => l.type === 'edited');
-    return notify({ roles: ['factory'] }, by, '⚠️ Order changed · ' + no, short((e && e.text) || 'Please review the details', 220), id);
+    return notify({ roles: ['factory'], factoryId: a.factoryId }, by, '⚠️ Order changed · ' + no, short((e && e.text) || 'Please review the details', 220), id);
   }
   for (const l of newLogs.filter(x => (x.type === 'note' || x.type === 'media' || x.type === 'stage') && x.role === 'factory')) {
     if (l.type === 'stage' && !/\n/.test(l.text || '')) continue; /* plain stage moves stay quiet */
@@ -143,6 +153,6 @@ exports.orderUpdated = onDocumentUpdated('orders/{orderId}', async (event) => {
   }
   for (const l of newLogs.filter(x => (x.type === 'note' || x.type === 'media') && x.role !== 'factory' && a.factoryVisible)) {
     /* the factory never sees who at the store or office wrote it — only the store */
-    await notify({ roles: ['factory'] }, by, 'Note · ' + no + ' · Deeva Diamonds' + (a.storeName ? ' — ' + a.storeName : ''), short(l.text, 200), id);
+    await notify({ roles: ['factory'], factoryId: a.factoryId }, by, 'Note · ' + no + ' · Deeva Diamonds' + (a.storeName ? ' — ' + a.storeName : ''), short(l.text, 200), id);
   }
 });

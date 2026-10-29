@@ -36,13 +36,26 @@ mandatory fields, and the same record goes to Darshana/Admin for approval and th
 | `admin` | Mayuresh (first setup, real Gmail) — main admin | everything, all stores, every activity: approve → factory, query, edit any time, CAD OK, stage, dispatch, cancel/reopen, payments, final bill, Dashboard, Team, Stores, Deeva receipt signature |
 | `subadmin` | Darshana — approvals are mainly hers | same as admin (`isAdmin()` = admin or subadmin), but cannot change an `admin` account or login, and cannot create admins |
 | `store` | one manager per store (`users.storeId`), e.g. Nishant = VIP Road Raipur | only HIS store's orders: create, see client + price + payments, edit until approved, reply to queries, CAD OK / change, date/priority change any time, notes & media, payments + receipt photo, final bill, "Store पर मिल गया", Delivered, receipt PDF |
-| `factory` | one factory person | only approved orders (`factoryVisible == true`), only product details + factory media + voice notes. **Never** client name/phone, price, payments, internal notes, queries. Updates stage, adds photos (CAD), dispatches (time punch) |
+| `factory` | logins of one factory (`users.factoryId`; several factories = vendors, e.g. KK Diamonds, Vermil) | only approved orders given to ITS factory (`factoryVisible == true && factoryId == myFactory()`), only product details + factory media + voice notes. **Never** client name/phone, price, payments, internal notes, queries. Updates stage, adds photos (CAD), dispatches (time punch) |
 
 **Who sees whom (owner's rule, 27 Oct 2026):** the factory never sees a store person or the office by name or phone —
 only "Deeva Diamonds — <store>" and the store address (`whoLabel()`, `mediaWho()`, `deevaLabel()`); a store manager never
 sees the factory person — only "Factory" — and never the factory bill. `users` reads: Admin / Sub Admin all; store manager
 only `role in [admin, subadmin]` (WhatsApp buttons); factory only its own doc. Media items carry `role` of the uploader.
 Today's rate (`config/rates`) may be set by Admin, Sub Admin or a store manager (📈 banner on the Orders page).
+
+## Factories (vendors, owner's request 29 Oct 2026)
+
+`factories/{fid}` = `{name, contact, phone, city, active, at}` — Admin / Sub Admin create and edit them (Team › 🏭 Factories);
+a factory login reads only its own factory doc; the store never reads factories. Each factory login has `users.factoryId`.
+Admin / Sub Admin choose the factory when approving (`sheetApprove` chips, required) → `orders.factoryId`; "Change factory"
+on the order header (status `factory` only) moves it: stage back to `new`, log type `factory_change` (Admin-only in the
+timeline), the new factory is notified. A factory sees only its orders (rules + query `factoryVisible == true,
+factoryId == me, status in …`, composite index), never another factory's log entries (`fid` on factory log entries),
+never the client, price or store staff. Notifications to factories go only to that factory's logins (`tokensFor` checks
+`users.factoryId`). Admin Orders list: 🏭 factory on each card + factory filter chips; Dashboard: Factory-wise table;
+Google Sheet: "Factory" column at the end of All orders and Dispatched. `tools/migrate-factories.js` (run by firebase.yml)
+links factory logins / approved orders without `factoryId` to the first factory (creates "Factory 1" if none).
 
 ## Stores
 
