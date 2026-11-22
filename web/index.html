@@ -956,6 +956,13 @@ function itemLine(o){
   if (s.size && s.size !== 'NA') parts.push(s.size);
   return parts.filter(Boolean).join(' · ');
 }
+/* the order's target weight goes with the product details (the factory needs it for the CAD); the prices stay private */
+function specWeights(calc, spec){
+  const g = num(calc && calc.grossWt);
+  if (!(g > 0)) return {grossWt: '', netWt: ''};
+  const v = calcValues(calc, spec);
+  return {grossWt: (Math.round(g * 1000) / 1000).toFixed(3), netWt: (Math.round(v.net * 1000) / 1000).toFixed(3)};
+}
 function specRows(s){
   s = s || {};
   const R = [];
@@ -965,6 +972,7 @@ function specRows(s){
   add('Metal colour', s.metalColor, ['spec.metalColor']);
   add('Purity', s.purity, ['spec.purity']);
   add('Size / Length', s.size, ['spec.size']);
+  if (num(s.grossWt) > 0) add('Weight (as ordered)', 'Gross ' + fmtG(s.grossWt) + (num(s.netWt) > 0 ? ' · Net gold ' + fmtG(s.netWt) : ''), ['spec.grossWt', 'spec.netWt']);
   let anyDia = false;
   DIA_N.forEach(n => {
     const p = 'dia' + n, ct = s[p + 'Ct'];
@@ -1297,8 +1305,9 @@ function slipBlock(o, bill){
   const estC = est && est.calc ? calcValues(est.calc, s) : null;
   const tr = (l, ord, act, diff) => `<tr><td>${l}</td><td>${ord}</td><td style="${diff ? 'color:var(--warn);font-weight:700' : 'font-weight:600'}">${act}</td></tr>`;
   let h = `<div class="card"><h3>📋 Dispatch Slip <span class="tag muted small">${esc(fmtWhen(d.at))}</span></h3><div class="scroll-x"><table class="tbl"><tr><th></th><th>As ordered</th><th>Actual</th></tr>`;
-  h += tr('Gross weight', estC && estC.gross ? fmtG(estC.gross) : '—', fmtG(a.grossWt), estC && estC.gross && Math.abs(estC.gross - a.grossWt) > 0.0005);
-  h += tr('<b>Net gold</b>', estC && estC.gross ? fmtG(estC.net) : '—', '<b>' + fmtG(a.netWt) + '</b>', estC && estC.gross && Math.abs(estC.net - a.netWt) > 0.0005);
+  const oG = estC && estC.gross ? estC.gross : num(s.grossWt), oN = estC && estC.gross ? estC.net : num(s.netWt);
+  h += tr('Gross weight', oG ? fmtG(oG) : '—', fmtG(a.grossWt), oG && Math.abs(oG - a.grossWt) > 0.0005);
+  h += tr('<b>Net gold</b>', oN ? fmtG(oN) : '—', '<b>' + fmtG(a.netWt) + '</b>', oN && Math.abs(oN - a.netWt) > 0.0005);
   (a.dias || []).forEach(x => {
     const extra = x.n > 4, oc = extra ? '' : s['dia' + x.n + 'Ct'], op = extra ? '' : s['dia' + x.n + 'Pcs'];
     const parts = x.parts || [];
@@ -2791,6 +2800,7 @@ async function submitNew(){
     if (!spec.qty) spec.qty = '1';
     if (!F.gem2On) GEM_KEYS.forEach(k => { spec['gem2' + k] = ''; });
     DIA_N.forEach(n => { if (n > F.diaCount) DIA_KEYS.forEach(k => { spec['dia' + n + k] = ''; }); });
+    Object.assign(spec, specWeights(F.price.calc, spec));
     const ym = ymOf(new Date());
     const priv = {
       storeId,
@@ -2853,6 +2863,15 @@ async function saveEdit(){
     const line = label + ': ' + (ov || '—') + ' → ' + (nv || '—');
     if (where === 'main') { setp(main, path, val); mainTxt.push(line); edited[path.replace(/\./g, '_')] = Date.now(); }
     else { setp(priv, path, val); privTxt.push(line); }
+  }
+  /* the order's weight (shared with the factory) */
+  if (staff()) {
+    const w = specWeights(F.price.calc, F.spec), ow = o.spec || {};
+    if (w.grossWt !== (ow.grossWt || '') || w.netWt !== (ow.netWt || '')) {
+      setp(main, 'spec.grossWt', w.grossWt); setp(main, 'spec.netWt', w.netWt);
+      mainTxt.push('Weight: gross ' + (ow.grossWt ? fmtG(ow.grossWt) : '—') + ' → ' + (w.grossWt ? fmtG(w.grossWt) : '—') + ', net gold ' + (ow.netWt ? fmtG(ow.netWt) : '—') + ' → ' + (w.netWt ? fmtG(w.netWt) : '—'));
+      edited.spec_grossWt = edited.spec_netWt = Date.now();
+    }
   }
   /* calculation */
   const calcSig = c => c && num(c.final) ? CALC_IN.map(k => String(num(c[k]))).join('|') + '|' + Math.round(num(c.final)) : '';

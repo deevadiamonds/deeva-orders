@@ -44,6 +44,12 @@ sees the factory person — only "Factory" — and never the factory bill. `user
 only `role in [admin, subadmin]` (WhatsApp buttons); factory only its own doc. Media items carry `role` of the uploader.
 Today's rate (`config/rates`) may be set by Admin, Sub Admin or a store manager (📈 banner on the Orders page).
 
+**Order weight for the factory (22 Nov 2026):** the gross weight typed in the estimate and its net gold (`specWeights()`) are
+saved on the order as `spec.grossWt` / `spec.netWt` (3 decimals) at placement and on edits, so the factory sees
+"Weight (as ordered)" in the product details (for the CAD) and in the slip's "As ordered" column — never any price.
+A weight change after approval alerts the factory like any product change. `tools/migrate-weights.js` (firebase.yml)
+filled older orders from their private estimate.
+
 ## Factories (vendors, owner's request 29 Oct 2026)
 
 `factories/{fid}` = `{name, contact, phone, city, active, at}` — Admin / Sub Admin create and edit them (Team › 🏭 Factories);

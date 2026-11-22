@@ -320,6 +320,10 @@ async def main():
         assert 'Deeva Diamonds — Raipur' in t and 'Currency Tower' in t, 'factory sees the store and its address'
         for need in ['VVS2', 'Round — Portuguese cut', 'Diamond 1 · Solitaire', 'Diamond 2 · Side', 'Ruby', 'Centre stone set slightly higher', 'Client reference', 'Light weight chain', '🏬']:
             assert need in t, need
+        sp = (await order_doc())['spec']
+        assert float(sp['grossWt']) > 0 and 0 < float(sp['netWt']) < float(sp['grossWt']), sp
+        assert 'Weight (as ordered)' in t and ('Gross ' + format(float(sp['grossWt']), '.3f')) in t and ('Net gold ' + format(float(sp['netWt']), '.3f')) in t, 'factory sees the target weight'
+        print('ok  factory sees the order weight for the CAD: gross ' + sp['grossWt'] + ' g, net gold ' + sp['netWt'] + ' g')
         assert await pg.eval_on_selector_all('.gal audio', 'l => l.length') >= 1
         await shot('05-order-factory-new')
         print('ok  factory sees 4Cs, gemstone, photo + its voice note; no client / price / receipt')

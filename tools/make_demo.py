@@ -77,6 +77,7 @@ window.__demoPdfPreview = true;
     const rate = {'14KT': 8544, '18KT': 10950, '22KT': 13400}[item[2]] || 8544;
     const calc = calcOf({grossWt: String(item[8]), goldRate: String(rate), making: '2000', d1Rate: '22000', d2Rate: '15000', d3Rate: '', d4Rate: '', gemAmt: spec.gem1Type ? '1500' : '', other: '', gst: '3'}, spec);
     const est = Math.round(calc.final / 100) * 100;
+    spec.grossWt = calc.gross.toFixed(3); spec.netWt = (Math.round(calc.net * 1000) / 1000).toFixed(3);
     const approvedAt = createdAt + (0.4 + rr()) * D;
     const makeDays = 7 + Math.round(rr() * 9);
     const o = Object.assign({no: nn.no, ym: nn.ym, seq: nn.seq, orderDay: dayAt(createdAt), createdAt, createdBy: store === 's_rpr' ? 'u_nishant' : 'u_ravi', createdByName: store === 's_rpr' ? 'Nishant · Raipur' : 'Ravi (demo) · Bilaspur (demo)', storeId: store, storeName: F.store['stores/' + store].name,
