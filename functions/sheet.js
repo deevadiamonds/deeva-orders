@@ -8,12 +8,21 @@
  *   Orders placed  — a row is added when an order is placed
  *   Dispatched     — a row is added when the factory dispatches
  * Saving the link (or "Sync all again") rewrites the three tabs from the database.
+ *
+ * 💎 Deeva Shine Plan (savings plan) — three more tabs in the same sheet, rewritten whenever a member or payment changes,
+ * and every morning (so "overdue" stays current):
+ *   Shine members  — one row per member: details, nominee, installment, paid, next due, overdue, maturity, redemption
+ *   Shine payments — one row per payment: receipt no., date, amount, mode, paid by / from, reference, cancelled, proof photo
+ *   Shine dues     — every installment of every active member, by date: paid on / overdue / upcoming
  */
 const { GoogleAuth } = require('google-auth-library');
 const admin = require('firebase-admin');
+const shine = require('./shine');
 
 const API = 'https://sheets.googleapis.com/v4/spreadsheets/';
 const T_ALL = 'All orders', T_PLACED = 'Orders placed', T_DISP = 'Dispatched';
+const T_SM = 'Shine members', T_SP = 'Shine payments', T_SD = 'Shine dues';
+const TABS = [T_ALL, T_PLACED, T_DISP, T_SM, T_SP, T_SD];
 const STATUS = { review: 'Awaiting approval', query: 'Query', factory: 'In factory', dispatched: 'Dispatched', received: 'At store', delivered: 'Delivered', cancelled: 'Cancelled' };
 
 const ORDER_HEAD = ['Order no.', 'Order date', 'Store', 'Taken by', 'Client', 'Phone', 'City', 'Item', 'Purity', 'Metal colour', 'Size', 'Diamonds (as ordered)',
@@ -24,7 +33,14 @@ const DISP_HEAD = ['Dispatched on', 'Actual gross g', 'Actual net g', 'Diamonds 
 const HEAD = {
   [T_ALL]: ['Status'].concat(ORDER_HEAD, DISP_HEAD, ['Factory']),
   [T_PLACED]: ORDER_HEAD,
-  [T_DISP]: ['Order no.', 'Store', 'Client', 'Item', 'Purity', 'Agreed amount ₹'].concat(DISP_HEAD, ['Open in app', 'Factory'])
+  [T_DISP]: ['Order no.', 'Store', 'Client', 'Item', 'Purity', 'Agreed amount ₹'].concat(DISP_HEAD, ['Open in app', 'Factory']),
+  [T_SM]: ['Account no.', 'Status', 'Store', 'Member', 'Mobile', 'Alternate mobile', 'Email', 'Address', 'City', 'Date of birth', 'Anniversary', 'Photo ID',
+    'Nominee', 'Monthly installment ₹', 'First installment date', 'Paid ₹', 'Installments paid (of 10½)', 'Balance ₹', 'Next due date', 'Next due ₹', 'Overdue',
+    'Maturity moved (months)', 'Maturity', 'Redeem by', 'Payments', 'Last payment', 'Last reminder', 'Redeemed on', 'Deeva contribution ₹', 'Plan value ₹',
+    'Jewellery bill no.', 'Jewellery taken', 'Enrolled on', 'Enrolled by', 'Closed / note', 'Open in app'],
+  [T_SP]: ['Receipt no.', 'Date', 'Account no.', 'Member', 'Mobile', 'Store', 'Amount ₹', 'Mode', 'Paid by / from', 'Reference', 'Note', 'Received by', 'Entered at',
+    'Status', 'Receipt sent on WhatsApp', 'Proof photo', 'Proof link', 'Open in app'],
+  [T_SD]: ['Due date', 'Account no.', 'Member', 'Mobile', 'Store', 'Installment', 'Amount ₹', 'Status', 'Paid on', 'Open in app']
 };
 
 const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
@@ -117,7 +133,7 @@ async function ensureTabs(id) {
   const meta = await api('GET', API + id + '?fields=sheets.properties(sheetId,title)');
   const have = new Map((meta.sheets || []).map(s => [s.properties.title, s.properties.sheetId]));
   const req = [];
-  const want = [T_ALL, T_PLACED, T_DISP];
+  const want = TABS;
   if (!have.has(T_ALL) && have.has('Sheet1') && have.size === 1) {   /* a new blank sheet: its first tab becomes "All orders" */
     req.push({ updateSheetProperties: { properties: { sheetId: have.get('Sheet1'), title: T_ALL, gridProperties: { frozenRowCount: 1 } }, fields: 'title,gridProperties.frozenRowCount' } });
     have.set(T_ALL, have.get('Sheet1')); have.delete('Sheet1');
@@ -230,6 +246,7 @@ async function rebuild(db, appUrl) {
     await mark(db, false, e.message, { working: false });
     throw e;
   }
+  await shineSync(db, appUrl, 'all orders copied too');
 }
 
 /* an order deleted permanently by the Admin: remove its rows from all three tabs */
@@ -251,4 +268,72 @@ async function removeOrder(db, no) {
   }
 }
 
-module.exports = { onOrder, rebuild, removeOrder, robotEmail, placedRow, dispatchedRow, allRow, HEAD, T_ALL, T_PLACED, T_DISP };
+/* ---------- 💎 Deeva Shine Plan ---------- */
+const PSTATUS = { active: 'Active', redeemed: 'Redeemed', closed: 'Closed' };
+const inst11 = it => (it.half ? '11 (half)' : String(it.n));
+const nm = s => String(s || '').split(' · ')[0];
+function countText(c) { return c.full ? '10½' : String(c.n) + (c.paid - c.n * c.inst > 0.5 ? ' + ₹' + Math.round(c.paid - c.n * c.inst) : ''); }
+function memberRow(id, p, c, t, appUrl) {
+  const cu = p.cust || {}, r = p.redeem || {}, pays = c.pays;
+  const last = pays.length ? pays[pays.length - 1] : null;
+  const overdue = p.status === 'active' && c.overdue ? 'Yes — since ' + day(c.due) + (c.lateNow ? ' (' + c.lateNow + ' month' + (c.lateNow > 1 ? 's' : '') + ' late)' : '') : '';
+  return [txt(p.acct), PSTATUS[p.status] || p.status, txt(p.storeName), txt(p.name), txt(p.phone), txt(cu.alt), txt(cu.email), txt(cu.address), txt(cu.city), day(cu.dob), day(cu.anniv),
+    txt([cu.idType, cu.idNo].filter(Boolean).join(' · ')), txt([cu.nominee, cu.nomRel ? '(' + cu.nomRel + ')' : '', cu.nomPhone].filter(Boolean).join(' ')),
+    n(p.inst), day(p.startDay), r2(c.paid), countText(c), r2(Math.max(0, c.total - c.paid)),
+    p.status === 'active' && c.next ? day(c.due) : '', p.status === 'active' && c.next ? r2(c.left) : '', overdue, c.moved || '',
+    day(c.maturity), day(c.redeemBy), pays.length, last ? day(last.day) : '', p.remind && p.remind.at ? when(p.remind.at) + ' · ' + nm(p.remind.name) : '',
+    r.day ? day(r.day) : '', r.day ? r2(r.bonus) : '', r.day ? r2(r.value) : '', txt(r.billNo || ''), txt(r.item || ''),
+    when(p.createdAt), txt(nm(p.createdByName)), txt([p.close && p.close.reason ? 'Closed: ' + p.close.reason : '', cu.note].filter(Boolean).join('\n')), appUrl + '#/crm/m/' + id];
+}
+function paymentRows(id, p, appUrl) {
+  return Object.entries(p.payments || {}).map(([k, x]) => {
+    const v = (p.void || {})[k];
+    return { day: x.day || '', at: x.at || 0, proof: !!x.proofUrl, row: [txt(x.rno), day(x.day), txt(p.acct), txt(p.name), txt(p.phone), txt(p.storeName), n(x.amount), txt(x.mode), txt(x.from),
+      txt(x.ref), txt(x.note), txt(nm(x.name)), when(x.at), v ? txt('Cancelled — ' + (v.reason || '') + ' (' + nm(v.name) + ', ' + when(v.at) + ')') : 'OK',
+      (p.sent || {})[k] ? when(p.sent[k]) : '', image(x.proofUrl), x.proofUrl || '', appUrl + '#/crm/m/' + id] };
+  });
+}
+function dueRows(id, p, c, t, appUrl) {
+  if (p.status !== 'active') return [];
+  return c.items.map(it => {
+    const st = it.paid ? 'Paid' : it.part > 0 ? 'Part paid ₹' + Math.round(it.part) : it.due < t ? 'Overdue' : it.due === t ? 'Due today' : 'Upcoming';
+    return { due: it.due, acct: p.acct || '', row: [day(it.due), txt(p.acct), txt(p.name), txt(p.phone), txt(p.storeName), inst11(it), r2(it.amt), st, it.paid ? day(it.paidDay) : '', appUrl + '#/crm/m/' + id] };
+  });
+}
+/* write a whole tab: the new rows first, then clear whatever is left below (never an empty moment) */
+async function writeTab(id, tab, rows) {
+  if (rows.length) await api('PUT', API + id + '/values/' + q(tab) + '!A2?valueInputOption=USER_ENTERED', { values: rows });
+  await api('POST', API + id + '/values/' + q(tab) + '!A' + (rows.length + 2) + ':AZ:clear', {});
+}
+async function shineSync(db, appUrl, why) {
+  const c = await config(db); if (!c) return;
+  try {
+    const tabs = await ensureTabs(c.id);
+    const t = shine.todayIST();
+    const snap = await db.collection('shinePlans').get();
+    const plans = snap.docs.map(d => ({ id: d.id, p: d.data() })).sort((a, b) => (a.p.createdAt || 0) - (b.p.createdAt || 0));
+    const members = [], pays = [], dues = [];
+    for (const { id, p } of plans) {
+      const calc = shine.shineCalc(p, t);
+      members.push(memberRow(id, p, calc, t, appUrl));
+      pays.push(...paymentRows(id, p, appUrl));
+      dues.push(...dueRows(id, p, calc, t, appUrl));
+    }
+    pays.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : a.at - b.at));
+    dues.sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : a.acct < b.acct ? -1 : 1));
+    await writeTab(c.id, T_SM, members);
+    await writeTab(c.id, T_SP, pays.map(x => x.row));
+    await writeTab(c.id, T_SD, dues.map(x => x.row));
+    /* payment rows with a proof photo are taller, the others normal */
+    const sid = tabs.ids.get(T_SP), reqs = [];
+    if (pays.length) reqs.push({ updateDimensionProperties: { range: { sheetId: sid, dimension: 'ROWS', startIndex: 1, endIndex: pays.length + 1 }, properties: { pixelSize: 21 }, fields: 'pixelSize' } });
+    pays.forEach((x, i) => { if (x.proof) reqs.push({ updateDimensionProperties: { range: { sheetId: sid, dimension: 'ROWS', startIndex: i + 1, endIndex: i + 2 }, properties: { pixelSize: 90 }, fields: 'pixelSize' } }); });
+    if (reqs.length) await api('POST', API + c.id + ':batchUpdate', { requests: reqs });
+    await mark(db, true, 'Shine Plan copied — ' + plans.length + ' members, ' + pays.length + ' payments' + (why ? ' (' + why + ')' : ''));
+  } catch (e) {
+    await mark(db, false, 'Shine Plan: ' + e.message);
+    throw e;
+  }
+}
+
+module.exports = { onOrder, rebuild, removeOrder, shineSync, robotEmail, placedRow, dispatchedRow, allRow, HEAD, T_ALL, T_PLACED, T_DISP, T_SM, T_SP, T_SD };

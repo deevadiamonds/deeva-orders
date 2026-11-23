@@ -3006,10 +3006,10 @@ function renderTeam(){
 const sheetRobot = () => ((window.DO_CONFIG || {}).messagingSenderId || 'PROJECT-NUMBER') + '-compute@developer.gserviceaccount.com';
 function sheetCardHtml(){
   const c = S.sheetCfg || {}, st = c.status || {};
-  let h = `<div class="card" id="sheet-card"><h3>📊 Google Sheet backup</h3><p class="small muted" style="margin-top:-4px">Every order is copied to your Google Sheet automatically — when it is placed (details, estimate, photo) and again when it is dispatched (actual weights, diamonds by size, factory bill). Tabs: <b>All orders</b> (both together) · <b>Orders placed</b> · <b>Dispatched</b>.</p>`;
+  let h = `<div class="card" id="sheet-card"><h3>📊 Google Sheet backup</h3><p class="small muted" style="margin-top:-4px">Every order is copied to your Google Sheet automatically — when it is placed (details, estimate, photo) and again when it is dispatched (actual weights, diamonds by size, factory bill). Tabs: <b>All orders</b> (both together) · <b>Orders placed</b> · <b>Dispatched</b>. The 💎 Shine Plan goes to the same sheet: <b>Shine members</b> · <b>Shine payments</b> · <b>Shine dues</b> (updated with every payment and every morning).</p>`;
   if (c.id && !S.sheetEdit) {
     h += `<p class="small" style="margin:0 0 10px">${st.working ? '⏳ ' : st.ok === false ? '<span style="color:var(--bad)">⚠️ ' : '✓ '}${esc(st.msg || 'Linked')}${st.ok === false ? '</span>' : ''}${st.at ? ' · ' + esc(fmtWhen(st.at)) : ''}</p>
-      <div class="btns"><a class="btn sm primary" href="${esc(c.url || 'https://docs.google.com/spreadsheets/d/' + c.id)}" target="_blank" rel="noopener">Open the sheet</a><button class="btn sm" data-act="sheet-sync">Copy all orders again</button><button class="btn sm" data-act="sheet-edit">Change</button></div>`;
+      <div class="btns"><a class="btn sm primary" href="${esc(c.url || 'https://docs.google.com/spreadsheets/d/' + c.id)}" target="_blank" rel="noopener">Open the sheet</a><button class="btn sm" data-act="sheet-sync">Copy everything again</button><button class="btn sm" data-act="sheet-edit">Change</button></div>`;
     if (st.ok === false) h += `<p class="small muted" style="margin:10px 0 0">The sheet must be shared (Editor) with <b style="word-break:break-all">${esc(sheetRobot())}</b> <button class="btn sm" data-act="copy" data-t="${esc(sheetRobot())}">Copy</button></p>`;
   } else {
     h += `<ol class="small" style="margin:0 0 10px;padding-left:20px;line-height:1.55">
@@ -3042,8 +3042,8 @@ async function saveSheet(){
 }
 async function syncSheet(){
   const now = Date.now();
-  const ok = await write('config/sheet', {syncReq: now, status: {ok: true, working: true, msg: 'Waiting for the server to copy all orders…', at: now}});
-  if (ok) toast('All orders are being copied to the sheet again.');
+  const ok = await write('config/sheet', {syncReq: now, status: {ok: true, working: true, msg: 'Waiting for the server to copy all orders and the Shine Plan…', at: now}});
+  if (ok) toast('All orders and the Shine Plan are being copied to the sheet again.');
 }
 function sheetFactory(fid){
   const f = fid ? S.factories[fid] : {};
@@ -4060,6 +4060,12 @@ function renderShineSettings(){
   h += `<div class="card"><h3>🔔 Reminders</h3><div class="two"><div class="fld"><label for="tpl-before">Remind how many days before the due date</label><input class="in" id="tpl-before" inputmode="numeric" value="${esc(cfg.remindBefore != null ? cfg.remindBefore : 2)}"></div>
     <div class="fld"><label for="tpl-gap">Overdue: remind again every … days</label><input class="in" id="tpl-gap" inputmode="numeric" value="${esc(cfg.remindGap || 3)}"></div></div></div>
     <div class="btns"><button class="btn primary big" data-act="sp-tpl-save">Save messages</button><button class="btn" data-act="sp-tpl-reset">Back to the standard messages</button></div>`;
+  /* the Google Sheet copy (same sheet as the orders): Shine members · Shine payments · Shine dues */
+  const sc = S.sheetCfg || {}, sst = sc.status || {};
+  h += `<div class="card" style="margin-top:14px"><h3>📊 Google Sheet backup</h3><p class="small muted" style="margin-top:-4px">Every member, payment and installment is copied to your Google Sheet (the same one as the orders) — tabs <b>Shine members</b>, <b>Shine payments</b> and <b>Shine dues</b>. Updated with every change and again every morning.</p>` +
+    (sc.id ? `<p class="small" style="margin:0 0 10px">${sst.working ? '⏳ ' : sst.ok === false ? '<span style="color:var(--bad)">⚠️ ' : '✓ '}${esc(sst.msg || 'Linked')}${sst.ok === false ? '</span>' : ''}${sst.at ? ' · ' + esc(fmtWhen(sst.at)) : ''}</p>
+      <div class="btns"><a class="btn sm primary" href="${esc(sc.url || 'https://docs.google.com/spreadsheets/d/' + sc.id)}" target="_blank" rel="noopener">Open the sheet</a><button class="btn sm" data-act="sheet-sync">Copy everything again</button></div>`
+      : `<p class="small" style="margin:0">No sheet linked yet — link it under <a href="#/team">Team › Google Sheet backup</a>.</p>`) + `</div>`;
   patch($('#view'), h);
 }
 async function spTplSave(reset){

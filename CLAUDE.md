@@ -92,7 +92,14 @@ the factory never sees it (no tab, rules deny, no listener).
   payment, redeemed), `shineDaily` (09:40 IST, Cloud Scheduler: per store "N due today (₹) · N overdue · N due in 2 days ·
   N ready to redeem" → store manager; all stores → admins; link `#/crm`), `shineDeleted` (removes proofs, gives the
   account number back). `notify(..., hash)` takes the link. `firebase.yml` enables `cloudscheduler.googleapis.com`.
-- Not (yet) in the Google Sheet copy; the weekly archive and daily backups include it (whole database + all files).
+- **Google Sheet** (owner's request, 24 Nov 2026 — same sheet as the orders): `sheet.shineSync()` rewrites three tabs from
+  `shinePlans` on every create / update / delete, every morning (`shineDaily`) and on "Copy everything again" (`rebuild`):
+  **Shine members** (one row per member: details, nominee, installment, paid, x of 10½, balance, next due, overdue,
+  months moved, maturity, redeem by, last payment / reminder, redemption, enrolled by), **Shine payments** (receipt no.,
+  date, amount, mode, paid by / from, reference, received by, OK / Cancelled + reason, receipt sent, `=IMAGE()` proof),
+  **Shine dues** (every installment of every active member by date: Paid / Part paid / Overdue / Due today / Upcoming).
+  Rows are written first, then the rest of the tab below is cleared (never empty). Card on Shine Plan › Messages (Admin).
+  The weekly archive and daily backups also include it (whole database + all files).
 
 ## Factories (vendors, owner's request 29 Oct 2026)
 
@@ -180,7 +187,7 @@ extra); a browser downloads it and opens the chat (WhatsApp does not let website
 - Google Sheet: `functions/sheet.js` (called from `orderCreated` / `orderUpdated`, plus `sheetSetup` on `config/sheet`).
   Admin pastes the sheet link under Team › 📊 Google Sheet backup (`config/sheet` = `{id, url, syncReq, status{ok,msg,at,working,count}}`,
   Admin / Sub Admin read only). The owner shares the sheet (Editor) with the functions' account
-  `395857273671-compute@developer.gserviceaccount.com`. Tabs: **All orders** (one row per order: status, details, estimate,
+  `395857273671-compute@developer.gserviceaccount.com`. Tabs (+ the three Shine Plan tabs, see above): **All orders** (one row per order: status, details, estimate,
   `=IMAGE()` photo, then dispatch summary + factory bill), **Orders placed** (row appended at placement), **Dispatched** (row
   appended at dispatch). Any status change refreshes the order's row in All orders (matched on order no. in column B).
   Saving the link / "Copy all orders again" (`syncReq`) rewrites all three tabs. Errors go to `config/sheet.status` and show

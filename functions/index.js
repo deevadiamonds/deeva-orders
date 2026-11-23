@@ -16,6 +16,7 @@
  *   new member           → admins + that store
  *   payment / cancelled payment / redeemed → admins + that store
  *   every morning 9:40 (India) → each store manager: due today, overdue, due in 2 days, ready to redeem; admins: all stores
+ *   every change (and every morning) → Google Sheet tabs Shine members / Shine payments / Shine dues
  * Device tokens: pushTokens/{token} = { uid, role, storeId, platform, at }. The person who made the change is never notified.
  * Client name, phone and price are never put into a notification.
  */
@@ -165,12 +166,15 @@ exports.orderUpdated = onDocumentUpdated('orders/{orderId}', async (event) => {
 
 /* ---------- 💎 Deeva Shine Plan ---------- */
 const memberLink = pid => '#/crm/m/' + pid;
+/* the Google Sheet copy (tabs Shine members / Shine payments / Shine dues) — never blocks a notification */
+const toShineSheet = why => sheet.shineSync(db, APP_URL, why).catch(e => logger.warn('shine sheet', { why, err: e.message }));
 
 exports.shineCreated = onDocumentCreated('shinePlans/{pid}', async (event) => {
   const p = event.data && event.data.data();
   if (!p) return;
   await notify({ roles: ['admin', 'subadmin'], storeId: p.storeId }, p.createdBy, '💎 New Shine Plan member · ' + (p.storeName || ''),
     p.name + ' · ' + shine.inr(p.inst) + ' a month · ' + p.acct + ' · enrolled by ' + String(p.createdByName || '').split(' · ')[0], '', memberLink(event.params.pid));
+  await toShineSheet('new member ' + p.acct);
 });
 
 exports.shineUpdated = onDocumentUpdated('shinePlans/{pid}', async (event) => {
@@ -192,6 +196,7 @@ exports.shineUpdated = onDocumentUpdated('shinePlans/{pid}', async (event) => {
   if (b.status !== 'redeemed' && a.status === 'redeemed' && a.redeem) {
     await notify(who, by, '🎁 Shine Plan redeemed · ' + a.name, a.acct + ' · paid ' + shine.inr(a.redeem.paid) + ' + contribution ' + shine.inr(a.redeem.bonus) + ' = ' + shine.inr(a.redeem.value), '', link);
   }
+  await toShineSheet(a.acct);
 });
 
 /* every morning: who pays today, who is overdue (to each store manager; admins get all stores) */
@@ -208,6 +213,7 @@ exports.shineDaily = onSchedule({ schedule: '40 9 * * *', timeZone: 'Asia/Kolkat
   }
   if (lines.length) await notify({ roles: ['admin', 'subadmin'] }, null, '💎 Shine Plan today', lines.join('\n'), '', '#/crm');
   logger.info('shine daily', { t, stores: lines.length });
+  await toShineSheet('daily');
 });
 
 /* the main Admin deleted a member permanently: remove the payment proofs and give the account number back if it was the latest */
@@ -223,4 +229,5 @@ exports.shineDeleted = onDocumentDeleted({ document: 'shinePlans/{pid}', timeout
     }).catch(e => logger.warn('counter', { err: e.message }));
   }
   logger.info('shine plan deleted', { id, acct: p.acct });
+  await toShineSheet('deleted ' + (p.acct || ''));
 });

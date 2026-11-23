@@ -736,6 +736,11 @@ async def main():
         await pg.fill('#tpl-reminder', 'Namaste {name}, {due_amount} due on {due} — Deeva')
         await pg.click('[data-act="sp-tpl-save"]')
         await pg.wait_for_function("__fake.store['config/shine'] && __fake.store['config/shine'].tpl.reminder.startsWith('Namaste')")
+        sc = await text(); assert 'Shine members' in sc and 'Shine payments' in sc and 'Shine dues' in sc and 'Open the sheet' in sc, sc
+        before = await pg.evaluate("__fake.store['config/sheet'].syncReq")
+        await pg.click('#view [data-act="sheet-sync"]')
+        await pg.wait_for_function("(b) => __fake.store['config/sheet'].syncReq > b", arg=before)
+        print('ok  Shine Plan › Messages: Google Sheet card (Shine members / payments / dues tabs), copy everything again')
         await pg.evaluate("location.hash='#/crm/m/spOver'")
         await pg.wait_for_selector('[data-act="sp-del-open"]')
         await pg.click('[data-act="sp-del-open"]')
