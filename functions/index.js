@@ -12,10 +12,15 @@
  *   factory note / photo → admins + that store
  *   dispatched           → admins + that store
  *   delivered            → admins
+ * Deeva Shine Plan (savings plan; never the factory):
+ *   new member           → admins + that store
+ *   payment / cancelled payment / redeemed → admins + that store
+ *   every morning 9:40 (India) → each store manager: due today, overdue, due in 2 days, ready to redeem; admins: all stores
  * Device tokens: pushTokens/{token} = { uid, role, storeId, platform, at }. The person who made the change is never notified.
  * Client name, phone and price are never put into a notification.
  */
 const { onDocumentCreated, onDocumentUpdated, onDocumentWritten, onDocumentDeleted } = require('firebase-functions/v2/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { setGlobalOptions, logger } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 
@@ -23,6 +28,7 @@ setGlobalOptions({ region: 'asia-south1', maxInstances: 5, memory: '256MiB' });
 admin.initializeApp();
 const db = admin.firestore();
 const sheet = require('./sheet');
+const shine = require('./shine');
 /* the Google Sheet copy never blocks a notification: its errors are written to config/sheet.status for the Admin */
 const toSheet = (id, o, ev) => sheet.onOrder(db, id, o, ev, APP_URL).catch(e => logger.warn('sheet', { id, ev, err: e.message }));
 
@@ -62,10 +68,10 @@ async function tokensFor(who, exceptUid) {
   return docs.filter(d => live.has(d.data().uid));
 }
 
-async function notify(who, exceptUid, title, body, orderId) {
+async function notify(who, exceptUid, title, body, orderId, hash) {
   const docs = await tokensFor(who, exceptUid);
   if (!docs.length) { logger.info('no device tokens', { who, title }); return; }
-  const link = APP_URL + '#/o/' + orderId;
+  const link = APP_URL + (hash || '#/o/' + orderId);
   const res = await admin.messaging().sendEachForMulticast({
     tokens: docs.map(d => d.id),
     notification: { title: short(title, 80), body: short(body, 240) },
@@ -155,4 +161,66 @@ exports.orderUpdated = onDocumentUpdated('orders/{orderId}', async (event) => {
     /* the factory never sees who at the store or office wrote it — only the store */
     await notify({ roles: ['factory'], factoryId: a.factoryId }, by, 'Note · ' + no + ' · Deeva Diamonds' + (a.storeName ? ' — ' + a.storeName : ''), short(l.text, 200), id);
   }
+});
+
+/* ---------- 💎 Deeva Shine Plan ---------- */
+const memberLink = pid => '#/crm/m/' + pid;
+
+exports.shineCreated = onDocumentCreated('shinePlans/{pid}', async (event) => {
+  const p = event.data && event.data.data();
+  if (!p) return;
+  await notify({ roles: ['admin', 'subadmin'], storeId: p.storeId }, p.createdBy, '💎 New Shine Plan member · ' + (p.storeName || ''),
+    p.name + ' · ' + shine.inr(p.inst) + ' a month · ' + p.acct + ' · enrolled by ' + String(p.createdByName || '').split(' · ')[0], '', memberLink(event.params.pid));
+});
+
+exports.shineUpdated = onDocumentUpdated('shinePlans/{pid}', async (event) => {
+  const b = event.data && event.data.before.data();
+  const a = event.data && event.data.after.data();
+  if (!a || !b) return;
+  const who = { roles: ['admin', 'subadmin'], storeId: a.storeId }, by = a.updatedBy, link = memberLink(event.params.pid);
+  const today = shine.todayIST();
+  for (const [k, x] of Object.entries(a.payments || {})) {
+    if ((b.payments || {})[k]) continue;
+    const c = shine.shineCalc(a, today);
+    await notify(who, by, '💰 Shine Plan payment · ' + a.name, shine.inr(x.amount) + ' (' + (x.mode || '') + ') · ' + a.acct + ' · ' + (c.full ? 'full plan paid' : c.n + ' of 10½ paid') + ' · by ' + String(x.name || '').split(' · ')[0], '', link);
+  }
+  for (const [k, v] of Object.entries(a.void || {})) {
+    if ((b.void || {})[k]) continue;
+    const x = (a.payments || {})[k] || {};
+    await notify(who, by, '✖️ Shine Plan payment cancelled · ' + a.name, shine.inr(x.amount) + ' (' + (x.rno || '') + ') — ' + (v.reason || ''), '', link);
+  }
+  if (b.status !== 'redeemed' && a.status === 'redeemed' && a.redeem) {
+    await notify(who, by, '🎁 Shine Plan redeemed · ' + a.name, a.acct + ' · paid ' + shine.inr(a.redeem.paid) + ' + contribution ' + shine.inr(a.redeem.bonus) + ' = ' + shine.inr(a.redeem.value), '', link);
+  }
+});
+
+/* every morning: who pays today, who is overdue (to each store manager; admins get all stores) */
+exports.shineDaily = onSchedule({ schedule: '40 9 * * *', timeZone: 'Asia/Kolkata', timeoutSeconds: 120 }, async () => {
+  const t = shine.todayIST();
+  const snap = await db.collection('shinePlans').where('status', '==', 'active').get();
+  const by = shine.digest(snap.docs.map(d => d.data()), t);
+  const lines = [];
+  for (const [sid, s] of Object.entries(by)) {
+    const txt = shine.digestText(s);
+    if (!txt) continue;
+    lines.push((s.store || 'Store') + ': ' + txt);
+    await notify({ storeId: sid }, null, '💎 Shine Plan today', txt + ' — tap to send reminders', '', '#/crm');
+  }
+  if (lines.length) await notify({ roles: ['admin', 'subadmin'] }, null, '💎 Shine Plan today', lines.join('\n'), '', '#/crm');
+  logger.info('shine daily', { t, stores: lines.length });
+});
+
+/* the main Admin deleted a member permanently: remove the payment proofs and give the account number back if it was the latest */
+exports.shineDeleted = onDocumentDeleted({ document: 'shinePlans/{pid}', timeoutSeconds: 120 }, async (event) => {
+  const id = event.params.pid, p = (event.data && event.data.data()) || {};
+  await admin.storage().bucket().deleteFiles({ prefix: 'shine/' + id + '/' }).catch(e => logger.warn('files', { id, err: e.message }));
+  if (p.ym && /^\d{4}$/.test(p.ym)) {
+    await db.runTransaction(async tx => {
+      const all = await tx.get(db.collection('shinePlans').where('ym', '==', p.ym));
+      const max = all.docs.reduce((m, d) => Math.max(m, Number(d.data().seq) || 0), 0);
+      const ref = db.doc('shineCounters/' + p.ym), cur = await tx.get(ref);
+      if (cur.exists && (cur.data().n || 0) > max) tx.set(ref, { n: max });
+    }).catch(e => logger.warn('counter', { err: e.message }));
+  }
+  logger.info('shine plan deleted', { id, acct: p.acct });
 });

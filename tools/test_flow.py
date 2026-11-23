@@ -6,7 +6,8 @@ Covers: first admin setup (default store), stores + one manager per store, store
 order (mandatory fields, diamond 4Cs, side stones, gemstone, photo + voice note on the photo, video, estimate
 breakdown, deal amount, booked gold rate, advance + receipt photo, signature), admin query -> store reply + edit,
 approve, factory view without client/price, CAD approval, date/priority change alert to factory, dispatch with
-final weight, final bill, payment with receipt, delivered, receipt PDF content, admin dashboard.
+final weight, final bill, payment with receipt, delivered, receipt PDF content, admin dashboard,
+Deeva Shine Plan (enrolment, payments, receipts, reminders, dues calendar, redemption, store isolation, no factory access).
 """
 import asyncio, re, sys, tempfile, pathlib, base64
 from playwright.async_api import async_playwright
@@ -20,6 +21,9 @@ LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.mi
 
 def build_harness():
     src = (ROOT / 'web/index.html').read_text(encoding='utf8')
+    # the Shine Plan schedule exists twice (app + daily notification server): both copies must be identical
+    web_calc = re.search(r'/\* SHINE-CALC-START.*?\*/\n(.*?)/\* SHINE-CALC-END \*/', src, re.S).group(1).strip()
+    assert web_calc in (ROOT / 'functions/shine.js').read_text(encoding='utf8'), 'functions/shine.js shineCalc() differs from web/index.html'
     fake = (ROOT / 'tools/fake-backend.js').read_text(encoding='utf8')
     src = re.sub(r'<!--FIREBASE-SDK-->.*?<!--/FIREBASE-SDK-->', lambda m: '<script>' + fake + '</script>', src, flags=re.S)
     src = src.replace('<link rel="stylesheet" href="https://fonts.googleapis.com', '<link rel="x" href="https://fonts.googleapis.com')
@@ -563,6 +567,187 @@ async def main():
         assert 'u-menu' not in owner_row, 'sub admin must not be able to change the admin'
         print('ok  sub admin cannot change the main admin')
         await logout()
+
+        # ---- 11. 💎 Shine Plan (savings plan CRM): store manager enrols, payments, receipts, reminders; admin tools; factory none
+        import datetime as _dt, calendar as _cal
+        await login('nishant', 'nishant1')
+        assert '💎 Shine Plan' in await pg.inner_text('#tabs')
+        await pg.click('#tabs a[href="#/crm"]')
+        await pg.wait_for_function("document.querySelector('.brand b').innerText === 'Shine Plan' && document.body.classList.contains('crm')")
+        t = await pg.inner_text('#tabs'); assert 'Dues' in t and 'Members' in t and '＋ Enrol' in t and '📦 Orders' in t and 'Messages' not in t, t
+        assert 'No members yet' in await text()
+        await pg.click('#tabs a[href="#/crm/new"]')
+        await pg.wait_for_selector('#spf-phone')
+        await pg.fill('#spf-phone', '98270 12345'); await pg.fill('#spf-name', 'Sunita Agrawal')
+        await pg.fill('#spf-address', 'Shankar Nagar')
+        await pg.click('#spc-idType [data-v="PAN"]'); await pg.fill('#spf-idNo', 'ABCDE1234F')
+        await pg.fill('#spf-nominee', 'Rakesh Agrawal'); await pg.click('#spc-nomRel [data-v="Spouse"]')
+        await pg.click('#spc-inst [data-v="10000"]')
+        sm = await pg.inner_text('#sp-sum'); assert '₹1,05,000' in sm and '₹15,000' in sm and '₹1,20,000' in sm and 'Matures' in sm, sm
+        await pg.fill('#spf-instOther', '7500')
+        assert 'multiples of ₹1,000' in await pg.inner_text('#sp-sum')
+        await pg.fill('#spf-instOther', '')
+        await pg.click('#spc-mode [data-v="UPI"]'); await pg.fill('#spf-ref', 'UPI-7788'); await pg.fill('#spf-from', 'Self — SBI')
+        await pg.set_input_files('#spf-proof input[data-pick="image"]', str(TMP / 'ref.png'))
+        await pg.wait_for_function("document.querySelector('#spf-proof').innerText.includes('✓ Upload')")
+        await pg.click('[data-act="sp-enrol"]')
+        await pg.wait_for_function("document.querySelector('#toasts').innerText.includes('Customer signature')")
+        assert not await pg.evaluate("Object.keys(__fake.store).some(k => k.startsWith('shinePlans/'))")
+        await pg.check('#spf-accepted')
+        box = await pg.query_selector('#sp-sig'); bb = await box.bounding_box()
+        await pg.mouse.move(bb['x'] + 30, bb['y'] + 90); await pg.mouse.down()
+        for i in range(8): await pg.mouse.move(bb['x'] + 40 + i * 25, bb['y'] + 60 + (i % 2) * 40)
+        await pg.mouse.up()
+        await pg.click('[data-act="sp-enrol"]')
+        await pg.wait_for_selector('#sheet [data-act="sp-pdf"][data-kind="enrol"]', timeout=5000)
+        plan = await pg.evaluate("Object.entries(__fake.store).find(([k]) => k.startsWith('shinePlans/'))")
+        pid, pdoc = plan[0].split('/')[1], plan[1]
+        ym = _dt.date.today().strftime('%y%m'); acct = f'SP-{ym}-001'
+        assert pdoc['acct'] == acct and pdoc['inst'] == 10000 and pdoc['storeId'] == raipur and pdoc['phone'] == '9827012345' and pdoc['status'] == 'active', pdoc
+        fp = list(pdoc['payments'].values())[0]
+        assert fp['amount'] == 10000 and fp['rno'] == acct + '/01' and fp['mode'] == 'UPI' and fp['ref'] == 'UPI-7788' and fp['from'] == 'Self — SBI' and fp['proofPath'].startswith('shine/' + pid + '/'), fp
+        assert pdoc['ack']['signData'].startswith('data:image/png') and pdoc['cust']['nominee'] == 'Rakesh Agrawal' and pdoc['cust']['idType'] == 'PAN', pdoc['cust']
+        assert await pg.evaluate("location.hash") == '#/crm/m/' + pid
+        await pg.evaluate("""(libs) => {
+          libs.forEach(src => { if (!document.querySelector('script[data-lib="' + src + '"]')) { const s = document.createElement('script'); s.dataset.lib = src; document.head.appendChild(s); } });
+          window.html2canvas = async (el) => { window.__sp = el.outerHTML; const c = document.createElement('canvas'); c.width = 1120; c.height = 2000; return c; };
+          window.jspdf = {jsPDF: function(o){ this.addImage = () => {}; this.output = () => new Blob(['%PDF'], {type: 'application/pdf'}); }};
+        }""", LIBS)
+        async with pg.expect_download(timeout=8000) as dl:
+            await pg.click('#sheet [data-act="sp-pdf"][data-kind="enrol"][data-wa="1"]')
+        assert (await dl.value).suggested_filename == f'Deeva-Shine-Enrolment-{acct}.pdf'
+        await pg.wait_for_selector('#sheet a.wa[href*="wa.me/919827012345"]', timeout=3000)
+        href = await pg.get_attribute('#sheet a.wa', 'href'); assert 'Welcome%20to%20the%20Deeva%20Shine%20Plan' in href and acct in href, href
+        await close_sheet()
+        ef = await pg.evaluate('window.__sp')
+        for need in ['ENROLMENT FORM', acct, 'Sunita Agrawal', '9827012345', 'Rakesh Agrawal', 'Spouse', 'PAN · ABCDE1234F', '₹10,000', '₹1,05,000', '₹15,000', '₹1,20,000',
+                     'Early redemption', '₹3,000', '₹9,000', 'First installment received', 'UPI-7788', 'Member signature', 'For Deeva Diamonds', 'No cash refund', 'brand of Glittering Diamonds', 'Shankar Nagar']:
+            assert need in ef, need
+        assert ef.count('data:image/png') >= 3, 'seal + member signature + Deeva signature'
+        if SHOTS: (SHOTS / 'shine-enrolment.html').write_text('<base href="file://' + str(ROOT / 'web') + '/">' + ef, encoding='utf8')
+        await pg.wait_for_function("(id) => __fake.store['shinePlans/' + id].sent.enrol > 0", arg=pid)
+        print('ok  Shine Plan: store manager enrols a member (signature, nominee, first installment + proof) → ' + acct + ', enrolment form PDF to WhatsApp')
+        # second payment → receipt to WhatsApp
+        await pg.click('#stickbar [data-act="sp-pay-open"]')
+        assert await pg.input_value('#sp-amt') == '10000'
+        await pg.click('#sp-mode [data-v="Cash"]'); await pg.fill('#sp-from', 'Husband — Rakesh'); await pg.fill('#sp-ref', 'C-11')
+        await pg.click('[data-act="sp-pay-do"]')
+        await pg.wait_for_selector('#sheet [data-act="sp-pdf"][data-kind="receipt"][data-wa="1"]')
+        async with pg.expect_download(timeout=8000) as dl:
+            await pg.click('#sheet [data-act="sp-pdf"][data-kind="receipt"][data-wa="1"]')
+        assert (await dl.value).suggested_filename == f'Deeva-Shine-Receipt-{acct}-02.pdf', (await dl.value).suggested_filename
+        await pg.wait_for_selector('#sheet a.wa[href*="wa.me/919827012345"]', timeout=3000)
+        href = await pg.get_attribute('#sheet a.wa', 'href'); assert 'received%20%E2%82%B910%2C000%20(Cash)' in href and '2%20of%2010%C2%BD' in href, href
+        await close_sheet()
+        rc = await pg.evaluate('window.__sp')
+        for need in ['PAYMENT RECEIPT', acct + '/02', '₹10,000', 'Rupees Ten Thousand only', 'Towards Installment 2', '₹20,000 · 2 of 10½', 'Cash', 'Husband — Rakesh', 'Next installment', '₹1,20,000']:
+            assert need in rc, need
+        if SHOTS: (SHOTS / 'shine-receipt.html').write_text('<base href="file://' + str(ROOT / 'web') + '/">' + rc, encoding='utf8')
+        lg = await pg.inner_text('#sp-ledger'); assert 'Total ₹20,000' in lg and '✓ Sent' in lg and 'Husband — Rakesh' in lg, lg
+        assert await pg.eval_on_selector_all('[data-act="sp-void-open"], [data-act="sp-plan-open"], [data-act="sp-del-open"]', 'l => l.length') == 0, 'store manager cannot cancel payments or edit the plan'
+        await pg.click('#stickbar [data-act="sp-pay-open"]'); await pg.fill('#sp-amt', '200000'); await pg.click('[data-act="sp-pay-do"]')
+        await pg.wait_for_function("document.querySelector('#toasts').innerText.includes('more than the plan balance')")
+        await close_sheet()
+        await shot('11-shine-member')
+        print('ok  payment (cash, paid by, reference) → receipt PDF with amount in words and installment no. → member’s WhatsApp; ledger with running total')
+        # more members: one overdue, one fully paid and matured (Raipur), one in Bilaspur
+        td = _dt.date.today()
+        def mshift(d, n, day=None):
+            y = d.year + (d.month - 1 + n) // 12; m = (d.month - 1 + n) % 12 + 1
+            return _dt.date(y, m, min(day or d.day, _cal.monthrange(y, m)[1])).isoformat()
+        so = mshift(td, -3); sf = mshift(td, -12, 1)
+        full_pays = {('f%d' % i): {'amount': 10000, 'mode': 'UPI', 'day': mshift(_dt.date.fromisoformat(sf), i), 'at': i + 1, 'rno': 'SP-0000-902/%02d' % (i + 1)} for i in range(10)}
+        full_pays['f10'] = {'amount': 5000, 'mode': 'UPI', 'day': mshift(_dt.date.fromisoformat(sf), 10, 15), 'at': 11, 'rno': 'SP-0000-902/11'}
+        await pg.evaluate("""async ([raipur, bilaspur, so, sf, fullPays]) => {
+          const mk = (acct, sid, sname, name, phone, inst, start, payments) => ({acct, ym: '0000', seq: +acct.slice(-3), storeId: sid, storeName: sname, name, phone, cust: {address: 'Raipur'}, inst, startDay: start,
+            status: 'active', payments, sent: Object.fromEntries(Object.keys(payments).map(k => [k, 1])), createdAt: 1, createdBy: 'x', createdByName: 'Old', updatedAt: 1, updatedBy: 'x', log: {}});
+          __fake.store['shinePlans/spOver'] = mk('SP-0000-901', raipur, 'Raipur', 'Kavita Late', '9000011111', 5000, so, {a: {amount: 5000, mode: 'UPI', day: so, at: 1, rno: 'SP-0000-901/01'}});
+          __fake.store['shinePlans/spFull'] = mk('SP-0000-902', raipur, 'Raipur', 'Meena Full', '9000022222', 10000, sf, fullPays);
+          __fake.store['shinePlans/spBil'] = mk('SP-0000-903', bilaspur, 'Bilaspur', 'Bilaspur Member', '9000033333', 5000, so, {});
+          await window.DO_BACKEND.db.set('test/ping', {at: Date.now()});
+        }""", [raipur, bilaspur, so, sf, full_pays])
+        await pg.click('#tabs a[href="#/crm"]')
+        await pg.wait_for_selector('#sp-rem')
+        rem = await pg.inner_text('#sp-rem'); assert 'Kavita Late' in rem and 'Sunita' not in rem, rem
+        t = await text()
+        assert 'Bilaspur Member' not in t, 'store manager sees only his store'
+        assert 'Meena Full' in t and 'Full plan paid' in t and 'Overdue' in t, t
+        hero = await pg.inner_text('.kpi.hero'); assert '₹5,000' in hero, hero
+        rhref = await pg.get_attribute('#sp-rem a[data-act="sp-remind"]', 'href')
+        assert 'wa.me/919000011111' in rhref and 'still%20pending' in rhref and 'SP-0000-901' in rhref, rhref
+        cal = await pg.inner_text('#sp-cal'); assert 'Sunita Agrawal' in cal and 'Installment 1' in cal, cal
+        await pg.click('[data-act="sp-month"][data-d="1"]')
+        await pg.wait_for_function("document.querySelector('#sp-cal').innerText.includes('Installment 2')")
+        async with ctx.expect_page() as popup:
+            await pg.click('#sp-rem a[data-act="sp-remind"]')
+        await (await popup.value).close()
+        await pg.wait_for_function("__fake.store['shinePlans/spOver'].remind && __fake.store['shinePlans/spOver'].remind.kind === 'overdue'")
+        await pg.wait_for_function("!document.querySelector('#sp-rem')")
+        await shot('12-shine-dues')
+        print('ok  dues dashboard: reminders to send (overdue template on WhatsApp, marked sent), overdue / today / next 7 days, full plans, month calendar; only own store')
+        await pg.click('#tabs a[href="#/crm/members"]')
+        await pg.wait_for_selector('#spq')
+        await pg.fill('#spq', '22222')
+        await pg.wait_for_function("document.querySelectorAll('#view .ocard').length === 1 && document.querySelector('#view .ocard').innerText.includes('Meena Full')")
+        await pg.fill('#spq', '')
+        await pg.click('#tabs a.back')
+        await pg.wait_for_function("location.hash === '#/' && document.querySelector('.brand b').innerText === 'Deeva Orders'")
+        print('ok  members search by phone; one tap back to Orders')
+        await logout()
+        await login('ravi', 'ravi1234')
+        await pg.evaluate("location.hash='#/crm/members'")
+        await pg.wait_for_function("document.querySelector('#view').innerText.includes('Bilaspur Member')")
+        assert 'Sunita' not in await text()
+        await logout()
+        await login('factory', 'factory1')
+        assert 'Shine Plan' not in await pg.inner_text('#tabs')
+        await pg.evaluate("location.hash='#/crm'")
+        await pg.wait_for_function("location.hash === '#/'")
+        assert 'Sunita' not in await text()
+        await logout()
+        print('ok  Bilaspur manager sees only Bilaspur members; the factory has no Shine Plan at all')
+        # Admin: all stores, cancel a wrong payment, redeem a matured plan, message templates, permanent delete
+        await login('owner@gmail.com', 'owner123')
+        await pg.evaluate("location.hash='#/crm'")
+        await pg.wait_for_selector('#sp-rem, .kpi.hero')
+        t = await pg.inner_text('#tabs'); assert 'Messages' in t, t
+        assert 'Bilaspur Member' in await text()
+        await pg.click('[data-act="sp-store"][data-v="%s"]' % bilaspur)
+        await pg.wait_for_function("!document.querySelector('#view').innerText.includes('Meena Full')")
+        await pg.click('[data-act="sp-store"][data-v="all"]')
+        await pg.evaluate("(id) => location.hash = '#/crm/m/' + id", pid)
+        await pg.wait_for_selector('#sp-ledger [data-act="sp-void-open"]')
+        await pg.click('#sp-ledger .lrow:nth-child(3) [data-act="sp-void-open"]')
+        await pg.fill('#sp-vreason', 'Entered twice'); await pg.click('[data-act="sp-void-do"]')
+        await pg.wait_for_function("document.querySelector('#sp-ledger').innerText.includes('Cancelled by') && document.querySelector('.dhead').innerText.includes('₹10,000')")
+        await pg.evaluate("location.hash='#/crm/m/spFull'")
+        await pg.wait_for_function("document.body.innerText.includes('Plan matured')")
+        await pg.click('#stickbar [data-act="sp-redeem-open"]')
+        assert await pg.input_value('#sp-bonus') == '15000'
+        assert '₹1,20,000' in await pg.inner_text('#sp-rval')
+        await pg.fill('#sp-bill', 'B-501'); await pg.fill('#sp-item', 'Diamond bracelet')
+        await pg.click('[data-act="sp-redeem-do"]')
+        await pg.wait_for_function("__fake.store['shinePlans/spFull'].status === 'redeemed'")
+        rd = await pg.evaluate("__fake.store['shinePlans/spFull'].redeem")
+        assert rd['paid'] == 105000 and rd['bonus'] == 15000 and rd['value'] == 120000 and rd['billNo'] == 'B-501', rd
+        await pg.wait_for_function("document.body.innerText.includes('Redeemed on')")
+        await pg.click('#tabs a[href="#/crm/settings"]')
+        await pg.wait_for_selector('#tpl-reminder')
+        await pg.fill('#tpl-reminder', 'Namaste {name}, {due_amount} due on {due} — Deeva')
+        await pg.click('[data-act="sp-tpl-save"]')
+        await pg.wait_for_function("__fake.store['config/shine'] && __fake.store['config/shine'].tpl.reminder.startsWith('Namaste')")
+        await pg.evaluate("location.hash='#/crm/m/spOver'")
+        await pg.wait_for_selector('[data-act="sp-del-open"]')
+        await pg.click('[data-act="sp-del-open"]')
+        await pg.fill('#sp-delno', 'sp-0000-901'); await pg.click('[data-act="sp-del-do"]')
+        await pg.wait_for_function("!__fake.store['shinePlans/spOver'] && location.hash === '#/crm/members'")
+        await logout()
+        await login('darshana', 'darshana1')
+        await pg.evaluate("(id) => location.hash = '#/crm/m/' + id", pid)
+        await pg.wait_for_selector('#sp-ledger')
+        assert await pg.eval_on_selector_all('[data-act="sp-del-open"]', 'l => l.length') == 0 and await pg.eval_on_selector_all('[data-act="sp-void-open"]', 'l => l.length') >= 1
+        await logout()
+        print('ok  Admin: all stores + store filter, cancel a wrong payment, redeem a matured plan (paid + 1½ installments), edit message templates, permanent delete (main Admin only)')
 
         await pg.fill('#l-id', 'nishant'); await pg.fill('#l-pw', 'nope'); await pg.click('#l-submit')
         await pg.wait_for_selector('#l-err:not([hidden])')

@@ -143,6 +143,41 @@ window.__demoPdfPreview = true;
       media: {m4: {kind: 'image', url: earr, path: 'demo', desc: 'Finished piece', by: 'u_factory', byName: 'Raju · KK Diamonds', at: now - 20 * H, stage: 'dispatched'}}}
   });
   makeOrder('o4', now - 6 * D, 'factory', 's_bsp', ITEMS[3], 'Kavita Soni', {o: {stage: 'setting', stageAt: {setting: now - D}, approvedAt: now - 5 * D, factoryDue: day(-1), deliveryDay: day(3)}});
+  /* 💎 Shine Plan members (demo): due today, overdue, due soon, full plan, redeemed, just enrolled, Bilaspur */
+  const dsx = (y, m, d) => { const yy = y + Math.floor(m / 12), mm = ((m % 12) + 12) % 12, last = new Date(yy, mm + 1, 0).getDate(); return yy + '-' + pad(mm + 1) + '-' + pad(Math.min(d, last)); };
+  const msOf = s => { const q = s.split('-').map(Number); return new Date(q[0], q[1] - 1, q[2], 11).getTime(); };
+  const T = new Date(now), spSeq = {};
+  const sign = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 120"><path d="M20 80 C40 20 60 110 80 60 S120 30 140 70 S190 90 210 50 S260 40 280 70" fill="none" stroke="#0a271b" stroke-width="4" stroke-linecap="round"/></svg>');
+  const plan = (id, store, name, phone, inst, monthsAgo, dom, paidN, extra) => {
+    const sy = T.getFullYear(), sm = T.getMonth() - monthsAgo, start = dsx(sy, sm, dom);
+    const ym = start.slice(2, 4) + start.slice(5, 7); spSeq[ym] = (spSeq[ym] || 0) + 1; F.store['shineCounters/' + ym] = {n: spSeq[ym]};
+    const acct = 'SP-' + ym + '-' + String(spSeq[ym]).padStart(3, '0');
+    const by = store === 's_rpr' ? 'u_nishant' : 'u_ravi', byName = store === 's_rpr' ? 'Nishant · Raipur' : 'Ravi (demo) · Bilaspur (demo)';
+    const payments = {}, sent = {enrol: msOf(start)}, log = {};
+    log[k()] = L(msOf(start), by, byName, 'store', 'created', 'Enrolled · ₹' + inst.toLocaleString('en-IN') + ' a month');
+    for (let i = 0; i < paidN; i++) {
+      const half = i === 10, day = half ? dsx(sy, sm + 10, 10) : dsx(sy, sm + i, dom);
+      payments['p' + i] = {amount: half ? inst / 2 : inst, mode: ['UPI', 'Cash', 'UPI', 'Bank transfer'][i % 4], day, from: i % 3 ? '' : 'Self', ref: i % 2 ? '' : 'UPI' + (40817 + i * 731),
+        note: i === 0 ? 'First installment' : '', at: msOf(day) + i, by, name: byName, rno: acct + '/' + pad(i + 1)};
+      sent['p' + i] = msOf(day) + H;
+      log[k()] = L(msOf(day) + i, by, byName, 'store', 'payment', 'Payment ₹' + payments['p' + i].amount.toLocaleString('en-IN') + ' (' + payments['p' + i].mode + ') · receipt ' + acct + '/' + pad(i + 1));
+    }
+    F.store['shinePlans/' + id] = Object.assign({acct, ym, seq: spSeq[ym], storeId: store, storeName: F.store['stores/' + store].name, name: name + ' (demo)', phone,
+      cust: {address: ['Shankar Nagar', 'Avanti Vihar', 'Telibandha', 'Pandri', 'Civil Lines'][spSeq[ym] % 5], city: F.store['stores/' + store].city, nominee: 'Family member (demo)', nomRel: 'Spouse'},
+      inst, startDay: start, status: 'active', payments, sent, ack: {accepted: true, remote: false, at: msOf(start), signData: sign},
+      createdAt: msOf(start), createdBy: by, createdByName: byName, updatedAt: msOf(start), updatedBy: by, log}, extra || {});
+  };
+  const td = T.getDate();
+  plan('sp1', 's_rpr', 'Sunita Agrawal', '9800000101', 10000, 2, td, 2);
+  plan('sp2', 's_rpr', 'Kavita Jain', '9800000102', 5000, 4, 5, 2);
+  plan('sp3', 's_rpr', 'Meena Sharma', '9800000103', 20000, 11, 1, 11);
+  plan('sp4', 's_rpr', 'Pooja Verma', '9800000104', 15000, 7, Math.min(28, td + 3), 7);
+  plan('sp5', 's_rpr', 'Ritu Gupta', '9800000105', 10000, 1, Math.min(28, td + 1), 1);
+  plan('sp6', 's_rpr', 'Anjali Soni', '9800000106', 25000, 3, 2, 3);
+  plan('sp7', 's_rpr', 'Neha Tiwari', '9800000107', 5000, 14, 10, 11, {status: 'redeemed', redeem: {day: day(-20), at: now - 20 * D, by: 'u_nishant', name: 'Nishant · Raipur', paid: 52500, installments: 10, bonus: 7500, value: 60000, billNo: 'R-1182', item: 'Diamond pendant (demo)', note: ''}});
+  plan('sp8', 's_rpr', 'Rekha Patel', '9800000108', 50000, 0, td, 1);
+  F.store['shinePlans/sp8'].sent = {enrol: now - 2 * H};
+  plan('sp9', 's_bsp', 'Shalini Dubey', '9800000109', 10000, 2, 12, 2);
   F.preLogin('nishant-x2@demo');
 })();
 </script>"""

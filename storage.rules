@@ -21,6 +21,15 @@ service firebase.storage {
       allow update, delete: if false;
     }
 
+    // Deeva Shine Plan: payment proof (UPI screenshot, cheque, bank slip) — store manager, Admin, Sub Admin only
+    match /shine/{pid}/{file} {
+      allow read: if staff();
+      allow create: if staff()
+        && request.resource.size < 30 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf');
+      allow update, delete: if false;
+    }
+
     // client signature and other store-only files
     match /private/{orderId}/{file} {
       allow read: if staff();

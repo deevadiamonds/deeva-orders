@@ -313,6 +313,40 @@ main{max-width:680px;margin:0 auto;padding-block:14px 130px;padding-left:max(16p
 .tbl th{font-size:12.5px;color:var(--ink2);font-weight:600}
 .scroll-x{overflow-x:auto}
 details.tv summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--acc);margin-top:6px}
+/* ---------- 💎 Shine Plan (CRM) ---------- */
+.tab.sp{color:var(--gold-ink)}
+.tab.sp.on{color:var(--acc)}
+.tab.back{color:var(--ink2);font-weight:500;flex-grow:0}
+body.crm .top{background:linear-gradient(120deg,#4a3410,var(--g9) 62%)}
+body.crm .brand small{color:var(--gold)}
+.srow{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:none}
+.srow .nm{flex:1;min-width:0;display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.srow .nm>span:last-child{min-width:0}
+.srow .av{width:36px;height:36px;border-radius:50%;background:var(--gold-soft);color:var(--gold-ink);display:grid;place-items:center;font-weight:700;flex:none}
+.srow .nm b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow .nm small{display:block;color:var(--ink2);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow .amt{text-align:right;flex:none;font-family:var(--num);font-weight:700;font-size:14.5px;font-variant-numeric:tabular-nums}
+.srow .amt small{display:block;font-family:var(--font);font-weight:500;font-size:12px;color:var(--ink2);margin-top:1px}
+.srow .btn{flex:none}
+.cal-d{display:flex;justify-content:space-between;gap:8px;margin:12px 0 2px;padding:5px 9px;border-radius:9px;background:var(--card2);font-weight:700;font-size:14px}
+.cal-d span:last-child{font-family:var(--num)}
+.mstrip,.mlab{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px}
+.mstrip{margin:4px 0 3px}
+.mstrip i{height:32px;border-radius:6px;border:1px solid var(--line2);background:var(--card2);display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:700;font-family:var(--num);color:var(--ink2)}
+.mstrip i.paid{background:var(--g7);border-color:var(--g7);color:var(--gold)}
+.mstrip i.part{background:linear-gradient(0deg,var(--gold-soft) 50%,var(--card2) 50%);border-color:var(--gold)}
+.mstrip i.due{border:2px solid var(--gold);color:var(--gold-ink)}
+.mstrip i.late{border:2px solid var(--bad);background:var(--bad-soft);color:var(--bad)}
+.mstrip i.bonus{background:linear-gradient(100deg,#d1913f,#ffdb66 45%,#e7b150 70%,#d1913f);border-color:#e7b150;color:#3b2a0c}
+.mlab span{font-size:10px;color:var(--ink2);text-align:center;overflow:hidden}
+.lrow{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14.5px}
+.lrow small{display:block;color:var(--ink2);font-size:12.5px;margin-top:1px;overflow-wrap:anywhere}
+.lrow .lr{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none;max-width:46%}
+.lrow.void{opacity:.6}
+.lrow.void b{text-decoration:line-through}
+.lproof{display:block;width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line);margin-top:6px;cursor:zoom-in}
+.fld.miss>textarea.in,#w-sp-sig.miss .sig-wrap{outline:2px solid var(--bad);outline-offset:2px;border-radius:11px}
 @media (min-width:560px){ .gal{grid-template-columns:repeat(3,1fr)} .kpis{grid-template-columns:repeat(4,minmax(0,1fr))} }
 @media (max-width:360px){ .two{grid-template-columns:1fr} .mbtns .btn{font-size:12.5px} }
 </style>
@@ -555,7 +589,8 @@ const S = {
   route: {v: 'loading'}, filter: 'all', q: '', firstOrders: true, unsubs: [], privUnsubs: {}, viewUnsubs: [], viewId: null,
   needSetup: false, settingUp: false, booted: false, micFor: null, stores: {}, storeFilter: 'all', factories: {}, factoryFilter: 'all', brand: null,
   pushToken: null, pushOn: false, dash: null, dashLoading: false, dashStore: 'all', dashRange: 12,
-  actStore: 'all', actWho: 'all', actQ: '', actLimit: 150, fbill: {}, fbUnsub: null, fbFor: null
+  actStore: 'all', actWho: 'all', actQ: '', actLimit: 150, fbill: {}, fbUnsub: null, fbFor: null,
+  shine: {}, shineCfg: null, shineReady: false, shineErr: '', spStore: 'all', spFilter: 'active', spQ: '', spMonth: ''
 };
 const role = () => (S.me && S.me.role) || '';
 const isOwner = () => role() === 'admin';                                  /* Mayuresh — main admin */
@@ -689,6 +724,7 @@ function parseRoute(){
   if (p[0] === 'past') return {v: 'past'};
   if (p[0] === 'activity') return {v: 'activity'};
   if (p[0] === 'account') return {v: 'account'};
+  if (p[0] === 'crm') return {v: 'crm', sub: p[1] === 'm' ? 'm' : (p[1] || 'dues'), id: p[2] || ''};
   return {v: 'home'};
 }
 const go = h => { if (location.hash === h) { S.route = parseRoute(); render(); } else location.hash = h; };
@@ -718,7 +754,8 @@ function doRender(){
   else if (r.v === 'activity') { if (!isAdmin()) return go('#/'); renderActivity(); }
   else if (r.v === 'account') renderAccount();
   else if (r.v === 'past') renderPast();
-  if (r.v !== 'order' && r.v !== 'form') $('#stickbar').innerHTML = '';
+  else if (r.v === 'crm') { if (!staff()) return go('#/'); renderShine(r); }
+  if (r.v !== 'order' && r.v !== 'form' && !(r.v === 'crm' && r.sub === 'm')) { $('#stickbar').innerHTML = ''; $('#stickbar')._h = null; }
 }
 
 /* ---------- top & tabs ---------- */
@@ -735,13 +772,29 @@ function attentionCount(){
 function renderTop(){
   patch($('#who'), `<span class="av">${esc(initial(myName()))}</span><span>${esc(myName())}</span><em>${esc(ROLES[role()] || '')}</em>`);
   const v = S.route.v; const att = attentionCount();
-  const tabs = [['#/', 'Orders' + (att ? `<i>${att}</i>` : ''), v === 'home' || v === 'order']];
-  if (staff()) tabs.push(['#/new', '＋ New Order', v === 'form' && S.route.mode === 'new']);
-  tabs.push(['#/past', 'Past Orders', v === 'past']);
-  if (isAdmin()) tabs.push(['#/dash', 'Dashboard', v === 'dash']);
-  if (isAdmin()) tabs.push(['#/activity', 'Activity', v === 'activity']);
-  if (isAdmin()) tabs.push(['#/team', 'Team', v === 'team']);
-  patch($('#tabs'), tabs.map(t => `<a class="tab ${t[2] ? 'on' : ''}" href="${t[0]}">${t[1]}</a>`).join(''));
+  /* 💎 Shine Plan mode: one tap on the Shine Plan tab switches the whole app (header + tabs) to the savings-plan CRM */
+  const crm = v === 'crm', sub = crm ? S.route.sub : '';
+  document.body.classList.toggle('crm', crm);
+  const bb = $('.brand b'), bs = $('.brand small'), ba = $('.brand');
+  if (bb && bb.textContent !== (crm ? 'Shine Plan' : 'Deeva Orders')) { bb.textContent = crm ? 'Shine Plan' : 'Deeva Orders'; bs.textContent = crm ? 'DEEVA · MEMBERS' : 'MADE TO ORDER'; ba.setAttribute('href', crm ? '#/crm' : '#/'); }
+  const spAtt = staff() && S.shineReady ? shineAttention() : 0;
+  const tabs = [];
+  if (crm) {
+    tabs.push(['#/', '📦 Orders', false, 'back']);
+    tabs.push(['#/crm', 'Dues' + (spAtt ? `<i>${spAtt}</i>` : ''), sub === 'dues']);
+    tabs.push(['#/crm/members', 'Members', sub === 'members' || sub === 'm']);
+    tabs.push(['#/crm/new', '＋ Enrol', sub === 'new']);
+    if (isAdmin()) tabs.push(['#/crm/settings', 'Messages', sub === 'settings']);
+  } else {
+    tabs.push(['#/', 'Orders' + (att ? `<i>${att}</i>` : ''), v === 'home' || v === 'order']);
+    if (staff()) tabs.push(['#/crm', '💎 Shine Plan' + (spAtt ? `<i>${spAtt}</i>` : ''), false, 'sp']);
+    if (staff()) tabs.push(['#/new', '＋ New Order', v === 'form' && S.route.mode === 'new']);
+    tabs.push(['#/past', 'Past Orders', v === 'past']);
+    if (isAdmin()) tabs.push(['#/dash', 'Dashboard', v === 'dash']);
+    if (isAdmin()) tabs.push(['#/activity', 'Activity', v === 'activity']);
+    if (isAdmin()) tabs.push(['#/team', 'Team', v === 'team']);
+  }
+  patch($('#tabs'), tabs.map(t => `<a class="tab ${t[3] || ''} ${t[2] ? 'on' : ''}" href="${t[0]}">${t[1]}</a>`).join(''));
 }
 
 /* ---------- auth screens ---------- */
@@ -828,7 +881,7 @@ function stopAll(){
   Object.values(S.privUnsubs).forEach(u => { try { u(); } catch (e) {} }); S.privUnsubs = {};
   S.viewUnsubs.forEach(u => { try { u(); } catch (e) {} }); S.viewUnsubs = []; S.viewId = null;
   if (S.fbUnsub) { try { S.fbUnsub(); } catch (e) {} } S.fbUnsub = null; S.fbFor = null; S.fbill = {};
-  Object.assign(S, {me: null, users: {}, orders: {}, priv: {}, extra: {}, extraPriv: {}, history: null, firstOrders: true});
+  Object.assign(S, {me: null, users: {}, orders: {}, priv: {}, extra: {}, extraPriv: {}, history: null, firstOrders: true, shine: {}, shineCfg: null, shineReady: false, shineErr: ''});
 }
 let dataStarted = false;
 function startSession(u){
@@ -879,6 +932,7 @@ function startData(){
     subscribe([['status', 'in', ACTIVE]], null);
   }
   S.unsubs.push(() => { try { if (cur) cur(); } catch (e) {} });
+  if (staff()) startShine();   /* 💎 Shine Plan members (store manager: his store) — never the factory */
   setTimeout(setupPush, 1500);
 }
 function onOrders(list){
@@ -1923,7 +1977,7 @@ function loadScript(src){
     document.head.appendChild(s);
   });
 }
-function sealData(city){
+function sealData(city, mid){
   const c = document.createElement('canvas'); c.width = 400; c.height = 400;
   const x = c.getContext('2d');
   x.translate(200, 200); x.rotate(-0.12);
@@ -1943,7 +1997,7 @@ function sealData(city){
   x.moveTo(-28, -46); x.lineTo(-16, -22); x.lineTo(0, -46); x.lineTo(16, -22); x.lineTo(28, -46);
   x.moveTo(-16, -22); x.lineTo(0, 44); x.lineTo(16, -22);
   x.stroke(); x.restore();
-  x.font = '700 22px Montserrat, Arial, sans-serif'; x.fillText('MADE TO ORDER', 0, 58);
+  x.font = '700 22px Montserrat, Arial, sans-serif'; x.fillText(mid || 'MADE TO ORDER', 0, 58);
   x.font = '600 17px Montserrat, Arial, sans-serif'; x.fillText((city || 'RAIPUR').toUpperCase(), 0, 90);
   return c.toDataURL('image/png');
 }
@@ -2240,7 +2294,7 @@ function makePicker(containerId, orderId, opts){
     try {
       const blob = kind === 'image' ? await compressImage(file) : file;
       const type = blob.type || file.type || (kind === 'audio' ? 'audio/webm' : kind === 'video' ? 'video/mp4' : 'image/jpeg');
-      const path = 'orders/' + orderId + '/' + id + '.' + extOf(type, kind === 'image' && blob !== file ? 'x.jpg' : file.name);
+      const path = (opts.base || 'orders/' + orderId) + '/' + id + '.' + extOf(type, kind === 'image' && blob !== file ? 'x.jpg' : file.name);
       let last = 0;
       const res = await upload(blob, type, path, f => { m.progress = f; if (Date.now() - last > 250) { last = Date.now(); P.render(); } });
       m.url = res.url; m.path = res.path; m.size = blob.size; m.status = 'ok';
@@ -2251,7 +2305,7 @@ function makePicker(containerId, orderId, opts){
   const addVoiceTo = async (m, blob, mt) => {
     m.voicePreview = URL.createObjectURL(blob); m.vstatus = 'up'; P.render();
     try {
-      const res = await upload(blob, mt, 'orders/' + orderId + '/' + m.id + '-voice-' + rid() + '.' + extOf(mt, ''), null);
+      const res = await upload(blob, mt, (opts.base || 'orders/' + orderId) + '/' + m.id + '-voice-' + rid() + '.' + extOf(mt, ''), null);
       m.voiceUrl = res.url; m.voicePath = res.path; m.vstatus = 'ok';
     } catch (e) { console.error(e); m.vstatus = 'err'; m.voicePreview = ''; toast('Voice note upload failed — ' + errText(e), 'bad'); }
     P.render(); if (opts.onChange) opts.onChange();
@@ -3320,12 +3374,935 @@ function renderAccount(){
   patch($('#view'), h);
 }
 
+/* =====================================================================================================
+   💎 DEEVA SHINE PLAN — monthly savings plan CRM (owner's request, 24 Nov 2026)
+   One tab switches the app into Shine Plan mode: dues dashboard (who pays on which date), members, enrolment with the
+   customer's signature, payments (when, how, paid by / from, reference, proof photo), ledger, receipts / enrolment form /
+   statement as PDF straight to the customer's WhatsApp, template messages, redemption.
+   Store manager (his store only), Admin, Sub Admin; the factory never sees any of it.
+   Data: shinePlans/{pid}, shineCounters/{YYMM} (account no. SP-YYMM-001), config/shine (message templates).
+   ===================================================================================================== */
+const SP_INST = [5000, 10000, 15000, 20000, 25000, 50000];
+const SP_LADDER = [[6, 0.3], [7, 0.4], [8, 0.55], [9, 0.7], [10, 0.9]];
+const SP_MODES = ['UPI', 'Cash', 'Card', 'Bank transfer', 'Cheque'];
+const SP_IDS = ['Aadhaar', 'PAN', 'Driving licence', 'Voter ID', 'Passport'];
+const SP_REL = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Other'];
+const SP_TERMS = [
+  'The monthly installment is fixed at enrolment (minimum ₹5,000, in multiples of ₹1,000) and cannot be changed during the plan.',
+  'The member pays the full installment every month for 10 months, and half an installment by the 15th of the 11th month (10½ installments).',
+  'The plan matures at the end of the 12th month. Deeva Diamonds then adds 1½ installments as its contribution, making 12 installments’ value.',
+  'Redeem within 15 days of maturity.',
+  'Early redemption: after completing 6, 7, 8, 9 or 10 monthly installments, Deeva’s contribution is 30%, 40%, 55%, 70% or 90% of one installment, redeemable within 15 days of completing that month. No contribution before 6 installments.',
+  'Plan value is redeemable only against diamond jewellery from Deeva’s ready stock. Not valid on made-to-order or customised pieces.',
+  'No cash refund or cash payout of the installments or Deeva’s contribution at any stage.',
+  'Jewellery is billed at the prevailing gold rate, diamond price and making charges on the day of purchase. GST and taxes as applicable. Any amount above the plan value is paid by the member. The plan value must be used in one bill.',
+  'A late or missed installment moves the maturity date ahead by the same number of months.',
+  'Pay only at the Deeva store or to Deeva’s official account, and get every payment entered with a receipt. Bring the passbook and a photo ID at redemption.',
+  'The plan cannot be combined with any other offer or discount.',
+  'Only the member or the registered nominee (with photo ID) can redeem the plan. Deeva’s records are final if the passbook is lost.',
+  'Deeva Diamonds may change or withdraw the plan for new enrolments; existing members keep the terms they joined on. Subject to Raipur jurisdiction. The final decision on all plan matters rests with the management of Deeva Diamonds.'
+];
+/* message templates — the Admin can change them (Shine Plan › Messages); {words} are filled in for each member */
+const SP_TPL = {
+  welcome: 'Dear {name},\nWelcome to the Deeva Shine Plan! 💎\nAccount no.: {acct}\nMonthly installment: {inst}\nYour plan matures on {maturity} — 12 installments’ value of diamond jewellery.\nPlease find your enrolment form attached.\n— Deeva Diamonds, {store}',
+  receipt: 'Dear {name},\nThank you! We have received {amount} ({mode}) on {date} for your Deeva Shine Plan {acct}.\nReceipt no.: {receipt}\nPaid so far: {paid} ({count} of 10½ installments)\nNext installment: {next}\nYour receipt is attached.\n— Deeva Diamonds, {store}',
+  reminder: 'Dear {name},\nA gentle reminder: your Deeva Shine Plan installment of {due_amount} is due on {due} (account {acct}).\nYou can pay at the store or to Deeva’s official account; we will send your receipt on WhatsApp.\nThank you!\n— Deeva Diamonds, {store}',
+  overdue: 'Dear {name},\nYour Deeva Shine Plan installment of {due_amount} was due on {due} and is still pending (account {acct}).\nAs per the plan terms, a late installment moves the maturity date ahead. Please pay at the earliest to keep your plan on track.\n— Deeva Diamonds, {store}',
+  maturity: 'Dear {name},\nCongratulations! Your Deeva Shine Plan {acct} matures on {maturity}.\nPlan value: {value} (you paid {paid} + Deeva’s contribution {bonus}).\nPlease visit the store by {redeem_by} with your passbook and a photo ID to choose your diamond jewellery.\n— Deeva Diamonds, {store}'
+};
+const SP_TPL_LABEL = {welcome: 'Welcome (with the enrolment form)', receipt: 'Payment receipt', reminder: 'Reminder before / on the due date', overdue: 'Installment overdue', maturity: 'Plan maturing / ready to redeem'};
+const SP_WORDS = ['name', 'acct', 'inst', 'start', 'maturity', 'redeem_by', 'paid', 'count', 'balance', 'due', 'due_amount', 'next', 'value', 'bonus', 'store', 'store_phone', 'amount', 'mode', 'date', 'receipt'];
+
+/* SHINE-CALC-START — the same function is in functions/shine.js; keep both copies identical */
+/* SHINE-CALC (the same function is in web/index.html and functions/shine.js — keep both copies identical)
+   Deeva Shine Plan schedule for one plan, as of the day `t` (YYYY-MM-DD):
+   installments 1–10 on the start date's day of each month, installment 11 (half) by the 15th of month 11.
+   An installment is on time when it is paid in its own calendar month; a late one moves every later date and the
+   maturity ahead by the months it was late (the plan pauses). Maturity = end of month 12 (+ months moved),
+   redeem by the 15th of month 13. Early redemption after 6–10 installments: 30/40/55/70/90 % of one installment;
+   the full plan (10½ paid) at maturity: 150 % (1½ installments). */
+function shineCalc(p, t){
+  const inst = Number(p.inst) || 0;
+  const pd = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? [+m[1], +m[2] - 1, +m[3]] : null; };
+  const ds = (y, m, d) => {
+    const yy = y + Math.floor(m / 12), mm = ((m % 12) + 12) % 12, last = new Date(Date.UTC(yy, mm + 1, 0)).getUTCDate();
+    return yy + '-' + String(mm + 1).padStart(2, '0') + '-' + String(Math.min(d, last)).padStart(2, '0');
+  };
+  const mi = s => { const a = pd(s); return a[0] * 12 + a[1]; };
+  const [y0, m0, d0] = pd(p.startDay) || pd(t);
+  const voids = p.void || {};
+  const pays = Object.entries(p.payments || {}).filter(([k]) => !voids[k])
+    .map(([k, x]) => ({k, amount: Number(x.amount) || 0, day: x.day || t, at: x.at || 0}))
+    .sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : a.at - b.at));
+  const paid = pays.reduce((s, x) => s + x.amount, 0);
+  const items = [];
+  for (let i = 0; i < 11; i++) items.push({n: i + 1, half: i === 10, amt: i === 10 ? inst / 2 : inst, y: y0, m: m0 + i, d: i === 10 ? 15 : d0});
+  let cum = 0, run = 0, pi = 0, shift = 0, next = null;
+  for (const it of items) {
+    cum += it.amt;
+    while (pi < pays.length && run + 0.5 < cum) { run += pays[pi].amount; pi++; }
+    it.due = ds(it.y, it.m + shift, it.d);
+    if (run + 0.5 >= cum) {
+      it.paid = true; it.paidDay = pays[pi - 1].day;
+      it.late = Math.max(0, mi(it.paidDay) - mi(it.due));
+      shift += it.late;
+    } else {
+      it.paid = false; it.part = Math.max(0, run - (cum - it.amt));
+      if (!next) next = it;
+    }
+  }
+  /* the installment still to pay: if its month is over, the plan has already moved by that many months */
+  const lateNow = next ? Math.max(0, mi(t) - mi(next.due)) : 0;
+  if (next) items.filter(it => !it.paid && it !== next).forEach(it => { it.due = ds(it.y, it.m + shift + lateNow, it.d); });
+  const moved = shift + lateNow;
+  let maturity = ds(y0, m0 + 11 + moved, 31), redeemBy = ds(y0, m0 + 12 + moved, 15);
+  if (p.matDay && pd(p.matDay)) {
+    const a = pd(p.matDay);
+    maturity = p.matDay; redeemBy = new Date(Date.UTC(a[0], a[1], a[2] + 15)).toISOString().slice(0, 10);
+  }
+  const total = inst * 10.5;
+  const full = inst > 0 && paid + 0.5 >= total;
+  const n = inst > 0 ? Math.min(10, Math.floor((paid + 0.5) / inst)) : 0;
+  const matured = t >= maturity;
+  const LADDER = {6: 0.3, 7: 0.4, 8: 0.55, 9: 0.7, 10: 0.9};
+  const pct = full && matured ? 1.5 : (LADDER[n] || 0);
+  const left = next ? next.amt - next.part : 0;
+  return {
+    inst, items, pays, paid, total, full, n, next, left, moved, shift, lateNow, maturity, redeemBy, matured, pct,
+    bonus: Math.round(inst * pct), due: next ? next.due : '', overdue: !!(next && next.due < t),
+    dueDays: next ? Math.round((Date.UTC(...pd(next.due)) - Date.UTC(...pd(t))) / 86400000) : null
+  };
+}
+/* SHINE-CALC-END */
+
+const spDay = () => today();
+const spPlans = () => Object.entries(S.shine).map(([id, p]) => Object.assign({id}, p));
+const spVisible = () => spPlans().filter(p => !isAdmin() || S.spStore === 'all' || p.storeId === S.spStore);
+const spCount = c => (c.full ? '10½' : String(c.n) + (c.paid - c.n * c.inst > 0.5 ? ' + ' + money(c.paid - c.n * c.inst) : ''));
+const spItemLabel = it => (it.half ? 'Installment 11 (half)' : 'Installment ' + it.n);
+const spMonthKey = d => d.slice(0, 7);
+const spOrd = n => n + ((n % 100 >= 11 && n % 100 <= 13) ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+const spMonthName = ym => { const [y, m] = ym.split('-').map(Number); return EMON[m - 1] + ' ' + y; };
+const spStatus = p => p.status === 'redeemed' ? '<span class="pill ok">Redeemed</span>' : p.status === 'closed' ? '<span class="pill mute">Closed</span>' : '<span class="pill gold">Active</span>';
+function spInWords(v){
+  let n = Math.round(num(v)); if (!n) return 'Zero';
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const two = x => (x < 20 ? a[x] : b[Math.floor(x / 10)] + (x % 10 ? '-' + a[x % 10] : ''));
+  const three = x => (x >= 100 ? a[Math.floor(x / 100)] + ' Hundred' + (x % 100 ? ' ' : '') : '') + (x % 100 ? two(x % 100) : '');
+  const parts = [];
+  const cr = Math.floor(n / 1e7); n %= 1e7; const la = Math.floor(n / 1e5); n %= 1e5; const th = Math.floor(n / 1000); n %= 1000;
+  if (cr) parts.push(spInWords(cr) + ' Crore'); if (la) parts.push(two(la) + ' Lakh'); if (th) parts.push(two(th) + ' Thousand'); if (n) parts.push(three(n));
+  return parts.join(' ');
+}
+
+/* ---------- data ---------- */
+function startShine(){
+  if (isStore() && !myStore()) return;
+  let first = true;
+  S.unsubs.push(B.db.watchQuery('shinePlans', isAdmin() ? [] : [['storeId', '==', myStore()]], list => {
+    const next = Object.fromEntries(list.map(x => [x.id, x.data]));
+    if (!first) shineEvents(S.shine, next);
+    first = false; S.shine = next; S.shineReady = true; render();
+  }, e => { console.error(e); S.shineReady = true; S.shineErr = errText(e); render(); }));
+  S.unsubs.push(B.db.watchDoc('config/shine', s => { S.shineCfg = s.exists ? s.data : null; render(); }, () => {}));
+}
+function shineEvents(prev, next){
+  const me = S.authUser.uid, evs = [];
+  for (const id in next) {
+    const n = next[id], o = prev[id];
+    if (n.updatedBy === me || (!o && n.createdBy === me)) continue;
+    if (!o) { evs.push(['💎 New Shine Plan member', n.name + ' · ' + money(n.inst) + ' a month · ' + n.acct]); continue; }
+    for (const k in (n.payments || {})) if (!(o.payments || {})[k]) evs.push(['💰 Shine Plan payment', n.name + ' · ' + money(n.payments[k].amount) + ' (' + n.payments[k].mode + ')']);
+    if (o.status !== 'redeemed' && n.status === 'redeemed') evs.push(['🎁 Shine Plan redeemed', n.name + ' · ' + n.acct]);
+  }
+  evs.slice(0, 3).forEach(e => alertUser(e[0], e[1]));
+}
+function shineAttention(){
+  const t = spDay(); let n = 0;
+  for (const p of spVisible()) { if (p.status !== 'active') continue; const c = shineCalc(p, t); if (c.next && c.next.due <= t) n++; }
+  return n;
+}
+
+/* ---------- messages ---------- */
+function spVars(p, c, extra){
+  const st = S.stores[p.storeId] || {};
+  const nx = c.next;
+  return Object.assign({
+    name: p.name || '', acct: p.acct || '', inst: money(p.inst), start: fmtDayEn(p.startDay),
+    maturity: fmtDayEn(c.maturity), redeem_by: fmtDayEn(c.redeemBy), paid: money(c.paid), count: spCount(c),
+    balance: money(Math.max(0, c.total - c.paid)), due: nx ? fmtDayEn(nx.due) : '', due_amount: nx ? money(c.left) : '',
+    next: nx ? money(c.left) + ' due on ' + fmtDayEn(nx.due) : 'All installments paid — thank you!',
+    value: money(num(p.inst) * 12), bonus: money(num(p.inst) * 1.5),
+    store: st.name || p.storeName || '', store_phone: st.phone ? '+91 ' + st.phone : ''
+  }, extra || {});
+}
+function spFill(key, p, c, extra){
+  const tpl = ((S.shineCfg && S.shineCfg.tpl) || {})[key] || SP_TPL[key];
+  const v = spVars(p, c, extra);
+  return String(tpl).replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m));
+}
+function spPayVars(p, k){
+  const x = (p.payments || {})[k] || {};
+  return {amount: money(x.amount), mode: x.mode || '', date: fmtDayEn(x.day), receipt: x.rno || ''};
+}
+/* which reminder each active member needs today (before / on the due date, then every few days while overdue) */
+function spRemindKind(p, c){
+  if (p.status !== 'active' || !c.next || !p.phone) return '';
+  const t = spDay(), cfg = S.shineCfg || {}, before = cfg.remindBefore != null ? num(cfg.remindBefore) : 2, gap = num(cfg.remindGap) || 3;
+  if (c.dueDays > before) return '';
+  const r = p.remind || {};
+  const kind = c.overdue ? 'overdue' : 'reminder';
+  if (r.due !== c.next.due) return kind;
+  if (c.overdue && r.day && diffDays(t, r.day) >= gap) return kind;
+  return '';
+}
+function spWaBtn(p, c, kind, label, extra){
+  const msg = spFill(kind, p, c, extra);
+  return `<a class="btn sm wa" href="${esc(waLink(p.phone, msg))}" target="_blank" rel="noopener" data-act="sp-remind" data-id="${esc(p.id)}" data-kind="${esc(kind)}" data-due="${esc(c.next ? c.next.due : '')}">${label || '💬 Send'}</a>`;
+}
+
+/* ---------- views ---------- */
+function renderShine(r){
+  if (r.sub !== 'new' && SPF && SPF.sig) SPF.sig = null;
+  if (isStore() && !myStore()) { patch($('#view'), '<div class="empty"><b>No store assigned</b>Please contact the Admin.</div>'); return; }
+  if (r.sub === 'new') return renderShineNew();
+  if (!S.shineReady) { patch($('#view'), '<div class="empty">Loading the Shine Plan…</div>'); return; }
+  if (S.shineErr && !Object.keys(S.shine).length) { patch($('#view'), `<div class="empty"><b>The Shine Plan could not be loaded</b>${esc(S.shineErr)}</div>`); return; }
+  if (r.sub === 'members') return renderShineMembers();
+  if (r.sub === 'm') return renderShineMember(r.id);
+  if (r.sub === 'settings') { if (!isAdmin()) return go('#/crm'); return renderShineSettings(); }
+  return renderShineDues();
+}
+function spStoreChips(){
+  if (!isAdmin() || storeList().length < 2) return '';
+  return `<div class="filters">` + [['all', 'All stores']].concat(storeList().map(s => [s.id, s.name])).map(([v, l]) => `<button class="fchip ${S.spStore === v ? 'on' : ''}" data-act="sp-store" data-v="${esc(v)}">${esc(l)}</button>`).join('') + `</div>`;
+}
+function spRow(p, sub, right, btn){
+  return `<div class="srow"><a class="nm" href="#/crm/m/${esc(p.id)}"><span class="av">${esc(initial(p.name))}</span><span><b>${esc(p.name)}</b><small>${sub}</small></span></a>${right ? `<span class="amt">${right}</span>` : ''}${btn || ''}</div>`;
+}
+function spStoreTag(p){ return isAdmin() && storeList().length > 1 ? ' · ' + esc(storeName(p.storeId) || p.storeName || '') : ''; }
+function renderShineDues(){
+  const t = spDay(), ym = spMonthKey(t);
+  const all = spVisible().map(p => ({p, c: shineCalc(p, t)}));
+  const act = all.filter(x => x.p.status === 'active');
+  const over = act.filter(x => x.c.overdue).sort((a, b) => (a.c.due < b.c.due ? -1 : 1));
+  const tod = act.filter(x => x.c.next && x.c.due === t);
+  const soon = act.filter(x => x.c.next && x.c.dueDays > 0 && x.c.dueDays <= 7).sort((a, b) => a.c.dueDays - b.c.dueDays);
+  const rem = act.map(x => Object.assign(x, {kind: spRemindKind(x.p, x.c)})).filter(x => x.kind);
+  const ready = act.filter(x => x.c.full).sort((a, b) => (a.c.maturity < b.c.maturity ? -1 : 1));
+  const unsent = [];
+  all.forEach(({p, c}) => { Object.entries(p.payments || {}).forEach(([k, x]) => { if (!(p.void || {})[k] && !(p.sent || {})[k] && diffDays(t, x.day || t) <= 45) unsent.push({p, c, k, x}); }); });
+  unsent.sort((a, b) => (b.x.at || 0) - (a.x.at || 0));
+  const collectedNow = over.concat(tod).reduce((s, x) => s + x.c.left, 0);
+  let monthIn = 0, monthN = 0;
+  all.forEach(({p}) => Object.entries(p.payments || {}).forEach(([k, x]) => { if (!(p.void || {})[k] && spMonthKey(x.day || '') === ym) { monthIn += num(x.amount); monthN++; } }));
+  const held = act.reduce((s, x) => s + x.c.paid, 0), monthly = act.reduce((s, x) => s + num(x.p.inst), 0);
+  let h = `<div class="view-title">💎 Shine Plan</div>${spStoreChips()}`;
+  if (!all.length) h += `<div class="card center"><p style="margin:6px 0 12px">No members yet. Enrol the first customer in the Deeva Shine Plan.</p><a class="btn primary big" href="#/crm/new">＋ Enrol a member</a></div>`;
+  h += `<div class="kpis"><div class="kpi hero"><small>To collect now (due today + overdue)</small><b>${money(collectedNow)}</b><span>${over.length + tod.length} ${plural(over.length + tod.length, 'member')} · ${over.length} overdue</span></div>
+    <div class="kpi"><small>Active members</small><b>${act.length}</b><span>${money(monthly)} a month</span></div>
+    <div class="kpi"><small>Received in ${EMON[+ym.slice(5) - 1]}</small><b>${money(monthIn)}</b><span>${monthN} ${plural(monthN, 'payment')}</span></div>
+    <div class="kpi"><small>Savings held</small><b>${money(held)}</b><span>active plans</span></div>
+    <div class="kpi"><small>Ready / near maturity</small><b>${ready.length}</b><span>full plan paid</span></div></div>`;
+  if (rem.length) h += `<div class="card" id="sp-rem"><h3>🔔 Reminders to send today <span class="tag pill warn">${rem.length}</span></h3><p class="small muted" style="margin:-4px 0 6px">One tap opens the member’s WhatsApp with the message ready.</p>` +
+    rem.map(({p, c, kind}) => spRow(p, esc(p.acct) + spStoreTag(p), money(c.left) + `<small style="${c.overdue ? 'color:var(--bad)' : ''}">${c.overdue ? Math.abs(c.dueDays) + ' ' + plural(Math.abs(c.dueDays), 'day') + ' late' : c.dueDays === 0 ? 'due today' : 'due ' + esc(fmtDay(c.due))}</small>`, spWaBtn(p, c, kind))).join('') + `</div>`;
+  if (unsent.length) h += `<div class="card" id="sp-unsent"><h3>🧾 Receipts not sent yet <span class="tag pill gold">${unsent.length}</span></h3>` +
+    unsent.slice(0, 30).map(({p, k, x}) => spRow(p, esc(x.rno || '') + ' · ' + esc(fmtDay(x.day)) + ' · ' + esc(x.mode || ''), money(x.amount), `<button class="btn sm wa" data-act="sp-pdf" data-kind="receipt" data-id="${esc(p.id)}" data-k="${esc(k)}" data-wa="1">🧾 Send</button>`)).join('') + `</div>`;
+  const dueList = (arr, empty) => arr.length ? arr.map(({p, c}) => spRow(p, esc(p.acct) + spStoreTag(p) + ' · ' + esc(spItemLabel(c.next)) + (c.lateNow ? ' · <b style="color:var(--bad)">' + c.lateNow + ' ' + plural(c.lateNow, 'month') + ' late</b>' : ''),
+    money(c.left) + `<small>${c.overdue ? 'since ' + esc(fmtDay(c.due)) : esc(fmtDay(c.due))}</small>`, p.phone ? `<a class="btn sm" href="tel:+91${esc(phone10(p.phone))}" aria-label="Call">📞</a>` : '')).join('') : `<p class="muted small" style="margin:0">${empty}</p>`;
+  h += `<div class="card"><h3>⚠️ Overdue <span class="tag pill bad">${over.length}</span></h3>${dueList(over, 'Nobody is overdue. 👍')}</div>`;
+  h += `<div class="card"><h3>📅 Due today <span class="tag pill gold">${tod.length}</span></h3>${dueList(tod, 'No installments due today.')}</div>`;
+  h += `<div class="card"><h3>Next 7 days <span class="tag pill mute">${soon.length}</span></h3>${dueList(soon, 'Nothing due in the next 7 days.')}</div>`;
+  if (ready.length) h += `<div class="card"><h3>🎁 Full plan paid — maturity <span class="tag pill ok">${ready.length}</span></h3>` + ready.map(({p, c}) => spRow(p, esc(p.acct) + ' · ' + (c.matured ? 'matured ' + esc(fmtDay(c.maturity)) + ' · redeem by ' + esc(fmtDay(c.redeemBy)) : 'matures ' + esc(fmtDay(c.maturity))),
+    money(num(p.inst) * 12), p.phone ? spWaBtn(p, c, 'maturity', '💬') : '')).join('') + `</div>`;
+  /* month calendar: on which date, from whom */
+  const cm = S.spMonth || ym;
+  const rows = [];
+  all.forEach(({p, c}) => { if (p.status === 'closed') return; c.items.forEach(it => { if (spMonthKey(it.due) === cm && (it.paid || p.status === 'active')) rows.push({p, c, it}); }); });
+  rows.sort((a, b) => (a.it.due < b.it.due ? -1 : a.it.due > b.it.due ? 1 : String(a.p.name).localeCompare(b.p.name)));
+  const exp = rows.reduce((s, r) => s + r.it.amt, 0), got = rows.filter(r => r.it.paid).reduce((s, r) => s + r.it.amt, 0);
+  h += `<div class="card" id="sp-cal"><h3>📆 Collection calendar</h3>
+    <div class="row" style="margin-bottom:8px"><button class="btn sm" data-act="sp-month" data-d="-1" aria-label="Previous month">‹</button><b class="grow center" id="sp-cal-m">${esc(spMonthName(cm))}</b><button class="btn sm" data-act="sp-month" data-d="1" aria-label="Next month">›</button></div>
+    <div class="row small" style="gap:6px;margin-bottom:4px"><span class="cnt mute">Due <b>${money(exp)}</b></span><span class="cnt ok">Paid <b>${money(got)}</b></span><span class="cnt warn">Pending <b>${money(exp - got)}</b></span></div>`;
+  if (!rows.length) h += `<p class="muted small">No installments in ${esc(spMonthName(cm))}.</p>`;
+  let lastD = '';
+  rows.forEach(({p, c, it}) => {
+    if (it.due !== lastD) {
+      lastD = it.due;
+      const dayRows = rows.filter(r => r.it.due === it.due);
+      h += `<div class="cal-d"><span>${esc(fmtDayEn(it.due))}${it.due === t ? ' · Today' : ''}</span><span>${money(dayRows.reduce((s, r) => s + r.it.amt, 0))}</span></div>`;
+    }
+    const st = it.paid ? `<span class="pill ok">✓ ${esc(fmtDay(it.paidDay))}</span>` : it.due < t ? '<span class="pill bad">Pending</span>' : '<span class="pill mute">Due</span>';
+    h += spRow(p, esc(p.acct) + ' · ' + esc(spItemLabel(it)) + spStoreTag(p), money(it.amt) + `<small>${st}</small>`, '');
+  });
+  h += `</div>`;
+  patch($('#view'), h);
+}
+function renderShineMembers(){
+  const t = spDay(), q = S.spQ.trim().toLowerCase(), qd = digits(q);
+  const all = spVisible().map(p => ({p, c: shineCalc(p, t)}));
+  const F = [['active', 'Active', x => x.p.status === 'active'], ['due', 'Due / overdue', x => x.p.status === 'active' && x.c.next && x.c.dueDays <= 7],
+    ['late', 'Late', x => x.p.status === 'active' && (x.c.overdue || x.c.moved > 0)], ['full', 'Full plan paid', x => x.p.status === 'active' && x.c.full],
+    ['redeemed', 'Redeemed', x => x.p.status === 'redeemed'], ['closed', 'Closed', x => x.p.status === 'closed'], ['all', 'All', () => true]];
+  const cur = F.find(f => f[0] === S.spFilter) || F[0];
+  let list = all.filter(cur[2]);
+  if (q) list = list.filter(({p}) => [p.name, p.acct, (p.cust || {}).city].join(' ').toLowerCase().includes(q) || (qd.length >= 3 && digits(p.phone).includes(qd)));
+  list.sort((a, b) => (a.p.status === 'active' && b.p.status === 'active' ? (a.c.due || '9') < (b.c.due || '9') ? -1 : 1 : (b.p.createdAt || 0) - (a.p.createdAt || 0)));
+  let h = `<div class="row" style="justify-content:space-between"><div class="view-title">Members</div><a class="btn primary sm" href="#/crm/new">＋ Enrol</a></div>${spStoreChips()}
+    <input class="search" id="spq" placeholder="Search name, phone or account no." value="${esc(S.spQ)}" autocomplete="off">
+    <div class="filters">${F.map(f => `<button class="fchip ${f === cur ? 'on' : ''}" data-act="sp-filter" data-v="${f[0]}">${esc(f[1])}<b>${all.filter(f[2]).length}</b></button>`).join('')}</div>`;
+  if (!list.length) h += `<div class="empty"><b>No members here</b>${all.length ? 'Try another filter or search.' : 'Enrol the first customer with “＋ Enrol”.'}</div>`;
+  h += list.map(({p, c}) => {
+    const pct = Math.min(100, Math.round(c.paid / (c.total || 1) * 100));
+    const due = p.status !== 'active' ? spStatus(p) : !c.next ? '<span class="pill ok">Fully paid</span>' : c.overdue ? `<span class="pill bad">Overdue · ${esc(fmtDay(c.due))}</span>` : c.dueDays === 0 ? '<span class="pill gold">Due today</span>' : `<span class="pill mute">Next ${esc(fmtDay(c.due))}</span>`;
+    return `<a class="ocard" href="#/crm/m/${esc(p.id)}"><div class="oc-top"><span class="ono">${esc(p.acct)}</span>${due}</div>
+      <div class="oc-name">${esc(p.name)}</div><div class="oc-item">${esc(p.phone || '')} · ${money(p.inst)} a month${spStoreTag(p)}</div>
+      <div class="oc-foot"><span class="oc-stage"><span class="bar"><i style="width:${pct}%"></i></span>${esc(spCount(c))} of 10½ · ${money(c.paid)}</span>${c.moved ? `<span class="pill warn">+${c.moved} ${plural(c.moved, 'month')}</span>` : ''}</div></a>`;
+  }).join('');
+  patch($('#view'), h);
+}
+function spStrip(c){
+  const t = spDay();
+  const cells = c.items.map(it => {
+    const cls = it.paid ? 'paid' : it.part > 0 ? 'part' : (c.next === it && it.due < t) ? 'late' : c.next === it ? 'due' : '';
+    return `<i class="${cls}" title="${esc(spItemLabel(it) + ' · ' + fmtDayEn(it.due))}">${it.half ? '½' : it.n}</i>`;
+  }).join('') + `<i class="bonus" title="Deeva’s contribution">✦</i>`;
+  return `<div class="mstrip">${cells}</div><div class="mlab">${c.items.map(it => `<span>${esc(EMON[+it.due.slice(5, 7) - 1])}</span>`).join('')}<span>${esc(EMON[+c.maturity.slice(5, 7) - 1])}</span></div>`;
+}
+function renderShineMember(pid){
+  const p0 = S.shine[pid];
+  if (!p0) { patch($('#view'), `<a class="btn ghost sm" href="#/crm/members">← Members</a><div class="empty"><b>Member not found</b>It may have been deleted, or it belongs to another store.</div>`); $('#stickbar').innerHTML = ''; return; }
+  const p = Object.assign({id: pid}, p0), c = shineCalc(p, spDay()), t = spDay(), cu = p.cust || {};
+  const st = S.stores[p.storeId] || {};
+  let h = `<a class="btn ghost sm" href="#/crm/members" style="margin-left:-6px">← Members</a>
+  <div class="dhead"><div class="row" style="margin-top:0"><span class="no">${esc(p.acct)}</span><span class="grow"></span>${spStatus(p)}</div>
+    <div style="font-size:19px;font-weight:700;margin-top:4px">${esc(p.name)}</div>
+    <div class="sub">${esc(p.phone || '')}${cu.city ? ' · ' + esc(cu.city) : ''} · Deeva Diamonds — ${esc(st.name || p.storeName || '')}</div>
+    <div class="dues"><div class="due"><small>MONTHLY INSTALLMENT</small><b>${money(p.inst)}</b></div>
+      <div class="due"><small>PAID</small><b>${money(c.paid)}</b><span class="small">${esc(spCount(c))} of 10½</span></div>
+      <div class="due"><small>${c.next ? (c.overdue ? 'OVERDUE SINCE' : 'NEXT DUE') : 'BALANCE'}</small><b>${c.next ? esc(fmtDayEn(c.due)) : '₹0'}</b>${c.next ? `<span class="small">${money(c.left)} · ${esc(spItemLabel(c.next))}</span>` : ''}</div>
+      <div class="due"><small>MATURITY</small><b>${esc(fmtDayEn(c.maturity))}</b><span class="small">redeem by ${esc(fmtDay(c.redeemBy))}${p.matDay ? ' · set by Admin' : ''}</span></div></div>
+  </div>`;
+  if (p.status === 'active') {
+    if (c.overdue) h += `<div class="alertbox bad"><h4>⚠️ ${esc(spItemLabel(c.next))} overdue since ${esc(fmtDayEn(c.due))}</h4><p>${money(c.left)} pending.${c.lateNow ? ' The plan has moved ahead by ' + c.lateNow + ' ' + plural(c.lateNow, 'month') + ' — maturity is now ' + fmtDayEn(c.maturity) + '.' : ' Paid this month, it stays on time.'}</p>${p.phone ? spWaBtn(p, c, 'overdue', '💬 Send overdue reminder') : ''}</div>`;
+    else if (c.full) h += `<div class="alertbox ${c.matured ? 'ok' : 'gold'}"><h4>${c.matured ? '🎁 Plan matured — ready to redeem' : '✓ Full plan paid'}</h4><p>${c.matured ? 'Redeem by ' + fmtDayEn(c.redeemBy) + '. Plan value ' + money(num(p.inst) * 12) + ' (paid ' + money(c.paid) + ' + Deeva’s contribution ' + money(num(p.inst) * 1.5) + ').' : 'Matures on ' + fmtDayEn(c.maturity) + '; the full contribution (1½ installments) applies from that date.'}</p><div class="btns">${p.phone ? spWaBtn(p, c, 'maturity', '💬 Send maturity message') : ''}<button class="btn primary sm" data-act="sp-redeem-open">🎁 Redeem</button></div></div>`;
+    if (c.moved && !c.overdue) h += `<div class="banner">⏳ Maturity moved ahead by ${c.moved} ${plural(c.moved, 'month')} for late installments.</div>`;
+  }
+  if (p.status === 'redeemed' && p.redeem) h += `<div class="alertbox ok"><h4>🎁 Redeemed on ${esc(fmtDayEn(p.redeem.day))}</h4><p>Paid ${money(p.redeem.paid)} + Deeva’s contribution ${money(p.redeem.bonus)} = plan value ${money(p.redeem.value)}${p.redeem.billNo ? ' · Bill ' + esc(p.redeem.billNo) : ''}${p.redeem.item ? '\n' + esc(p.redeem.item) : ''}${p.redeem.note ? '\n' + esc(p.redeem.note) : ''}</p>${isAdmin() ? '<button class="btn sm" data-act="sp-unredeem">↺ Undo redemption</button>' : ''}</div>`;
+  if (p.status === 'closed') h += `<div class="alertbox bad"><h4>Plan closed</h4><p>${esc((p.close && p.close.reason) || '')}${p.close ? '\n' + esc(p.close.name || '') + ' · ' + esc(fmtWhen(p.close.at)) : ''}</p>${isAdmin() ? '<button class="btn sm" data-act="sp-reopen">↺ Reopen plan</button>' : ''}</div>`;
+  /* plan card */
+  h += `<div class="card"><h3>💎 Plan</h3>${spStrip(c)}
+    <div class="kv" style="margin-top:10px">
+      <div>You pay (10½)</div><div>${money(c.total)}</div>
+      <div>Deeva’s contribution (1½)</div><div>${money(num(p.inst) * 1.5)}</div>
+      <div>Plan value (12)</div><div>${money(num(p.inst) * 12)}</div>
+      <div>Started</div><div>${esc(fmtDayEn(p.startDay))}</div>
+      <div>Balance to pay</div><div>${money(Math.max(0, c.total - c.paid))}</div>
+      <div>If redeemed today</div><div>${c.pct ? money(c.paid) + ' + ' + money(c.bonus) + ' (' + Math.round(c.pct * 100) + '%) = ' + money(c.paid + c.bonus) : money(c.paid) + ' — no contribution yet (from 6 installments)'}</div>
+    </div>
+    <details class="tv"><summary>Installment dates</summary><table class="tbl" style="margin-top:6px"><tr><th>Installment</th><th>Due</th><th>Amount</th><th>Status</th></tr>${c.items.map(it => `<tr><td>${it.half ? '11 (half)' : it.n}</td><td>${esc(fmtDay(it.due))}</td><td>${money(it.amt)}</td><td>${it.paid ? '✓ ' + esc(fmtDay(it.paidDay)) + (it.late ? ' <span class="pill warn">+' + it.late + 'm</span>' : '') : it.part ? money(it.part) + ' paid' : c.next === it && it.due < t ? '<span class="pill bad">Overdue</span>' : '—'}</td></tr>`).join('')}</table></details></div>`;
+  /* ledger */
+  const pays = Object.entries(p.payments || {}).map(([k, x]) => Object.assign({k}, x)).sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : (a.at || 0) - (b.at || 0)));
+  let run = 0;
+  h += `<div class="card" id="sp-ledger"><h3>📒 Ledger <span class="tag small muted">${pays.filter(x => !(p.void || {})[x.k]).length} ${plural(pays.length, 'payment')}</span></h3>`;
+  if (!pays.length) h += '<p class="muted small" style="margin:0 0 8px">No payments yet.</p>';
+  h += pays.map(x => {
+    const vd = (p.void || {})[x.k];
+    if (!vd) run += num(x.amount);
+    const sent = (p.sent || {})[x.k];
+    return `<div class="lrow ${vd ? 'void' : ''}"><div class="grow"><b class="money">${money(x.amount)}</b> · ${esc(x.mode || '')}${x.from ? ' · ' + esc(x.from) : ''}
+      <small>${esc(fmtDayEn(x.day))} · ${esc(x.rno || '')}${x.ref ? ' · Ref ' + esc(x.ref) : ''} · by ${esc(x.name || '')}</small>${x.note ? `<small>${esc(x.note)}</small>` : ''}${vd ? `<small style="color:var(--bad)">Cancelled by ${esc(vd.name || '')}: ${esc(vd.reason || '')}</small>` : ''}
+      ${x.proofUrl ? `<img class="lproof" src="${esc(x.proofUrl)}" alt="Payment proof" data-act="zoom" data-src="${esc(x.proofUrl)}" data-cap="${esc('Payment proof · ' + (x.rno || ''))}">` : ''}</div>
+      <div class="lr">${vd ? '' : `<span class="small muted">Total ${money(run)}</span><button class="btn sm ${sent ? '' : 'wa'}" data-act="sp-pdf" data-kind="receipt" data-k="${esc(x.k)}" data-wa="1">${sent ? '✓ Sent · again' : '🧾 Send receipt'}</button><button class="btn ghost sm" data-act="sp-pdf" data-kind="receipt" data-k="${esc(x.k)}" data-wa="0">PDF</button>${isAdmin() ? `<button class="btn ghost sm" data-act="sp-void-open" data-k="${esc(x.k)}">Cancel</button>` : ''}`}</div></div>`;
+  }).join('');
+  if (p.status === 'active' && !c.full) h += `<button class="btn primary big" data-act="sp-pay-open" style="margin-top:8px">＋ Add payment</button>`;
+  h += `</div>`;
+  /* documents */
+  h += `<div class="card"><h3>📄 Documents</h3><div class="btns">
+    <button class="btn wa" data-act="sp-pdf" data-kind="enrol" data-wa="1">${(p.sent || {}).enrol ? '✓ ' : ''}Enrolment form → WhatsApp</button>
+    <button class="btn" data-act="sp-pdf" data-kind="enrol" data-wa="0">Enrolment form PDF</button>
+    <button class="btn wa" data-act="sp-pdf" data-kind="stmt" data-wa="1">Statement → WhatsApp</button>
+    <button class="btn" data-act="sp-pdf" data-kind="stmt" data-wa="0">Statement PDF</button></div></div>`;
+  /* customer */
+  h += `<div class="card"><h3>👤 Member details <button class="btn ghost sm tag" data-act="sp-cust-open">Edit</button></h3><div class="kv">
+    <div>Mobile</div><div>${esc(p.phone || '')}${cu.alt ? ' · ' + esc(cu.alt) : ''}</div>
+    ${cu.email ? `<div>Email</div><div>${esc(cu.email)}</div>` : ''}
+    ${cu.dob ? `<div>Date of birth</div><div>${esc(fmtDayEn(cu.dob))}</div>` : ''}
+    ${cu.anniv ? `<div>Anniversary</div><div>${esc(fmtDayEn(cu.anniv))}</div>` : ''}
+    <div>Address</div><div>${esc([cu.address, cu.city].filter(Boolean).join(', '))}</div>
+    ${cu.idType ? `<div>Photo ID</div><div>${esc(cu.idType)}${cu.idNo ? ' · ' + esc(cu.idNo) : ''}</div>` : ''}
+    <div>Nominee</div><div>${esc(cu.nominee || '—')}${cu.nomRel ? ' (' + esc(cu.nomRel) + ')' : ''}${cu.nomPhone ? ' · ' + esc(cu.nomPhone) : ''}</div>
+    ${cu.note ? `<div>Note</div><div>${esc(cu.note)}</div>` : ''}
+    <div>Enrolled</div><div>${esc(fmtWhen(p.createdAt))} · ${esc(p.createdByName || '')}</div>
+  </div>${p.ack && p.ack.signData ? `<div class="small muted" style="margin-top:8px">Signature on the enrolment form</div><img class="sigimg" src="${esc(p.ack.signData)}" alt="Member signature">` : p.ack && p.ack.remote ? '<p class="small muted">Enrolled over phone / WhatsApp (no signature).</p>' : ''}
+  ${p.phone ? `<div class="btns" style="margin-top:10px"><a class="btn sm" href="tel:+91${esc(phone10(p.phone))}">📞 Call</a>${p.status === 'active' && c.next ? spWaBtn(p, c, c.overdue ? 'overdue' : 'reminder', '💬 Payment reminder') : ''}<a class="btn sm" href="${esc(waLink(p.phone, ''))}" target="_blank" rel="noopener">WhatsApp chat</a></div>` : ''}</div>`;
+  if (p.status === 'active' && !c.full && c.n >= 6) h += `<div class="card"><h3>🎁 Early redemption</h3><p class="small" style="margin-top:0">After ${c.n} installments Deeva’s contribution is ${Math.round(c.pct * 100)}% of one installment (${money(c.bonus)}). The full plan gives 150% (${money(num(p.inst) * 1.5)}) at maturity.</p><button class="btn" data-act="sp-redeem-open">Redeem now</button></div>`;
+  if (p.remind && p.remind.at) h += `<p class="small muted center">Last reminder: ${esc(fmtWhen(p.remind.at))} by ${esc(p.remind.name || '')}</p>`;
+  /* history */
+  const logs = Object.values(p.log || {}).sort((a, b) => (b.at || 0) - (a.at || 0));
+  h += `<div class="card"><h3>🕘 History</h3>${logs.length ? `<ul class="tl">${logs.map(x => `<li><span class="ic">${LOGICON[x.type] || '•'}</span><div class="tx">${esc(x.text)}<small>${esc(whoLabel(x.name, x.role, null))} · ${esc(fmtWhen(x.at))}</small></div></li>`).join('')}</ul>` : '<p class="muted small">Nothing yet.</p>'}</div>`;
+  if (isAdmin()) h += `<div class="card"><h3>⚙️ Admin</h3><div class="btns">
+    <button class="btn sm" data-act="sp-plan-open">Edit installment / start date</button>
+    <button class="btn sm" data-act="sp-mat-open">Change maturity date</button>
+    ${p.status === 'active' ? '<button class="btn sm danger" data-act="sp-close-open">Close plan</button>' : ''}
+    ${isOwner() ? '<button class="btn sm danger" data-act="sp-del-open">🗑️ Delete permanently</button>' : ''}</div></div>`;
+  patch($('#view'), h);
+  patch($('#stickbar'), p.status === 'active' ? `<div class="stick"><div class="in2">${p.phone && c.next ? spWaBtn(p, c, c.overdue ? 'overdue' : 'reminder', '💬 Reminder').replace('btn sm wa', 'btn wa') : ''}${c.full ? '<button class="btn primary" data-act="sp-redeem-open">🎁 Redeem</button>' : '<button class="btn primary" data-act="sp-pay-open">＋ Payment</button>'}</div></div>` : '');
+}
+
+/* ---------- enrolment ---------- */
+let SPF = null;
+function spNewForm(){
+  const sl = storeList();
+  const sid = isStore() ? myStore() : (sl.length === 1 ? sl[0].id : '');
+  return {key: rid(), pid: B.db.newId('shinePlans'), phone: '', name: '', alt: '', email: '', dob: '', anniv: '', address: '', city: (S.stores[sid] || {}).city || '',
+    idType: '', idNo: '', nominee: '', nomRel: '', nomPhone: '', note: '', inst: 10000, instOther: '', startDay: spDay(), storeId: sid,
+    payNow: true, payAmt: '10000', mode: 'UPI', from: '', ref: '', accepted: false, remote: false};
+}
+function spInstOf(f){ return f.instOther !== '' ? Math.round(num(f.instOther)) : num(f.inst); }
+function spFld(id, label, val, attrs, req, hint){
+  return `<div class="fld" id="w-${id}"><label for="${id}">${esc(label)}${req ? '<span class="req">*</span>' : ''}</label><input class="in" id="${id}" data-spf="${id.slice(4)}" value="${esc(val || '')}" ${attrs || ''}>${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
+}
+function spChips(field, list, val, label){
+  return `<div class="chips" id="spc-${field}">${list.map(v => `<button type="button" class="chip ${String(val) === String(v) ? 'on' : ''}" data-act="sp-fchip" data-f="${field}" data-v="${esc(v)}">${esc(label ? label(v) : typeof v === 'number' ? money(v) : v)}</button>`).join('')}</div>`;
+}
+function renderShineNew(){
+  if (!SPF) SPF = spNewForm();
+  const f = SPF;
+  if ($('#view')._sp === f.key && $('#spf')) { spFormUpdate(); return; }
+  const sl = storeList();
+  let h = `<div id="spf"><div class="row" style="margin-bottom:6px"><a class="btn ghost sm" href="#/crm" style="margin-left:-6px">← Back</a><span class="grow"></span><button class="btn ghost sm" data-act="sp-fclear">Clear</button></div>
+  <div class="view-title">Enrol in the Deeva Shine Plan</div>`;
+  if (isAdmin() && sl.length > 1) h += `<div class="sec"><div class="sec-h"><span class="n">🏬</span><b>Store</b></div><div class="fld" id="w-sp-store">${spChips('storeId', sl.map(s => s.id), f.storeId, id => storeName(id) || id)}</div></div>`;
+  h += `<div class="sec"><div class="sec-h"><span class="n">1</span><div><b>Customer</b><small>Who is joining the plan</small></div></div>
+    ${spFld('spf-phone', 'Mobile (WhatsApp)', f.phone, 'inputmode="tel" maxlength="14" autocomplete="off"', true)}
+    <div id="sp-exist"></div>
+    ${spFld('spf-name', 'Full name', f.name, 'autocomplete="off"', true)}
+    <div class="two">${spFld('spf-alt', 'Alternate mobile', f.alt, 'inputmode="tel"')}${spFld('spf-email', 'Email', f.email, 'type="email"')}</div>
+    <div class="two">${spFld('spf-dob', 'Date of birth', f.dob, 'type="date"')}${spFld('spf-anniv', 'Anniversary', f.anniv, 'type="date"')}</div>
+    <div class="fld" id="w-spf-address"><label for="spf-address">Address<span class="req">*</span></label><textarea class="in" id="spf-address" data-spf="address" style="min-height:64px">${esc(f.address)}</textarea></div>
+    ${spFld('spf-city', 'City', f.city)}
+    <div class="lbl">Photo ID (optional)</div>${spChips('idType', SP_IDS, f.idType)}<div style="height:8px"></div>
+    ${spFld('spf-idNo', 'ID number', f.idNo, 'autocomplete="off"')}</div>`;
+  h += `<div class="sec"><div class="sec-h"><span class="n">2</span><div><b>Nominee</b><small>Only the member or the nominee can redeem the plan</small></div></div>
+    ${spFld('spf-nominee', 'Nominee name', f.nominee)}<div class="lbl">Relation</div>${spChips('nomRel', SP_REL, f.nomRel)}<div style="height:8px"></div>
+    ${spFld('spf-nomPhone', 'Nominee mobile', f.nomPhone, 'inputmode="tel"')}</div>`;
+  h += `<div class="sec"><div class="sec-h"><span class="n">3</span><div><b>Plan</b><small>Minimum ₹5,000 a month, in multiples of ₹1,000 — fixed for the whole plan</small></div></div>
+    <div class="fld" id="w-sp-inst"><div class="lbl">Monthly installment<span class="req">*</span></div>${spChips('inst', SP_INST, f.instOther !== '' ? '' : f.inst)}</div>
+    ${spFld('spf-instOther', 'Other amount ₹', f.instOther, 'inputmode="numeric" placeholder="e.g. 12000"')}
+    ${spFld('spf-startDay', 'First installment date', f.startDay, 'type="date"', true, 'Every installment falls on this day of the month.')}
+    <div class="calc" id="sp-sum"></div></div>`;
+  h += `<div class="sec"><div class="sec-h"><span class="n">4</span><div><b>First installment</b><small>Payment received today</small></div></div>
+    <label class="check"><input type="checkbox" id="spf-payNow" ${f.payNow ? 'checked' : ''}><span>First installment received now</span></label>
+    <div id="sp-pay-wrap" ${f.payNow ? '' : 'hidden'}>
+      ${spFld('spf-payAmt', 'Amount ₹', f.payAmt, 'inputmode="numeric"', true)}
+      <div class="lbl">How was it paid?<span class="req">*</span></div>${spChips('mode', SP_MODES, f.mode)}<div style="height:10px"></div>
+      ${spFld('spf-from', 'Paid by / from', f.from, 'placeholder="e.g. Self — HDFC account, or husband Ramesh"')}
+      ${spFld('spf-ref', 'Reference no. (UPI / cheque / transaction)', f.ref, 'autocomplete="off"')}
+      <div class="lbl">🧾 Payment proof (optional)</div><div id="spf-proof"></div>
+    </div></div>`;
+  h += `<div class="sec"><div class="sec-h"><span class="n">5</span><div><b>Terms and signature</b></div></div>
+    <ol class="terms">${SP_TERMS.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
+    <label class="check" id="w-spf-accepted"><input type="checkbox" id="spf-accepted" ${f.accepted ? 'checked' : ''}><span>The customer has read and accepted the plan terms.</span></label>
+    <label class="check"><input type="checkbox" id="spf-remote" ${f.remote ? 'checked' : ''}><span>Enrolled over phone / WhatsApp (no signature now)</span></label>
+    <div id="w-sp-sig" ${f.remote ? 'hidden' : ''}><div class="lbl">Customer signature<span class="req">*</span></div><div class="sig-wrap"><canvas id="sp-sig"></canvas><span>Sign here with your finger</span></div><button type="button" class="btn ghost sm" data-act="sp-sig-clear">Clear</button></div>
+    ${spFld('spf-note', 'Note (internal)', f.note)}
+    <button class="btn primary big" data-act="sp-enrol" style="margin:6px 0 14px">💎 Enrol member</button></div></div>`;
+  $('#view').innerHTML = h; $('#view')._h = null; $('#view')._sp = f.key;
+  SPF.sig = attachSig($('#sp-sig'));
+  SPF.picker = makePicker('spf-proof', f.pid, {kinds: ['image'], imageLabel: 'Proof photo', descPh: 'e.g. UPI screenshot', base: 'shine/' + f.pid});
+  SPF.picker.render();
+  spFormUpdate();
+}
+function spFormUpdate(){
+  const f = SPF; if (!f) return;
+  const inst = spInstOf(f), ok = inst >= 5000 && inst % 1000 === 0;
+  const sum = $('#sp-sum');
+  if (sum) {
+    if (!ok) sum.innerHTML = `<p class="small" style="margin:0;color:var(--bad)">${inst ? 'The installment must be at least ₹5,000, in multiples of ₹1,000.' : 'Choose the monthly installment.'}</p>`;
+    else {
+      const c = shineCalc({inst, startDay: f.startDay || spDay()}, f.startDay || spDay());
+      sum.innerHTML = `<div class="calc-out" style="border:0;margin:0;padding:0">
+        <div><span>Customer pays (10½)</span><span>${money(inst * 10.5)}</span></div>
+        <div><span>Deeva’s contribution (1½)</span><span>${money(inst * 1.5)}</span></div>
+        <div class="fin"><span>Jewellery worth (12)</span><span>${money(inst * 12)}</span></div>
+        <div><span>Installments 1–10</span><span>${esc(fmtDay(c.items[0].due))} – ${esc(fmtDay(c.items[9].due))}</span></div>
+        <div><span>Last (half) installment</span><span>by ${esc(fmtDay(c.items[10].due))}</span></div>
+        <div><span>Matures</span><span>${esc(fmtDayEn(c.maturity))}</span></div>
+        <div><span>Redeem by</span><span>${esc(fmtDayEn(c.redeemBy))}</span></div></div>`;
+    }
+  }
+  /* existing member with this mobile number */
+  const ex = $('#sp-exist');
+  if (ex) {
+    const ph = phone10(f.phone);
+    const same = ph.length === 10 ? spPlans().filter(p => phone10(p.phone) === ph) : [];
+    const html = same.length ? `<div class="banner" style="margin-top:-4px">👤 ${esc(same[0].name)} is already a member (${same.map(p => esc(p.acct) + ' · ' + (p.status === 'active' ? 'active' : p.status)).join(', ')}). <button class="btn sm" data-act="sp-usecust" data-id="${esc(same[0].id)}">Use details</button></div>` : '';
+    if (ex._h !== html) { ex.innerHTML = html; ex._h = html; }
+  }
+  const pw = $('#sp-pay-wrap'); if (pw) pw.hidden = !f.payNow;
+  const sw = $('#w-sp-sig'); if (sw) sw.hidden = f.remote;
+}
+function spFormMissing(){
+  const f = SPF, m = [];
+  if (isAdmin() && !f.storeId) m.push(['w-sp-store', 'Store']);
+  if (phone10(f.phone).length !== 10) m.push(['w-spf-phone', 'Mobile number (10 digits)']);
+  if (!f.name.trim()) m.push(['w-spf-name', 'Full name']);
+  if (!f.address.trim()) m.push(['w-spf-address', 'Address']);
+  const inst = spInstOf(f);
+  if (!(inst >= 5000 && inst % 1000 === 0)) m.push(['w-sp-inst', 'Monthly installment (minimum ₹5,000, multiples of ₹1,000)']);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(f.startDay)) m.push(['w-spf-startDay', 'First installment date']);
+  if (f.payNow && !(num(f.payAmt) > 0)) m.push(['w-spf-payAmt', 'First installment amount']);
+  if (f.payNow && num(f.payAmt) > inst * 10.5) m.push(['w-spf-payAmt', 'The amount is more than the whole plan (' + money(inst * 10.5) + ')']);
+  if (!f.accepted) m.push(['w-spf-accepted', 'Customer’s acceptance of the terms']);
+  if (!f.remote && !(f.sig && f.sig.dirty())) m.push(['w-sp-sig', 'Customer signature']);
+  return m;
+}
+async function spEnrol(){
+  const f = SPF; if (!f || f.busy) return;
+  if (f.picker && f.picker.busy()) return toast('Please wait for the upload to finish…');
+  const miss = spFormMissing();
+  $$('#spf .miss').forEach(x => x.classList.remove('miss'));
+  if (miss.length) {
+    miss.forEach(([id]) => { const w = document.getElementById(id); if (w) w.classList.add('miss'); });
+    const w = document.getElementById(miss[0][0]); if (w) w.scrollIntoView({behavior: 'smooth', block: 'center'});
+    return toast('Please fill in: ' + miss.map(x => x[1]).join(', '), 'bad');
+  }
+  f.busy = true;
+  const btn = $('[data-act="sp-enrol"]'); if (btn) { btn.disabled = true; btn.textContent = 'Enrolling…'; }
+  const now = Date.now(), d = new Date(), ym = ymOf(d), pid = f.pid, uid = S.authUser.uid;
+  const inst = spInstOf(f), storeId = isStore() ? myStore() : f.storeId;
+  const sign = !f.remote && f.sig && f.sig.dirty() ? f.sig.data() : '';
+  const proof = f.picker ? f.picker.done()[0] : null;
+  const cust = {alt: phone10(f.alt), email: f.email.trim(), dob: f.dob, anniv: f.anniv, address: f.address.trim(), city: f.city.trim(), idType: f.idType, idNo: f.idNo.trim(),
+    nominee: f.nominee.trim(), nomRel: f.nomRel, nomPhone: phone10(f.nomPhone), note: f.note.trim()};
+  let acct = '';
+  try {
+    await B.db.counterTx('shineCounters/' + ym, n => {
+      acct = 'SP-' + ym + '-' + String(n).padStart(3, '0');
+      const doc = {acct, ym, seq: n, storeId, storeName: storeName(storeId), name: f.name.trim(), phone: phone10(f.phone), cust, inst, startDay: f.startDay,
+        status: 'active', payments: {}, sent: {}, ack: {accepted: true, remote: !!f.remote, at: now, terms: SP_TERMS.length}, createdAt: now, createdBy: uid,
+        createdByName: myName(), updatedAt: now, updatedBy: uid,
+        log: {[logKey()]: logEntry('created', 'Enrolled · ' + money(inst) + ' a month from ' + fmtDayEn(f.startDay))}};
+      if (sign) doc.ack.signData = sign;
+      if (f.payNow) {
+        const pay = {amount: Math.round(num(f.payAmt)), mode: f.mode, day: spDay(), from: f.from.trim(), ref: f.ref.trim(), note: 'First installment', at: now, by: uid, name: myName(), rno: acct + '/01'};
+        if (proof) { pay.proofUrl = proof.url; pay.proofPath = proof.path; }
+        doc.payments['p' + rid()] = pay;
+        doc.log[logKey()] = logEntry('payment', 'Payment ' + money(pay.amount) + ' (' + pay.mode + ') · receipt ' + pay.rno);
+      }
+      return [{path: 'shinePlans/' + pid, data: doc}];
+    });
+  } catch (e) {
+    handleWriteErr(e); f.busy = false;
+    if (btn) { btn.disabled = false; btn.textContent = '💎 Enrol member'; }
+    return;
+  }
+  SPF = null;
+  go('#/crm/m/' + pid);
+  setTimeout(() => openSheet('✓ Enrolled — ' + acct, `<p>${esc(f.name.trim())} is now a member of the Deeva Shine Plan. Send the enrolment form${f.payNow ? ' (with the first payment)' : ''} on WhatsApp:</p>
+    <button class="btn wa big" data-act="sp-pdf" data-kind="enrol" data-id="${esc(pid)}" data-wa="1">📲 Send enrolment form on WhatsApp</button>
+    <div class="btns" style="margin-top:8px"><button class="btn" data-act="sp-pdf" data-kind="enrol" data-id="${esc(pid)}" data-wa="0">Save PDF</button><button class="btn" data-act="sheet-close">Later</button></div>`, {pid}), 250);
+}
+
+/* ---------- payments ---------- */
+function spPayOpen(pid){
+  const p = S.shine[pid]; if (!p) return;
+  const c = shineCalc(p, spDay()), left = c.left, bal = Math.max(0, c.total - c.paid);
+  const quick = [];
+  if (left) quick.push([left, 'This installment']);
+  if (left && left + num(p.inst) <= bal) quick.push([left + num(p.inst), '2 installments']);
+  if (bal && !quick.some(q => q[0] === bal)) quick.push([bal, 'Full balance']);
+  openSheet('＋ Payment — ' + p.name, `<p class="small muted" style="margin-top:-6px">${esc(p.acct)} · ${esc(spCount(c))} of 10½ paid · ${c.next ? 'next ' + money(left) + ' due ' + esc(fmtDay(c.due)) : 'fully paid'}</p>
+    <div class="two"><div class="fld"><label for="sp-amt">Amount ₹ <span class="req">*</span></label><input class="in" id="sp-amt" inputmode="numeric" value="${left ? Math.round(left) : ''}"></div>
+      <div class="fld"><label for="sp-day">Date received</label><input class="in" type="date" id="sp-day" value="${spDay()}" max="${spDay()}"></div></div>
+    <div class="chips" style="margin:-4px 0 12px">${quick.map(q => `<button class="chip" data-act="sp-amt" data-v="${Math.round(q[0])}">${esc(q[1])} · ${money(q[0])}</button>`).join('')}</div>
+    <div class="lbl">How was it paid? <span class="req">*</span></div><div class="chips" id="sp-mode" style="margin-bottom:12px">${SP_MODES.map((m, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="sp-mode" data-v="${esc(m)}">${esc(m)}</button>`).join('')}</div>
+    <div class="fld"><label for="sp-from">Paid by / from</label><input class="in" id="sp-from" placeholder="e.g. Self — HDFC account, or husband Ramesh"></div>
+    <div class="fld"><label for="sp-ref">Reference no. (UPI / cheque / transaction)</label><input class="in" id="sp-ref" autocomplete="off"></div>
+    <div class="fld"><label for="sp-note">Note</label><input class="in" id="sp-note"></div>
+    <div class="lbl">🧾 Payment proof (optional) — UPI screenshot, cheque or slip</div><div id="sp-proof"></div>
+    <button class="btn primary big" data-act="sp-pay-do">Save payment</button>`, {pid, mode: SP_MODES[0]});
+  S.sheet.picker = makePicker('sp-proof', pid, {kinds: ['image'], imageLabel: 'Proof photo', descPh: 'e.g. UPI screenshot', base: 'shine/' + pid});
+  S.sheet.picker.render();
+}
+async function spPayDo(){
+  const pid = S.sheet.pid, p = S.shine[pid]; if (!p) return;
+  const amt = Math.round(num($('#sp-amt').value)), day = $('#sp-day').value || spDay(), pk = S.sheet.picker;
+  const c = shineCalc(p, spDay()), bal = Math.max(0, c.total - c.paid);
+  if (!(amt > 0)) return toast('Please enter the amount.', 'bad');
+  if (amt > bal + 0.5) return toast('That is more than the plan balance (' + money(bal) + ').', 'bad');
+  if (day > spDay()) return toast('The date cannot be in the future.', 'bad');
+  if (pk.busy()) return toast('Please wait for the upload to finish…');
+  const k = 'p' + rid(), n = Object.keys(p.payments || {}).length + 1;
+  const pay = {amount: amt, mode: S.sheet.mode, day, from: $('#sp-from').value.trim(), ref: $('#sp-ref').value.trim(), note: $('#sp-note').value.trim(),
+    at: Date.now(), by: S.authUser.uid, name: myName(), rno: p.acct + '/' + pad(n)};
+  const proof = pk.done()[0]; if (proof) { pay.proofUrl = proof.url; pay.proofPath = proof.path; }
+  const ok = await write('shinePlans/' + pid, stamp({payments: {[k]: pay}, log: {[logKey()]: logEntry('payment', 'Payment ' + money(amt) + ' (' + pay.mode + ')' + (pay.from ? ' from ' + pay.from : '') + ' · receipt ' + pay.rno + (proof ? ' · 🧾' : ''))}}));
+  if (!ok) return;
+  closeSheet();
+  openSheet('✓ Payment saved', `<p>${money(amt)} from ${esc(p.name)} — receipt <b>${esc(pay.rno)}</b>. Send the receipt on WhatsApp:</p>
+    <button class="btn wa big" data-act="sp-pdf" data-kind="receipt" data-id="${esc(pid)}" data-k="${esc(k)}" data-wa="1">📲 Send receipt on WhatsApp</button>
+    <div class="btns" style="margin-top:8px"><button class="btn" data-act="sp-pdf" data-kind="receipt" data-id="${esc(pid)}" data-k="${esc(k)}" data-wa="0">Save PDF</button><button class="btn" data-act="sheet-close">Later</button></div>`, {pid});
+}
+function spVoidOpen(pid, k){
+  const p = S.shine[pid], x = p && (p.payments || {})[k]; if (!x) return;
+  openSheet('Cancel this payment?', `<p>${money(x.amount)} · ${esc(x.mode)} · ${esc(fmtDayEn(x.day))} · ${esc(x.rno || '')}</p><p class="small muted">Use this only for a wrong entry. The payment stays in the ledger, crossed out, with your reason.</p>
+    <div class="fld"><label for="sp-vreason">Reason <span class="req">*</span></label><input class="in" id="sp-vreason" placeholder="e.g. Entered twice"></div>
+    <button class="btn danger big" data-act="sp-void-do">Cancel payment</button>`, {pid, k});
+}
+async function spVoidDo(){
+  const {pid, k} = S.sheet, r = $('#sp-vreason').value.trim(), p = S.shine[pid];
+  if (!r) return toast('Please write the reason.', 'bad');
+  const x = p.payments[k];
+  const ok = await write('shinePlans/' + pid, stamp({void: {[k]: {at: Date.now(), by: S.authUser.uid, name: myName(), reason: r}}, log: {[logKey()]: logEntry('cancelled', 'Payment ' + money(x.amount) + ' (' + (x.rno || '') + ') cancelled: ' + r)}}));
+  if (ok) { closeSheet(); toast('Payment cancelled.'); }
+}
+
+/* ---------- member details, redemption, admin ---------- */
+function spCustOpen(pid){
+  const p = S.shine[pid]; if (!p) return; const cu = p.cust || {};
+  const fi = (id, l, v, a) => `<div class="fld"><label for="${id}">${esc(l)}</label><input class="in" id="${id}" value="${esc(v || '')}" ${a || ''}></div>`;
+  openSheet('Member details', fi('sc-name', 'Full name *', p.name) + `<div class="two">${fi('sc-phone', 'Mobile (WhatsApp) *', p.phone, 'inputmode="tel"')}${fi('sc-alt', 'Alternate mobile', cu.alt, 'inputmode="tel"')}</div>` +
+    fi('sc-email', 'Email', cu.email, 'type="email"') + `<div class="two">${fi('sc-dob', 'Date of birth', cu.dob, 'type="date"')}${fi('sc-anniv', 'Anniversary', cu.anniv, 'type="date"')}</div>` +
+    `<div class="fld"><label for="sc-address">Address *</label><textarea class="in" id="sc-address" style="min-height:60px">${esc(cu.address || '')}</textarea></div>` + fi('sc-city', 'City', cu.city) +
+    `<div class="two">${fi('sc-idType', 'Photo ID type', cu.idType, 'list="sp-idl"')}${fi('sc-idNo', 'ID number', cu.idNo)}</div><datalist id="sp-idl">${SP_IDS.map(x => `<option value="${esc(x)}">`).join('')}</datalist>` +
+    `<div class="two">${fi('sc-nominee', 'Nominee', cu.nominee)}${fi('sc-nomRel', 'Relation', cu.nomRel, 'list="sp-rell"')}</div><datalist id="sp-rell">${SP_REL.map(x => `<option value="${esc(x)}">`).join('')}</datalist>` +
+    fi('sc-nomPhone', 'Nominee mobile', cu.nomPhone, 'inputmode="tel"') + fi('sc-note', 'Note (internal)', cu.note) +
+    `<button class="btn primary big" data-act="sp-cust-save">Save</button>`, {pid});
+}
+async function spCustSave(){
+  const pid = S.sheet.pid, p = S.shine[pid], v = id => $('#' + id).value.trim();
+  if (!v('sc-name') || phone10(v('sc-phone')).length !== 10 || !v('sc-address')) return toast('Name, a 10-digit mobile and the address are required.', 'bad');
+  const cust = {alt: phone10(v('sc-alt')), email: v('sc-email'), dob: v('sc-dob'), anniv: v('sc-anniv'), address: v('sc-address'), city: v('sc-city'), idType: v('sc-idType'), idNo: v('sc-idNo'),
+    nominee: v('sc-nominee'), nomRel: v('sc-nomRel'), nomPhone: phone10(v('sc-nomPhone')), note: v('sc-note')};
+  const old = Object.assign({name: p.name, phone: p.phone}, p.cust || {}), now = Object.assign({name: v('sc-name'), phone: phone10(v('sc-phone'))}, cust);
+  const LBL = {name: 'Name', phone: 'Mobile', alt: 'Alternate mobile', email: 'Email', dob: 'Date of birth', anniv: 'Anniversary', address: 'Address', city: 'City', idType: 'Photo ID', idNo: 'ID number', nominee: 'Nominee', nomRel: 'Relation', nomPhone: 'Nominee mobile', note: 'Note'};
+  const ch = Object.keys(LBL).filter(k => String(old[k] || '') !== String(now[k] || '')).map(k => LBL[k] + ': ' + (old[k] || '—') + ' → ' + (now[k] || '—'));
+  if (!ch.length) return closeSheet();
+  const ok = await write('shinePlans/' + pid, stamp({name: now.name, phone: now.phone, cust, log: {[logKey()]: logEntry('edited', 'Details changed\n' + ch.join('\n'))}}));
+  if (ok) { closeSheet(); toast('Saved.'); }
+}
+function spRedeemOpen(pid){
+  const p = S.shine[pid]; if (!p) return;
+  const t = spDay(), c = shineCalc(p, t);
+  const notes = [];
+  if (c.full && !c.matured) notes.push('The plan matures on ' + fmtDayEn(c.maturity) + '. Before that the contribution is for 10 installments (90%).');
+  if (c.full && c.matured && t > c.redeemBy) notes.push('The redemption window ended on ' + fmtDayEn(c.redeemBy) + '. The Admin decides the contribution.');
+  if (c.n < 6) notes.push('Less than 6 installments: no contribution — the savings can be used for jewellery (no cash refund).');
+  const rule = c.full && c.matured ? 'Full plan at maturity — 1½ installments (150%)' : c.n >= 6 ? c.n + ' installments — ' + Math.round(c.pct * 100) + '% of one installment' : 'No contribution';
+  openSheet('🎁 Redeem — ' + p.name, `${notes.map(n => `<div class="banner">⚠️ ${esc(n)}</div>`).join('')}
+    <div class="kv" style="margin-bottom:12px"><div>Paid by the member</div><div>${money(c.paid)}</div><div>Rule</div><div>${esc(rule)}</div></div>
+    <div class="fld"><label for="sp-bonus">Deeva’s contribution ₹</label><input class="in" id="sp-bonus" inputmode="numeric" value="${c.bonus}" data-spr="1" ${isAdmin() ? '' : 'readonly'}>${isAdmin() ? '<div class="hint">Admin can change this (management decision).</div>' : ''}</div>
+    <div class="tot big"><span>Plan value for jewellery</span><span class="money" id="sp-rval">${money(c.paid + c.bonus)}</span></div>
+    <div class="fld"><label for="sp-bill">Jewellery bill no.</label><input class="in" id="sp-bill"></div>
+    <div class="fld"><label for="sp-item">Jewellery taken</label><input class="in" id="sp-item" placeholder="e.g. Diamond bracelet, 18KT"></div>
+    <div class="fld"><label for="sp-rnote">Note</label><input class="in" id="sp-rnote"></div>
+    <p class="small muted">Ready-stock diamond jewellery only · one bill · no cash refund.</p>
+    <button class="btn primary big" data-act="sp-redeem-do">Mark as redeemed</button>`, {pid, paid: c.paid, n: c.n, pct: c.pct});
+}
+async function spRedeemDo(){
+  const {pid, paid, n} = S.sheet, bonus = Math.round(num($('#sp-bonus').value));
+  const r = {day: spDay(), at: Date.now(), by: S.authUser.uid, name: myName(), paid, installments: n, bonus, value: paid + bonus, billNo: $('#sp-bill').value.trim(), item: $('#sp-item').value.trim(), note: $('#sp-rnote').value.trim()};
+  const ok = await write('shinePlans/' + pid, stamp({status: 'redeemed', redeem: r, log: {[logKey()]: logEntry('delivered', 'Redeemed · paid ' + money(paid) + ' + contribution ' + money(bonus) + ' = ' + money(r.value) + (r.billNo ? ' · bill ' + r.billNo : ''))}}));
+  if (ok) { closeSheet(); toast('Plan redeemed.'); }
+}
+function spPlanOpen(pid){
+  const p = S.shine[pid];
+  openSheet('Edit plan — ' + p.acct, `<p class="small muted" style="margin-top:-6px">For correcting a wrong entry. The installment is otherwise fixed for the whole plan.</p>
+    <div class="two"><div class="fld"><label for="sp-pinst">Monthly installment ₹</label><input class="in" id="sp-pinst" inputmode="numeric" value="${num(p.inst)}"></div>
+    <div class="fld"><label for="sp-pstart">First installment date</label><input class="in" type="date" id="sp-pstart" value="${esc(p.startDay)}"></div></div>
+    <button class="btn primary big" data-act="sp-plan-save">Save</button>`, {pid});
+}
+async function spPlanSave(){
+  const pid = S.sheet.pid, p = S.shine[pid], inst = Math.round(num($('#sp-pinst').value)), sd = $('#sp-pstart').value;
+  if (!(inst >= 5000 && inst % 1000 === 0)) return toast('Minimum ₹5,000, in multiples of ₹1,000.', 'bad');
+  if (!sd) return toast('Please choose the date.', 'bad');
+  const ch = [];
+  if (inst !== num(p.inst)) ch.push('Installment: ' + money(p.inst) + ' → ' + money(inst));
+  if (sd !== p.startDay) ch.push('Start: ' + fmtDayEn(p.startDay) + ' → ' + fmtDayEn(sd));
+  if (!ch.length) return closeSheet();
+  const ok = await write('shinePlans/' + pid, stamp({inst, startDay: sd, log: {[logKey()]: logEntry('edited', 'Plan changed\n' + ch.join('\n'))}}));
+  if (ok) { closeSheet(); toast('Saved.'); }
+}
+function spMatOpen(pid){
+  const p = S.shine[pid], c = shineCalc(Object.assign({}, p, {matDay: ''}), spDay());
+  openSheet('Maturity date — ' + p.acct, `<p class="small muted" style="margin-top:-6px">Worked out from the payments: <b>${esc(fmtDayEn(c.maturity))}</b>${c.moved ? ' (moved ' + c.moved + ' ' + plural(c.moved, 'month') + ' for late installments)' : ''}. Set a different date only as a management decision.</p>
+    <div class="fld"><label for="sp-mat">Maturity date</label><input class="in" type="date" id="sp-mat" value="${esc(p.matDay || '')}"></div>
+    <div class="btns"><button class="btn primary" data-act="sp-mat-save">Save</button>${p.matDay ? '<button class="btn" data-act="sp-mat-auto">Back to automatic</button>' : ''}</div>`, {pid});
+}
+async function spMatSave(auto){
+  const pid = S.sheet.pid, d = auto ? '' : $('#sp-mat').value;
+  if (!auto && !d) return toast('Please choose the date.', 'bad');
+  const ok = await write('shinePlans/' + pid, stamp({matDay: d, log: {[logKey()]: logEntry('schedule', d ? 'Maturity date set to ' + fmtDayEn(d) : 'Maturity date back to automatic')}}));
+  if (ok) { closeSheet(); toast('Saved.'); }
+}
+function spDelOpen(pid){
+  const p = S.shine[pid];
+  openSheet('Delete ' + p.acct + ' permanently?', `<p>The member, every payment and the history will be deleted for ever. Use this only for a test or wrong entry.</p>
+    <div class="fld"><label for="sp-delno">Type the account no. (${esc(p.acct)}) to confirm</label><input class="in" id="sp-delno" autocomplete="off"></div>
+    <button class="btn danger big" data-act="sp-del-do">🗑️ Delete permanently</button>`, {pid});
+}
+async function spDelDo(){
+  const pid = S.sheet.pid, p = S.shine[pid];
+  if ($('#sp-delno').value.trim().toUpperCase() !== String(p.acct).toUpperCase()) return toast('The account number does not match.', 'bad');
+  const ok = await commit(B.db.del('shinePlans/' + pid));
+  if (ok) { closeSheet(); toast(p.acct + ' deleted.'); go('#/crm/members'); }
+}
+
+/* ---------- message templates (Admin) ---------- */
+function renderShineSettings(){
+  const cfg = S.shineCfg || {}, tpl = cfg.tpl || {};
+  let h = `<div class="view-title">Shine Plan messages</div>
+    <p class="small muted" style="margin-top:-6px">These WhatsApp messages go to members with one tap. Words in {curly brackets} are filled in for each member: ${SP_WORDS.map(w => '{' + w + '}').join(' ')}</p>`;
+  Object.keys(SP_TPL).forEach(k => { h += `<div class="fld"><label for="tpl-${k}">${esc(SP_TPL_LABEL[k])}</label><textarea class="in" id="tpl-${k}" style="min-height:150px">${esc(tpl[k] || SP_TPL[k])}</textarea></div>`; });
+  h += `<div class="card"><h3>🔔 Reminders</h3><div class="two"><div class="fld"><label for="tpl-before">Remind how many days before the due date</label><input class="in" id="tpl-before" inputmode="numeric" value="${esc(cfg.remindBefore != null ? cfg.remindBefore : 2)}"></div>
+    <div class="fld"><label for="tpl-gap">Overdue: remind again every … days</label><input class="in" id="tpl-gap" inputmode="numeric" value="${esc(cfg.remindGap || 3)}"></div></div></div>
+    <div class="btns"><button class="btn primary big" data-act="sp-tpl-save">Save messages</button><button class="btn" data-act="sp-tpl-reset">Back to the standard messages</button></div>`;
+  patch($('#view'), h);
+}
+async function spTplSave(reset){
+  const tpl = {};
+  Object.keys(SP_TPL).forEach(k => { tpl[k] = reset ? SP_TPL[k] : ($('#tpl-' + k).value.trim() || SP_TPL[k]); });
+  const before = Math.max(0, Math.min(15, Math.round(num($('#tpl-before').value)))), gap = Math.max(1, Math.min(30, Math.round(num($('#tpl-gap').value) || 3)));
+  const ok = await commit(B.db.set('config/shine', {tpl, remindBefore: before, remindGap: gap, at: Date.now(), by: S.authUser.uid}));
+  if (ok) { toast(reset ? 'Standard messages restored.' : 'Messages saved.'); if (reset) Object.keys(SP_TPL).forEach(k => { const el = $('#tpl-' + k); if (el) el.value = SP_TPL[k]; }); }
+}
+
+/* ---------- PDFs: enrolment form, payment receipt, statement ---------- */
+const SP_G = '#0d3b25', SP_GOLD = '#b8862e', SP_INK = '#1b2620', SP_MUTE = '#5d655f', SP_LINE = '#e3dccb';
+const spLab = t => `<div style="font:700 10px Montserrat,Arial,sans-serif;letter-spacing:1.6px;color:${SP_GOLD};text-transform:uppercase;margin-bottom:3px">${t}</div>`;
+function spDocShell(p, title, sub, body){
+  const st = S.stores[p.storeId] || {};
+  return `<div style="width:560px;background:#fff;color:${SP_INK};font-family:Mukta,Montserrat,Arial,sans-serif;font-size:13px;line-height:1.4">
+  <div style="background:linear-gradient(120deg,#0f5330,#0a271b);padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:14px">
+    <div><img src="icons/wordmark.png" style="height:32px" alt="Deeva"><div style="font:italic 600 12px 'Playfair Display',Georgia,serif;color:#e7b150;margin-top:3px">Deeva Shine Plan</div></div>
+    <div style="text-align:right;color:#f6eedc"><div style="font:700 10.5px Montserrat,Arial,sans-serif;letter-spacing:2.4px;color:#e7b150">${esc(title)}</div>
+      <div style="font:700 21px 'Playfair Display',Georgia,serif">${esc(p.acct)}</div><div style="font-size:11.5px;opacity:.85">${esc(sub)}</div></div>
+  </div>
+  <div style="padding:14px 26px 18px">${body}
+    <div style="margin-top:12px;padding-top:7px;border-top:2px solid #e7b150;font-size:10px;color:${SP_MUTE};text-align:center">Deeva Diamonds — ${esc(st.name || p.storeName || '')}${st.address ? ' · ' + esc(st.address) : ''}${st.phone ? ' · WhatsApp +91 ' + esc(st.phone) : ''}<br>Deeva Lab Grown Diamond is a brand of Glittering Diamonds · IGI certified diamonds · BIS hallmarked gold</div>
+  </div></div>`;
+}
+function spSignRow(p, seal, memberSign){
+  const b = S.brand || {};
+  return `<div style="display:flex;gap:16px;margin-top:12px;align-items:flex-end">
+    <div style="flex:1;text-align:center">${memberSign ? (p.ack && p.ack.signData ? `<img src="${esc(p.ack.signData)}" style="height:52px;max-width:100%" alt="">` : `<div style="height:52px;display:flex;align-items:flex-end;justify-content:center;color:${SP_MUTE};font-size:10.5px">${p.ack && p.ack.remote ? 'Enrolled over phone / WhatsApp' : ''}</div>`) + `<div style="border-top:1px solid ${SP_INK};padding-top:3px;font-size:11px">Member signature</div>` : ''}</div>
+    <div style="flex:1;text-align:center"><div style="height:78px;display:flex;align-items:flex-end;justify-content:center;gap:2px"><img src="${seal}" style="width:76px;height:76px;opacity:.88" alt="">${b.signData ? `<img src="${esc(b.signData)}" style="height:46px;max-width:58%" alt="">` : ''}</div>
+      <div style="border-top:1px solid ${SP_INK};padding-top:3px;font-size:11px">For Deeva Diamonds</div></div></div>`;
+}
+const spTr = (k, v, strong) => `<tr><td style="padding:3.5px 0;${strong ? 'font-weight:700;color:' + SP_G : 'color:' + SP_MUTE}">${k}</td><td style="padding:3.5px 0;text-align:right;white-space:nowrap;font-weight:${strong ? 700 : 600};${strong ? 'color:' + SP_G : ''}">${v}</td></tr>`;
+function spEnrolHtml(p, seal){
+  const c = shineCalc(Object.assign({}, p, {payments: {}, void: {}}), p.startDay), cu = p.cust || {}, inst = num(p.inst);
+  const firstK = Object.keys(p.payments || {}).sort((a, b) => (p.payments[a].at || 0) - (p.payments[b].at || 0))[0];
+  const first = firstK && !(p.void || {})[firstK] ? p.payments[firstK] : null;
+  const kv = (k, v) => v ? `<div style="display:flex;gap:10px;padding:2px 0"><span style="color:${SP_MUTE};min-width:118px">${k}</span><b style="font-weight:600">${esc(v)}</b></div>` : '';
+  const body = `
+    <div style="display:flex;gap:18px;padding-bottom:10px;border-bottom:1px solid ${SP_LINE}">
+      <div style="flex:1.3;min-width:0">${spLab('Member')}<div style="font-weight:700;font-size:15px">${esc(p.name)}</div>
+        ${kv('Mobile', p.phone + (cu.alt ? ' · ' + cu.alt : ''))}${kv('Email', cu.email)}${kv('Date of birth', cu.dob ? fmtDayEn(cu.dob) : '')}${kv('Anniversary', cu.anniv ? fmtDayEn(cu.anniv) : '')}
+        ${kv('Address', [cu.address, cu.city].filter(Boolean).join(', '))}${kv('Photo ID', cu.idType ? cu.idType + (cu.idNo ? ' · ' + cu.idNo : '') : '')}</div>
+      <div style="flex:1;min-width:0">${spLab('Nominee')}<div style="font-weight:700">${esc(cu.nominee || '—')}</div><div style="color:${SP_MUTE}">${esc([cu.nomRel, cu.nomPhone].filter(Boolean).join(' · '))}</div>
+        <div style="margin-top:8px">${spLab('Enrolled')}<div style="font-weight:600">${esc(fmtDayEn(dayOf(new Date(p.createdAt || Date.now()))))}</div></div></div>
+    </div>
+    <div style="padding:10px 0;border-bottom:1px solid ${SP_LINE}">${spLab('Plan')}
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        ${spTr('Monthly installment (fixed)', '<b>' + money(inst) + '</b>')}
+        ${spTr('You pay — 10 installments + ½ installment', money(inst * 10.5))}
+        ${spTr('Deeva’s contribution at maturity — 1½ installments', money(inst * 1.5))}
+        ${spTr('Jewellery worth at maturity — 12 installments', money(inst * 12), true)}
+        ${spTr('Installments 1–10', esc(fmtDayEn(c.items[0].due) + ' – ' + fmtDayEn(c.items[9].due)) + ' (' + spOrd(+c.items[0].due.slice(8)) + ' of each month)')}
+        ${spTr('Last (half) installment', 'by ' + esc(fmtDayEn(c.items[10].due)))}
+        ${spTr('Plan matures', esc(fmtDayEn(c.maturity)))}
+        ${spTr('Redeem by', esc(fmtDayEn(c.redeemBy)))}
+      </table></div>
+    <div style="padding:10px 0;border-bottom:1px solid ${SP_LINE}">${spLab('Early redemption')}
+      <table style="width:100%;border-collapse:collapse;font-size:12px;text-align:right"><tr style="color:${SP_MUTE}"><td style="text-align:left">After</td>${SP_LADDER.map(r => `<td>${r[0]}</td>`).join('')}<td>10½ (full)</td></tr>
+      <tr><td style="text-align:left;color:${SP_MUTE}">Deeva adds</td>${SP_LADDER.map(r => `<td>${money(inst * r[1])}</td>`).join('')}<td><b>${money(inst * 1.5)}</b></td></tr></table>
+      <div style="font-size:10.5px;color:${SP_MUTE};margin-top:3px">Percent of one installment: 30 · 40 · 55 · 70 · 90 · 150 (full plan at maturity). No contribution before 6 installments.</div></div>
+    ${first ? `<div style="padding:10px 0;border-bottom:1px solid ${SP_LINE}">${spLab('First installment received')}<div><b>${money(first.amount)}</b> · ${esc(first.mode)}${first.ref ? ' · Ref ' + esc(first.ref) : ''} · ${esc(fmtDayEn(first.day))} · receipt ${esc(first.rno || '')}</div></div>` : ''}
+    <div style="font-size:9.4px;color:${SP_MUTE};line-height:1.35;padding-top:7px">${spLab('Terms & conditions')}${SP_TERMS.map((x, i) => (i + 1) + '. ' + esc(x)).join('<br>')}</div>
+    <div style="font-size:10.5px;margin-top:6px">I have read and accept the terms of the Deeva Shine Plan.</div>
+    ${spSignRow(p, seal, true)}`;
+  return spDocShell(p, 'ENROLMENT FORM', 'Member account no. · ' + fmtDayEn(dayOf(new Date(p.createdAt || Date.now()))), body);
+}
+function spReceiptHtml(p, k, seal){
+  const x = (p.payments || {})[k];
+  /* the receipt shows the plan as it stood right after this payment (also when it is sent again later) */
+  const upto = Object.fromEntries(Object.entries(p.payments || {}).filter(([q, y]) => q === k || (y.day || '') < (x.day || '') || ((y.day || '') === (x.day || '') && (y.at || 0) <= (x.at || 0))));
+  const c = shineCalc(Object.assign({}, p, {payments: upto}), x.day || spDay());
+  /* which installments this payment went to */
+  const before = c.pays.filter(q => q.day < x.day || (q.day === x.day && (q.at || 0) < (x.at || 0))).reduce((s, q) => s + q.amount, 0), after = before + num(x.amount);
+  let cum = 0; const cov = [];
+  c.items.forEach(it => { const lo = cum; cum += it.amt; if (cum > before + 0.5 && lo < after - 0.5) cov.push(it); });
+  const fromTo = cov.length ? (cov.length === 1 ? spItemLabel(cov[0]) : 'Installments ' + cov[0].n + '–' + (cov[cov.length - 1].half ? '11 (half)' : cov[cov.length - 1].n)) : '';
+  const body = `
+    <div style="display:flex;gap:18px;padding-bottom:10px;border-bottom:1px solid ${SP_LINE}">
+      <div style="flex:1;min-width:0">${spLab('Received from')}<div style="font-weight:700;font-size:15px">${esc(p.name)}</div><div style="color:${SP_MUTE}">${esc(p.phone || '')}</div></div>
+      <div style="flex:1;min-width:0;text-align:right">${spLab('Receipt no.')}<div style="font-weight:700;font-size:14.5px">${esc(x.rno || '')}</div><div style="color:${SP_MUTE}">${esc(fmtDayEn(x.day))}</div></div>
+    </div>
+    <div style="padding:12px 0;border-bottom:1px solid ${SP_LINE};text-align:center">${spLab('Amount received')}
+      <div style="font:700 30px 'Playfair Display',Georgia,serif;color:${SP_G}">${money(x.amount)}</div>
+      <div style="color:${SP_MUTE}">Rupees ${esc(spInWords(x.amount))} only</div>
+      <div style="margin-top:4px">${esc(x.mode || '')}${x.ref ? ' · Ref ' + esc(x.ref) : ''}${x.from ? ' · ' + esc(x.from) : ''}</div>
+      ${fromTo ? `<div style="margin-top:3px;font-weight:600">Towards ${esc(fromTo)}</div>` : ''}</div>
+    <table style="width:100%;border-collapse:collapse;margin:8px 0 4px;font-size:13px">
+      ${spTr('Monthly installment', money(p.inst))}
+      ${spTr('Total paid so far', money(c.paid) + ' · ' + esc(spCount(c)) + ' of 10½')}
+      ${spTr('Next installment', c.next ? money(c.left) + ' due ' + esc(fmtDayEn(c.due)) : 'All paid — thank you!')}
+      ${spTr('Plan matures', esc(fmtDayEn(c.maturity)) + ' · redeem by ' + esc(fmtDayEn(c.redeemBy)))}
+      ${spTr('Jewellery worth at maturity', money(num(p.inst) * 12), true)}
+    </table>
+    <div style="font-size:10px;color:${SP_MUTE}">Received by ${esc(x.name || '')} · Please keep this receipt with your passbook. No cash refund; plan value redeemable on Deeva’s ready-stock diamond jewellery.</div>
+    ${spSignRow(p, seal, false)}`;
+  return spDocShell(p, 'PAYMENT RECEIPT', 'Deeva Shine Plan', body);
+}
+function spStatementHtml(p, seal){
+  const c = shineCalc(p, spDay());
+  const pays = Object.entries(p.payments || {}).map(([k, x]) => Object.assign({k}, x)).sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : (a.at || 0) - (b.at || 0)));
+  let run = 0;
+  const rows = pays.map(x => { const vd = (p.void || {})[x.k]; if (!vd) run += num(x.amount);
+    return `<tr style="${vd ? 'text-decoration:line-through;color:#999' : ''}"><td style="padding:4px 4px 4px 0;border-bottom:1px solid ${SP_LINE}">${esc(fmtDayEn(x.day))}</td><td style="padding:4px;border-bottom:1px solid ${SP_LINE}">${esc(x.rno || '')}</td><td style="padding:4px;border-bottom:1px solid ${SP_LINE}">${esc(x.mode || '')}${x.ref ? ' · ' + esc(x.ref) : ''}</td><td style="padding:4px;border-bottom:1px solid ${SP_LINE};text-align:right">${money(x.amount)}</td><td style="padding:4px 0 4px 4px;border-bottom:1px solid ${SP_LINE};text-align:right;font-weight:600">${vd ? 'cancelled' : money(run)}</td></tr>`; }).join('');
+  const body = `
+    <div style="display:flex;gap:18px;padding-bottom:10px;border-bottom:1px solid ${SP_LINE}">
+      <div style="flex:1;min-width:0">${spLab('Member')}<div style="font-weight:700;font-size:15px">${esc(p.name)}</div><div style="color:${SP_MUTE}">${esc(p.phone || '')}</div></div>
+      <div style="flex:1;min-width:0;text-align:right">${spLab('Plan')}<div style="font-weight:700">${money(p.inst)} a month</div><div style="color:${SP_MUTE}">from ${esc(fmtDayEn(p.startDay))}</div></div></div>
+    <div style="padding:10px 0">${spLab('Payments')}<table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="color:${SP_MUTE};font-size:11px"><td>Date</td><td style="padding:0 4px">Receipt</td><td style="padding:0 4px">Mode</td><td style="text-align:right;padding:0 4px">Amount</td><td style="text-align:right">Total</td></tr>${rows || `<tr><td colspan="5" style="color:${SP_MUTE};padding:6px 0">No payments yet.</td></tr>`}</table></div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      ${spTr('Total paid', money(c.paid) + ' · ' + esc(spCount(c)) + ' of 10½', true)}
+      ${spTr('Balance to pay', money(Math.max(0, c.total - c.paid)))}
+      ${spTr('Next installment', c.next ? money(c.left) + ' due ' + esc(fmtDayEn(c.due)) : '—')}
+      ${spTr('Plan matures', esc(fmtDayEn(c.maturity)) + (c.moved ? ' (moved ' + c.moved + ' ' + plural(c.moved, 'month') + ' for late installments)' : ''))}
+      ${spTr('Redeem by', esc(fmtDayEn(c.redeemBy)))}
+      ${p.status === 'redeemed' && p.redeem ? spTr('Redeemed on ' + esc(fmtDayEn(p.redeem.day)), money(p.redeem.paid) + ' + ' + money(p.redeem.bonus) + ' = ' + money(p.redeem.value), true) : spTr('Jewellery worth at maturity', money(num(p.inst) * 12), true)}
+    </table>
+    <div style="font-size:10px;color:${SP_MUTE};margin-top:6px">Statement as on ${esc(fmtDayEn(spDay()))}. Deeva’s records are final.</div>
+    ${spSignRow(p, seal, false)}`;
+  return spDocShell(p, 'STATEMENT', 'As on ' + fmtDayEn(spDay()), body);
+}
+function pdfPreview(canvas, name, note){
+  const lb = document.createElement('div'); lb.className = 'lightbox'; lb.style.overflow = 'auto'; lb.style.placeItems = 'start center';
+  lb.innerHTML = `<div style="max-width:560px;width:100%"><img src="${canvas.toDataURL('image/jpeg', 0.9)}" alt="${esc(name)}" style="max-height:none;width:100%"><p>${esc(name)} — ${esc(note)}</p></div><button aria-label="Close">✕</button>`;
+  lb.addEventListener('click', () => lb.remove()); document.body.appendChild(lb);
+}
+async function spPdf(kind, pid, k, toWa){
+  const p0 = S.shine[pid];
+  if (!p0) return toast('The member is still loading — please try again in a moment.', 'bad');
+  const p = Object.assign({id: pid}, p0);
+  if (kind === 'receipt' && !(p.payments || {})[k]) return toast('Payment not found.', 'bad');
+  if (S.pdfBusy) return; S.pdfBusy = true;
+  toast('Preparing the PDF…');
+  try {
+    const st = S.stores[p.storeId] || {};
+    const seal = sealData(st.city, 'SHINE PLAN');
+    const html = kind === 'enrol' ? spEnrolHtml(p, seal) : kind === 'stmt' ? spStatementHtml(p, seal) : spReceiptHtml(p, k, seal);
+    const {pdf, canvas} = await htmlToPdf(html);
+    const c = shineCalc(p, spDay());
+    const x = kind === 'receipt' ? p.payments[k] : null;
+    const name = 'Deeva-Shine-' + (kind === 'enrol' ? 'Enrolment-' + p.acct : kind === 'stmt' ? 'Statement-' + p.acct : 'Receipt-' + String(x.rno || p.acct).replace(/\//g, '-')) + '.pdf';
+    const msg = kind === 'enrol' ? spFill('welcome', p, c) : kind === 'stmt' ? 'Dear ' + p.name + ',\nPlease find attached the statement of your Deeva Shine Plan ' + p.acct + ' as on ' + fmtDayEn(spDay()) + '.\n— Deeva Diamonds' : spFill('receipt', p, c, spPayVars(p, k));
+    if (window.__demoPdfPreview) pdfPreview(canvas, name, 'in the live app this PDF opens in the member’s WhatsApp chat');
+    else if (toWa) await sharePdf(pdf.output('blob'), name, msg, p.phone, true);
+    else await savePdfFile(pdf.output('blob'), name);
+    if (toWa && kind !== 'stmt') {
+      /* the enrolment form also carries the first installment, so that receipt counts as sent too */
+      const sent = {[kind === 'enrol' ? 'enrol' : k]: Date.now()};
+      if (kind === 'enrol') { const fk = Object.keys(p.payments || {}).sort((a, b) => (p.payments[a].at || 0) - (p.payments[b].at || 0))[0]; if (fk) sent[fk] = Date.now(); }
+      write('shinePlans/' + pid, stamp({sent}));
+    }
+    /* close the "saved / enrolled" sheet; a browser's own "open the chat" sheet (from sharePdf) stays open */
+    if (S.sheet && S.sheet.pid === pid && $('#sheet [data-act="sp-pdf"]')) closeSheet();
+  } catch (e) { console.error(e); toast('The PDF could not be created — ' + (e.message || errText(e)), 'bad'); }
+  S.pdfBusy = false;
+}
+
+/* ---------- clicks & typing in the Shine Plan ---------- */
+function shineClick(a, t, e){
+  const pid = t.dataset.id || (S.route && S.route.v === 'crm' && S.route.sub === 'm' ? S.route.id : '') || (S.sheet && S.sheet.pid) || '';
+  switch (a) {
+    case 'sp-store': S.spStore = t.dataset.v; render(); break;
+    case 'sp-filter': S.spFilter = t.dataset.v; render(); break;
+    case 'sp-month': { const cm = S.spMonth || spMonthKey(spDay()); const [y, m] = cm.split('-').map(Number); const d = new Date(y, m - 1 + +t.dataset.d, 1); S.spMonth = d.getFullYear() + '-' + pad(d.getMonth() + 1); render(); break; }
+    case 'sp-remind': { const p = S.shine[t.dataset.id]; if (p) write('shinePlans/' + t.dataset.id, stamp({remind: {at: Date.now(), day: spDay(), due: t.dataset.due || '', kind: t.dataset.kind, by: S.authUser.uid, name: myName()}, log: {[logKey()]: logEntry('note', 'WhatsApp ' + (t.dataset.kind === 'maturity' ? 'maturity message' : t.dataset.kind === 'overdue' ? 'overdue reminder' : 'payment reminder') + ' sent')}})); break; }
+    case 'sp-pdf': e.preventDefault(); spPdf(t.dataset.kind, pid, t.dataset.k, t.dataset.wa === '1'); break;
+    case 'sp-pay-open': spPayOpen(pid); break;
+    case 'sp-pay-do': spPayDo(); break;
+    case 'sp-amt': e.preventDefault(); { const i = $('#sp-amt'); if (i) i.value = t.dataset.v; } break;
+    case 'sp-void-open': spVoidOpen(pid, t.dataset.k); break;
+    case 'sp-void-do': spVoidDo(); break;
+    case 'sp-cust-open': spCustOpen(pid); break;
+    case 'sp-cust-save': spCustSave(); break;
+    case 'sp-redeem-open': spRedeemOpen(pid); break;
+    case 'sp-redeem-do': spRedeemDo(); break;
+    case 'sp-unredeem': askConfirm('Undo the redemption?', 'The plan becomes active again.', 'Yes, undo', () => write('shinePlans/' + pid, stamp({status: 'active', redeem: null, log: {[logKey()]: logEntry('reopened', 'Redemption undone')}})).then(ok => ok && toast('Plan active again.'))); break;
+    case 'sp-close-open': openSheet('Close this plan?', `<p class="small muted">For a member who stops the plan. No cash refund — the savings can still be used for jewellery (use Redeem for that).</p><div class="fld"><label for="sp-creason">Reason <span class="req">*</span></label><input class="in" id="sp-creason"></div><button class="btn danger big" data-act="sp-close-do">Close plan</button>`, {pid}); break;
+    case 'sp-close-do': { const r = $('#sp-creason').value.trim(); if (!r) return toast('Please write the reason.', 'bad'); write('shinePlans/' + S.sheet.pid, stamp({status: 'closed', close: {at: Date.now(), by: S.authUser.uid, name: myName(), reason: r}, log: {[logKey()]: logEntry('cancelled', 'Plan closed: ' + r)}})).then(ok => { if (ok) { closeSheet(); toast('Plan closed.'); } }); break; }
+    case 'sp-reopen': write('shinePlans/' + pid, stamp({status: 'active', log: {[logKey()]: logEntry('reopened', 'Plan reopened')}})).then(ok => ok && toast('Plan reopened.')); break;
+    case 'sp-plan-open': spPlanOpen(pid); break;
+    case 'sp-plan-save': spPlanSave(); break;
+    case 'sp-mat-open': spMatOpen(pid); break;
+    case 'sp-mat-save': spMatSave(false); break;
+    case 'sp-mat-auto': spMatSave(true); break;
+    case 'sp-del-open': spDelOpen(pid); break;
+    case 'sp-del-do': spDelDo(); break;
+    case 'sp-tpl-save': spTplSave(false); break;
+    case 'sp-tpl-reset': askConfirm('Restore the standard messages?', 'Your changes to the message texts will be replaced.', 'Yes, restore', () => spTplSave(true)); break;
+    case 'sp-enrol': spEnrol(); break;
+    case 'sp-sig-clear': if (SPF && SPF.sig) SPF.sig.clear(); break;
+    case 'sp-fclear': askConfirm('Clear the form?', 'Everything typed so far will be removed.', 'Yes, clear', () => { SPF = null; render(); }, true); break;
+    case 'sp-fchip': {
+      e.preventDefault(); if (!SPF) break;
+      const f = t.dataset.f; let v = t.dataset.v;
+      if (f === 'inst') { v = +v; SPF.instOther = ''; const o = $('#spf-instOther'); if (o) o.value = ''; if (SPF.payNow && (!SPF.payAmtTouched)) { SPF.payAmt = String(v); const pa = $('#spf-payAmt'); if (pa) pa.value = SPF.payAmt; } }
+      else if (SPF[f] === v && f !== 'mode' && f !== 'storeId') v = '';
+      SPF[f] = v;
+      if (f === 'storeId' && !SPF.city) { SPF.city = (S.stores[v] || {}).city || ''; const ci = $('#spf-city'); if (ci) ci.value = SPF.city; }
+      $$('#spc-' + f + ' .chip').forEach(b => b.classList.toggle('on', String(b.dataset.v) === String(v)));
+      const w = t.closest('.fld'); if (w) w.classList.remove('miss');
+      spFormUpdate(); break;
+    }
+    case 'sp-usecust': {
+      const p = S.shine[t.dataset.id]; if (!p || !SPF) break; const cu = p.cust || {};
+      Object.assign(SPF, {name: p.name || '', alt: cu.alt || '', email: cu.email || '', dob: cu.dob || '', anniv: cu.anniv || '', address: cu.address || '', city: cu.city || SPF.city, idType: cu.idType || '', idNo: cu.idNo || '', nominee: cu.nominee || '', nomRel: cu.nomRel || '', nomPhone: cu.nomPhone || ''});
+      $('#view')._sp = null; render(); toast('Details filled in from ' + p.acct + '.'); break;
+    }
+    default: return false;
+  }
+  return true;
+}
+function shineInput(t){
+  if (t.id === 'spq') { S.spQ = t.value; render(); return true; }
+  if (t.dataset && t.dataset.spf && SPF) {
+    const f = t.dataset.spf;
+    SPF[f] = t.type === 'checkbox' ? t.checked : t.value;
+    if (f === 'payAmt') SPF.payAmtTouched = true;
+    if (f === 'instOther') {
+      if (t.value.trim() === '') SPF.instOther = '';
+      $$('#spc-inst .chip').forEach(x => x.classList.toggle('on', SPF.instOther === '' && +x.dataset.v === +SPF.inst));
+      if (!SPF.payAmtTouched && spInstOf(SPF)) { SPF.payAmt = String(spInstOf(SPF)); const pa = $('#spf-payAmt'); if (pa) pa.value = SPF.payAmt; }
+    }
+    const w = t.closest('.fld'); if (w) w.classList.remove('miss');
+    spFormUpdate(); return true;
+  }
+  if (t.id === 'sp-bonus') { const pv = S.sheet && S.sheet.paid; const o = $('#sp-rval'); if (o) o.textContent = money(num(pv) + num(t.value)); return true; }
+  return false;
+}
+function shineChange(t){
+  if (!SPF) return false;
+  if (t.id === 'spf-payNow') { SPF.payNow = t.checked; spFormUpdate(); return true; }
+  if (t.id === 'spf-accepted') { SPF.accepted = t.checked; const w = $('#w-spf-accepted'); if (w) w.classList.remove('miss'); return true; }
+  if (t.id === 'spf-remote') { SPF.remote = t.checked; spFormUpdate(); return true; }
+  return false;
+}
+
 /* ---------- events ---------- */
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]');
   if (!t) return;
   const a = t.dataset.act;
   const oid = S.route && S.route.id;
+  if (a.startsWith('sp-') && shineClick(a, t, e)) return;
   switch (a) {
     case 'go': e.preventDefault(); go(t.dataset.to); break;
     case 'logout': logout(); break;
@@ -3354,7 +4331,7 @@ document.addEventListener('click', e => {
       e.preventDefault();
       $$('#' + t.dataset.g + ' .chip').forEach(c => c.classList.toggle('on', c === t));
       if (t.dataset.g === 'u-role') { const w = $('#u-store-wrap'); if (w) w.hidden = t.dataset.v !== 'store'; const wf = $('#u-fac-wrap'); if (wf) wf.hidden = t.dataset.v !== 'factory'; }
-      if (S.sheet && ['dp-mode', 'py-mode', 'sc-pri'].includes(t.dataset.g)) S.sheet.mode = t.dataset.v;
+      if (S.sheet && ['dp-mode', 'py-mode', 'sc-pri', 'sp-mode'].includes(t.dataset.g)) S.sheet.mode = t.dataset.v;
       if (S.sheet && S.sheet.lines && /^dp-/.test(t.dataset.g)) dpUpdate();
       break;
     }
@@ -3463,6 +4440,7 @@ document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'q') { S.q = t.value; render(); return; }
   if (t.id === 'aq') { S.actQ = t.value; render(); return; }
+  if (shineInput(t)) return;
   if (t.dataset && t.dataset.f && F && FORMKEY) { onFormInput(t); return; }
   if (t.dataset && t.dataset.fb && S.sheet && S.sheet.calc) { S.sheet.calc[t.dataset.fb] = t.value; updateFinalCalc(false); return; }
   if (t.dataset && t.dataset.dp && S.sheet && S.sheet.lines) {
@@ -3481,6 +4459,7 @@ document.addEventListener('change', e => {
     return;
   }
   if (t.dataset && t.dataset.fact) { const p = PICKERS[t.dataset.p]; if (p && p.items[t.dataset.fact]) { p.items[t.dataset.fact].factory = t.checked; if (p.opts.onChange) p.opts.onChange(); } return; }
+  if (shineChange(t)) return;
   if (t.id === 'f-ack' && F) { F.ack.accepted = t.checked; $('#w-f-ack').classList.remove('miss'); renderFormBar(); saveDraft(); }
   if (t.id === 'f-remote' && F) { F.ack.remote = t.checked; $('#w-sig').hidden = t.checked; renderFormBar(); saveDraft(); }
 });
