@@ -84,7 +84,7 @@ the factory never sees it (no tab, rules deny, no listener).
   Admin: edit a payment (`spPayEditOpen`: amount, date, mode, paid by, reference, note — logged), cancel one (`void.{key}`
   with reason — stays crossed out), edit installment / enrolment date / first installment date, set maturity, redeem.
 - **PDFs** (`spEnrolHtml`, `spReceiptHtml` (amount in words, which installments, totals as at that payment), `spStatementHtml`;
-  seal `sealData(city, 'SHINE PLAN')` + Deeva signature) → `sharePdf(..., toWhatsApp)`: APK puts the PDF straight into the
+  the owner's stamp + signature `stampBlock()`) → `sharePdf(..., toWhatsApp)`: APK puts the PDF straight into the
   member's chat (one tap — WhatsApp does not allow fully automatic sending without the paid WhatsApp Business API);
   browser downloads + opens the chat. Sending marks `sent.{key}` (enrolment also marks the first payment's receipt).
 - **Dues dashboard:** to collect now, active members, received this month, savings held, full plans; 🔔 reminders to send
@@ -212,7 +212,7 @@ extra); a browser downloads it and opens the chat (WhatsApp does not let website
 | `logins/{loginId}` | `email` (synthetic `<id>-<rand>@<projectId>.firebaseapp.com`), `uid` | public get (login lookup); admin list/write |
 | `counters/{YYMM}` | `n` | staff |
 | `stores/{sid}` | see Stores | active users read; admin writes |
-| `config/brand` | `signData` (PNG data URL of the authorised signature), `signName` | active users read; admin writes |
+| `config/brand` | old drawn signature — **no longer used** (the stamp image replaced it, 24 Nov 2026) | active users read; admin writes |
 | `pushTokens/{token}` | `uid, role, storeId, platform ('web'/'android'), at` | own create/delete; only the notification server reads |
 | `orders/{id}` | `no, ym, seq, orderDay, createdAt, createdBy, createdByName, storeId, storeName, status, factoryVisible, stage, stageAt{stage: ms}, priority, deliveryDay, factoryDue, cadRequired, cad{ok,by,at,note}, factoryNote, factoryAck, factoryAckAt, approvedAt, approvedBy, query{open,text,by,at,reply,replyAt}, dispatch{at,by,byName,mode,ref,note}, received{at,by}, delivered{at,by}, cancel{at,by,reason}, spec{jtype, jtypeOther, qty, metalColor, purity, size, engraving, design, dia{1..4}{Type (remark: Solitaire / Side / Cluster …), Ct (dia1Ct may be 'NA'), Pcs, Shape, Color, Clarity, Cut, Cert}, gem{1,2}{Type, Color, Shape, Ct (carat, number), Size (mm text), Pcs}, stoneNote}, media{id: {kind image/video/audio, url, path, desc, voiceUrl?/voicePath? (voice note recorded for THIS photo/video), by, byName, at, size, stage?, deleted?}}, dispatch also has goldWt, diaCt, edited{spec_size: ms…}, log{key: {at, by, name, role, type, text}}, updatedAt, updatedBy` | staff; factory only when `factoryVisible` |
 | `shinePlans/{pid}` | `acct (SP-YYMM-NNN), ym, seq, storeId, storeName, name, phone, cust{alt, email, dob, anniv, address, city, idType, idNo, nominee, nomRel, nomPhone, note}, inst (int), enrolDay, startDay, status active/redeemed/closed, payments{key: {amount, mode, day, from, ref, note, at, by, name, rno, proofUrl?, proofPath?, old? (paid before the app)}}, void{key: {at, by, name, reason}}, sent{enrol / key: ms}, remind{at, day, due, kind, by, name}, ack{accepted, remote, at, terms, signData}, redeem{day, at, by, name, paid, installments, bonus, value, billNo, item, note}, close{…}, matDay, createdAt, createdBy, createdByName, updatedAt, updatedBy, log{…}` | Admin / Sub Admin all; store manager his store (may only add payments and mark sent / reminded); delete main Admin only |
@@ -237,13 +237,20 @@ Storage: `shine/{pid}/…` (Shine Plan payment proofs; staff only, image / PDF <
   `makePicker()` = photo/video/voice-note uploader (MediaRecorder for voice notes). `micStart()` (dictation) is no longer
   reachable — `micBtn()` returns '' by the owner's decision; keep it that way unless he asks for dictation back.
 - `web/config.js` — `self.DO_CONFIG` (Firebase web config + `vapidKey`), shared by the page and `sw.js`.
+- **Stamp + signature** (owner's image, 24 Nov 2026): `web/icons/stamp.png` — round "GLITTERING DIAMONDS · GST NO.
+  22AASHM684TH1ZR" stamp with his signature, one transparent PNG (single ink colour #160071, 32 alpha levels, 600 px,
+  ~19 KB; made from the photo he sent). `STAMP` / `stampBlock(label)` print it, labelled "For Deeva Diamonds (Glittering
+  Diamonds)", on the client's order receipt and the Shine Plan enrolment form, payment receipt and statement — never on the
+  factory's bill (that is the factory's document to Deeva). It replaced the drawn seal (`sealData`) and the drawn
+  authorised signature (Team › signature, `config/brand`), both removed; the Team page shows the stamp (card `#stamp-card`).
+  To change it, replace the PNG (keep it transparent) — `sw.js` caches it (VERSION bump), `make_demo.py` inlines it.
 - `web/sw.js` (app-shell cache, never touches Firebase traffic; imports `config.js` + firebase-messaging for closed-app
   notifications), `web/manifest.webmanifest`, `web/icons/*` (from the official Deeva logo: gold mark on Deeva green).
 - Receipt PDF: `receiptHtml()` builds the client receipt, ONE page A5 wide and as long as needed (logo, order no, client,
   delivery date, item + diamond / gemstone lines (actual carats + "Certified" after dispatch), net / gross weight,
   hallmark + HUID, the ESTIMATE exactly as worked out — gold net g × rate, each diamond ct × ₹/ct, making, GST — owner's
   rule: the client must see the diamond and gold rates; the FINAL BILL breakdown at actual weight once made; agreed amount,
-  booked gold rate, payments, balance, 7 terms, client signature, Deeva seal + authorised signature; never the factory bill) → html2canvas 1.4.1 + jsPDF 2.5.1 (cdnjs,
+  booked gold rate, payments, balance, 7 terms, client signature, Deeva stamp + signature; never the factory bill) → html2canvas 1.4.1 + jsPDF 2.5.1 (cdnjs,
   on demand) → `sharePdf(blob, name, text, phone, toWhatsApp)`: APK `DeevaApp.sharePdfWhatsApp` opens the client's chat in
   WhatsApp Business / WhatsApp with the PDF attached (jid extra), `DeevaApp.sharePdf` = share sheet; browser: Web Share with
   file, else download + "open client's chat" link.

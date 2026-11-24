@@ -204,7 +204,7 @@ document.getElementById('demo-bar').addEventListener('click', e => {
 
 body = re.sub(r'<!--FIREBASE-SDK-->.*?<!--/FIREBASE-SDK-->', lambda m: '<script>' + fake + '</script>' + SEED, body, flags=re.S)
 body = body.replace("if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});", '')
-for name in ['mark.png', 'wordmark.png', 'icon-192.png']:
+for name in ['mark.png', 'wordmark.png', 'icon-192.png', 'stamp.png']:
     body = body.replace('icons/' + name, data_uri('icons/' + name))
 style = style.replace('icons/', '')
 page = ('<title>Deeva Orders Demo</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + '\n'.join(fonts) + '\n' + style + '\n' + DEMO_CSS +

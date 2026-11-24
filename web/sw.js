@@ -1,6 +1,6 @@
 /* Deeva Orders service worker: keeps the app shell available offline and shows notifications
    sent by the notification server while the app is closed. Never touches Firestore / Storage traffic. */
-const VERSION = 'do-v2';
+const VERSION = 'do-v3';
 
 try {
   importScripts('config.js');
@@ -12,7 +12,7 @@ try {
   }
 } catch (e) { /* offline or unsupported: the app still works, just no closed-app notifications */ }
 
-const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/mark.png', 'icons/wordmark.png', 'icons/favicon.png'];
+const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/mark.png', 'icons/wordmark.png', 'icons/favicon.png', 'icons/stamp.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

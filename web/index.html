@@ -907,7 +907,6 @@ function startData(){
   else if (isStore()) S.unsubs.push(B.db.watchQuery('users', [['role', 'in', ['admin', 'subadmin']]], onUsers, e => console.error(e)));
   else S.users = {};
   S.unsubs.push(B.db.watchQuery('stores', [], list => { S.stores = Object.fromEntries(list.map(x => [x.id, x.data])); render(); }, e => console.error(e)));
-  if (staff()) S.unsubs.push(B.db.watchDoc('config/brand', s => { S.brand = s.exists ? s.data : null; }, () => {}));
   if (staff()) S.unsubs.push(B.db.watchDoc('config/rates', s => { S.rates = s.exists ? s.data : null; if (F && FORMKEY) syncFormVis(); render(); }, () => {}));
   if (isAdmin()) S.unsubs.push(B.db.watchDoc('config/sheet', s => { S.sheetCfg = s.exists ? s.data : null; render(); }, () => {}));
   if (isAdmin()) S.unsubs.push(B.db.watchQuery('factories', [], list => { S.factories = Object.fromEntries(list.map(x => [x.id, x.data])); render(); }, e => console.error(e)));
@@ -1968,7 +1967,7 @@ async function doSeen(){
   if (ok) toast('Noted.');
 }
 
-/* ---------- receipt PDF (logo, details, estimate, payments, terms, client signature, Deeva seal) ---------- */
+/* ---------- receipt PDF (logo, details, estimate, payments, terms, client signature, Deeva stamp + signature) ---------- */
 const LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
 function loadScript(src){
   return new Promise((res, rej) => {
@@ -1977,36 +1976,16 @@ function loadScript(src){
     document.head.appendChild(s);
   });
 }
-function sealData(city, mid){
-  const c = document.createElement('canvas'); c.width = 400; c.height = 400;
-  const x = c.getContext('2d');
-  x.translate(200, 200); x.rotate(-0.12);
-  x.strokeStyle = '#0d3b25'; x.fillStyle = '#0d3b25';
-  x.lineWidth = 7; x.beginPath(); x.arc(0, 0, 186, 0, Math.PI * 2); x.stroke();
-  x.lineWidth = 2.5; x.beginPath(); x.arc(0, 0, 150, 0, Math.PI * 2); x.stroke();
-  x.beginPath(); x.arc(0, 0, 176, 0, Math.PI * 2); x.stroke();
-  const text = ' DEEVA DIAMONDS ✦ LAB GROWN DIAMOND JEWELLERY ✦';
-  x.font = '700 21px Montserrat, Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-  const step = Math.PI * 2 / text.length;
-  for (let i = 0; i < text.length; i++) { x.save(); x.rotate(i * step); x.translate(0, -163); x.fillText(text[i], 0, 0); x.restore(); }
-  /* brilliant-cut diamond, drawn (an <img> would block exporting the seal on some phones) */
-  x.save(); x.translate(0, -30); x.lineWidth = 4; x.lineJoin = 'round';
-  x.beginPath(); x.moveTo(-50, -22); x.lineTo(-28, -46); x.lineTo(28, -46); x.lineTo(50, -22); x.lineTo(0, 44); x.closePath(); x.stroke();
-  x.lineWidth = 2.5; x.beginPath();
-  x.moveTo(-50, -22); x.lineTo(50, -22);
-  x.moveTo(-28, -46); x.lineTo(-16, -22); x.lineTo(0, -46); x.lineTo(16, -22); x.lineTo(28, -46);
-  x.moveTo(-16, -22); x.lineTo(0, 44); x.lineTo(16, -22);
-  x.stroke(); x.restore();
-  x.font = '700 22px Montserrat, Arial, sans-serif'; x.fillText(mid || 'MADE TO ORDER', 0, 58);
-  x.font = '600 17px Montserrat, Arial, sans-serif'; x.fillText((city || 'RAIPUR').toUpperCase(), 0, 90);
-  return c.toDataURL('image/png');
-}
+/* the owner's stamp with his signature (Glittering Diamonds · GST no.), sent 24 Nov 2026 — on every document Deeva signs:
+   the client's order receipt and the Shine Plan enrolment form, payment receipt and statement (never the factory's bill) */
+const STAMP = 'icons/stamp.png';
+const stampBlock = label => `<div style="height:112px;display:flex;align-items:flex-end;justify-content:center"><img src="${STAMP}" style="height:110px;max-width:100%" alt="Stamp and signature"></div>
+  <div style="border-top:1px solid #1b2620;padding-top:3px;font-size:11px">${label || 'For Deeva Diamonds (Glittering Diamonds)'}</div>`;
 /* short client receipt (A5): what the client needs — item, diamonds, amount, paid, balance, delivery, terms, signatures */
-function receiptHtml(o, p, seal){
+function receiptHtml(o, p){
   const pr = p.price || {}, c = p.client || {}, st = (o.storeId && S.stores[o.storeId]) || {}, s = o.spec || {};
   const pays = Object.values(p.payments || {}).filter(x => !x.deleted).sort((a, b) => (a.at || 0) - (b.at || 0));
   const paid = paidTotal(p), total = num(pr.final) || num(pr.est);
-  const b = S.brand || {};
   const G = '#0d3b25', GOLD = '#b8862e', INK = '#1b2620', MUTE = '#5d655f', LINE = '#e3dccb';
   const calc = pr.finalCalc || pr.calc;
   const v = calc ? calcValues(calc, s) : null;
@@ -2062,8 +2041,7 @@ function receiptHtml(o, p, seal){
     <div style="display:flex;gap:16px;margin-top:12px;align-items:flex-end">
       <div style="flex:1;text-align:center">${(p.ack && (p.ack.signData || p.ack.signUrl)) ? `<img src="${esc(p.ack.signData || p.ack.signUrl)}" style="height:52px;max-width:100%" alt="">` : `<div style="height:52px;display:flex;align-items:flex-end;justify-content:center;color:${MUTE};font-size:10.5px">${p.ack && p.ack.remote ? 'Phone / WhatsApp order' : ''}</div>`}
         <div style="border-top:1px solid ${INK};padding-top:3px;font-size:11px">Customer signature</div></div>
-      <div style="flex:1;text-align:center"><div style="height:78px;display:flex;align-items:flex-end;justify-content:center;gap:2px"><img src="${seal}" style="width:76px;height:76px;opacity:.88" alt="">${b.signData ? `<img src="${esc(b.signData)}" style="height:46px;max-width:58%" alt="">` : ''}</div>
-        <div style="border-top:1px solid ${INK};padding-top:3px;font-size:11px">For Deeva Diamonds</div></div>
+      <div style="flex:1;text-align:center">${stampBlock()}</div>
     </div>
     <div style="margin-top:12px;padding-top:7px;border-top:2px solid #e7b150;font-size:10px;color:${MUTE};text-align:center">Lab-grown diamond jewellery · IGI certified diamonds · BIS hallmarked gold${st.address ? '<br>' + esc(st.address) : ''}${st.phone ? ' · WhatsApp +91 ' + esc(st.phone) : ''}</div>
   </div></div>`;
@@ -2165,9 +2143,7 @@ async function makeReceiptPdf(id, toWhatsApp){
   if (S.pdfBusy) return; S.pdfBusy = true;
   toast('Preparing the receipt PDF…');
   try {
-    const st = (o.storeId && S.stores[o.storeId]) || {};
-    const seal = sealData(st.city);
-    const {pdf, canvas} = await htmlToPdf(receiptHtml(o, p, seal));
+    const {pdf, canvas} = await htmlToPdf(receiptHtml(o, p));
     const name = 'Deeva-' + o.no + '.pdf';
     if (window.__demoPdfPreview) {   /* demo page: the viewer cannot download, so show the receipt instead */
       const lb = document.createElement('div'); lb.className = 'lightbox'; lb.style.overflow = 'auto'; lb.style.placeItems = 'start center';
@@ -2994,8 +2970,8 @@ function renderTeam(){
   h += `<div class="card"><h3>All members</h3>` + list.map(u => `<div class="urow ${u.active ? '' : 'off'}"><span class="av">${esc(initial(u.name))}</span><div class="nm"><b>${esc(u.name)} ${u.uid === S.authUser.uid ? '<span class="pill gold">You</span>' : ''}</b><small>${esc(ROLES[u.role] || u.role)}${u.role === 'store' && u.storeId ? ' · ' + esc(storeName(u.storeId)) : ''}${u.role === 'factory' ? ' · ' + (u.factoryId && factoryName(u.factoryId) ? esc(factoryName(u.factoryId)) : '<span style="color:var(--bad)">no factory</span>') : ''} · ID: ${esc(u.loginId || '')}${u.phone ? ' · 📱 ' + esc(u.phone) : ''}${u.active ? '' : ' · Disabled'}</small></div>
     ${u.uid !== S.authUser.uid && u.active && (isOwner() || u.role !== 'admin') ? `<button class="btn sm" data-act="u-menu" data-uid="${esc(u.uid)}">⋯</button>` : ''}</div>`).join('') + `</div>`;
   h += `<div class="card"><h3>📈 Today’s Rate <button class="btn sm tag" data-act="rates-open">Set</button></h3><p class="small muted" style="margin:0">${S.rates ? esc(ratesLine()) + ' · ' + esc(fmtDay(S.rates.day)) : 'Not set yet.'}</p></div>`;
-  const b = S.brand || {};
-  h += `<div class="card"><h3>🧾 Authorised signature on receipts</h3>${b.signData ? `<img class="sigimg" src="${esc(b.signData)}" alt=""><p class="small muted" style="margin:6px 0 10px">${esc(b.signName || '')}</p>` : '<p class="small muted" style="margin-top:0">No signature yet — receipts will carry the Deeva seal only.</p>'}<button class="btn sm" data-act="brand-sign">✍️ Signature ${b.signData ? 'Change' : 'set'}</button></div>`;
+  h += `<div class="card" id="stamp-card"><h3>🧾 Stamp and signature on documents</h3><div style="background:#fff;border-radius:12px;padding:8px;text-align:center"><img src="${STAMP}" alt="Stamp and signature" style="height:130px;max-width:100%"></div>
+    <p class="small muted" style="margin:8px 0 0">Printed on every client receipt and on the Shine Plan enrolment form, payment receipt and statement. To change it, send the new stamp to Claude.</p></div>`;
   h += sheetCardHtml() + archiveCardHtml();
   patch($('#view'), h);
   const roleOn = ($('#u-role .chip.on') || {dataset: {}}).dataset.v;
@@ -3074,20 +3050,6 @@ async function saveStore(){
   const d = {name, city: $('#st-city').value.trim(), phone: phone10($('#st-phone').value), address: $('#st-addr').value.trim()};
   const ok = sid ? await write('stores/' + sid, d) : await commit(B.db.set('stores/' + B.db.newId('stores'), Object.assign(d, {active: true, at: Date.now()})));
   if (ok) { closeSheet(); toast('Store saved.'); }
-}
-function sheetBrandSign(){
-  const b = S.brand || {};
-  openSheet('Authorised signature for Deeva', `<p class="small muted" style="margin-top:-6px">This appears on every receipt PDF alongside the Deeva seal.</p>
-    <div class="fld"><label for="bs-name">Name / designation</label><input class="in" id="bs-name" value="${esc(b.signName || 'Authorised Signatory')}"></div>
-    <div class="sig-wrap"><canvas id="bsig"></canvas><span>Sign here</span></div><button type="button" class="btn ghost sm" data-act="bsig-clear">Clear</button>
-    <button class="btn primary big" data-act="brand-save" style="margin-top:8px">Save</button>`, {});
-  S.sheet.sig = attachSig($('#bsig'));
-}
-async function saveBrandSign(){
-  const sg = S.sheet.sig;
-  if (!sg || !sg.dirty()) return toast('Please sign first.', 'bad');
-  const ok = await commit(B.db.set('config/brand', {signData: sg.data(), signName: $('#bs-name').value.trim(), at: Date.now(), by: S.authUser.uid}));
-  if (ok) { closeSheet(); toast('Signature saved.'); }
 }
 async function addUser(){
   const name = $('#u-name').value.trim(), lid = $('#u-lid').value.trim().toLowerCase(), pw = $('#u-pw').value, phone = phone10($('#u-phone').value);
@@ -4156,15 +4118,13 @@ function spDocShell(p, title, sub, body){
     <div style="margin-top:12px;padding-top:7px;border-top:2px solid #e7b150;font-size:10px;color:${SP_MUTE};text-align:center">Deeva Diamonds — ${esc(st.name || p.storeName || '')}${st.address ? ' · ' + esc(st.address) : ''}${st.phone ? ' · WhatsApp +91 ' + esc(st.phone) : ''}<br>Deeva Lab Grown Diamond is a brand of Glittering Diamonds · IGI certified diamonds · BIS hallmarked gold</div>
   </div></div>`;
 }
-function spSignRow(p, seal, memberSign){
-  const b = S.brand || {};
+function spSignRow(p, memberSign){
   return `<div style="display:flex;gap:16px;margin-top:12px;align-items:flex-end">
     <div style="flex:1;text-align:center">${memberSign ? (p.ack && p.ack.signData ? `<img src="${esc(p.ack.signData)}" style="height:52px;max-width:100%" alt="">` : `<div style="height:52px;display:flex;align-items:flex-end;justify-content:center;color:${SP_MUTE};font-size:10.5px">${p.ack && p.ack.remote ? 'Enrolled over phone / WhatsApp' : ''}</div>`) + `<div style="border-top:1px solid ${SP_INK};padding-top:3px;font-size:11px">Member signature</div>` : ''}</div>
-    <div style="flex:1;text-align:center"><div style="height:78px;display:flex;align-items:flex-end;justify-content:center;gap:2px"><img src="${seal}" style="width:76px;height:76px;opacity:.88" alt="">${b.signData ? `<img src="${esc(b.signData)}" style="height:46px;max-width:58%" alt="">` : ''}</div>
-      <div style="border-top:1px solid ${SP_INK};padding-top:3px;font-size:11px">For Deeva Diamonds</div></div></div>`;
+    <div style="flex:1;text-align:center">${stampBlock()}</div></div>`;
 }
 const spTr = (k, v, strong) => `<tr><td style="padding:3.5px 0;${strong ? 'font-weight:700;color:' + SP_G : 'color:' + SP_MUTE}">${k}</td><td style="padding:3.5px 0;text-align:right;white-space:nowrap;font-weight:${strong ? 700 : 600};${strong ? 'color:' + SP_G : ''}">${v}</td></tr>`;
-function spEnrolHtml(p, seal){
+function spEnrolHtml(p){
   const c = shineCalc(Object.assign({}, p, {payments: {}, void: {}}), p.startDay), cu = p.cust || {}, inst = num(p.inst);
   const firstK = Object.keys(p.payments || {}).sort((a, b) => (p.payments[a].at || 0) - (p.payments[b].at || 0))[0];
   const first = firstK && !(p.void || {})[firstK] ? p.payments[firstK] : null;
@@ -4195,10 +4155,10 @@ function spEnrolHtml(p, seal){
     ${first ? `<div style="padding:10px 0;border-bottom:1px solid ${SP_LINE}">${spLab('First installment received')}<div><b>${money(first.amount)}</b> · ${esc(first.mode)}${first.ref ? ' · Ref ' + esc(first.ref) : ''} · ${esc(fmtDayEn(first.day))} · receipt ${esc(first.rno || '')}</div></div>` : ''}
     <div style="font-size:9.4px;color:${SP_MUTE};line-height:1.35;padding-top:7px">${spLab('Terms & conditions')}${SP_TERMS.map((x, i) => (i + 1) + '. ' + esc(x)).join('<br>')}</div>
     <div style="font-size:10.5px;margin-top:6px">I have read and accept the terms of the Deeva Shine Plan.</div>
-    ${spSignRow(p, seal, true)}`;
+    ${spSignRow(p, true)}`;
   return spDocShell(p, 'ENROLMENT FORM', 'Member account no. · enrolled ' + fmtDayEn(spEnrolDay(p)), body);
 }
-function spReceiptHtml(p, k, seal){
+function spReceiptHtml(p, k){
   const x = (p.payments || {})[k];
   /* the receipt shows the plan as it stood right after this payment (also when it is sent again later) */
   const upto = Object.fromEntries(Object.entries(p.payments || {}).filter(([q, y]) => q === k || (y.day || '') < (x.day || '') || ((y.day || '') === (x.day || '') && (y.at || 0) <= (x.at || 0))));
@@ -4226,10 +4186,10 @@ function spReceiptHtml(p, k, seal){
       ${spTr('Jewellery worth at maturity', money(num(p.inst) * 12), true)}
     </table>
     <div style="font-size:10px;color:${SP_MUTE}">Received by ${esc(x.name || '')} · Please keep this receipt with your passbook. No cash refund; plan value redeemable on Deeva’s ready-stock diamond jewellery.</div>
-    ${spSignRow(p, seal, false)}`;
+    ${spSignRow(p, false)}`;
   return spDocShell(p, 'PAYMENT RECEIPT', 'Deeva Shine Plan', body);
 }
-function spStatementHtml(p, seal){
+function spStatementHtml(p){
   const c = shineCalc(p, spDay());
   const pays = Object.entries(p.payments || {}).map(([k, x]) => Object.assign({k}, x)).sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : (a.at || 0) - (b.at || 0)));
   let run = 0;
@@ -4249,7 +4209,7 @@ function spStatementHtml(p, seal){
       ${p.status === 'redeemed' && p.redeem ? spTr('Redeemed on ' + esc(fmtDayEn(p.redeem.day)), money(p.redeem.paid) + ' + ' + money(p.redeem.bonus) + ' = ' + money(p.redeem.value), true) : spTr('Jewellery worth at maturity', money(num(p.inst) * 12), true)}
     </table>
     <div style="font-size:10px;color:${SP_MUTE};margin-top:6px">Statement as on ${esc(fmtDayEn(spDay()))}. Deeva’s records are final.</div>
-    ${spSignRow(p, seal, false)}`;
+    ${spSignRow(p, false)}`;
   return spDocShell(p, 'STATEMENT', 'As on ' + fmtDayEn(spDay()), body);
 }
 function pdfPreview(canvas, name, note){
@@ -4265,9 +4225,7 @@ async function spPdf(kind, pid, k, toWa){
   if (S.pdfBusy) return; S.pdfBusy = true;
   toast('Preparing the PDF…');
   try {
-    const st = S.stores[p.storeId] || {};
-    const seal = sealData(st.city, 'SHINE PLAN');
-    const html = kind === 'enrol' ? spEnrolHtml(p, seal) : kind === 'stmt' ? spStatementHtml(p, seal) : spReceiptHtml(p, k, seal);
+    const html = kind === 'enrol' ? spEnrolHtml(p) : kind === 'stmt' ? spStatementHtml(p) : spReceiptHtml(p, k);
     const {pdf, canvas} = await htmlToPdf(html);
     const c = shineCalc(p, spDay());
     const x = kind === 'receipt' ? p.payments[k] : null;
@@ -4497,9 +4455,6 @@ document.addEventListener('click', e => {
     case 'um-factory': { const v = t.dataset.v, uid = S.sheet.uid; write('users/' + uid, {factoryId: v}).then(ok => { if (ok) { closeSheet(); toast(S.users[uid].name + ' now works for ' + factoryName(v) + '.'); } }); break; }
     case 'store-edit': sheetStore(t.dataset.sid); break;
     case 'store-save': saveStore(); break;
-    case 'brand-sign': sheetBrandSign(); break;
-    case 'bsig-clear': if (S.sheet && S.sheet.sig) S.sheet.sig.clear(); break;
-    case 'brand-save': saveBrandSign(); break;
     case 'rates-open': sheetRates(); break;
     case 'rates-save': saveRates(); break;
     case 'copy': { const tx = t.dataset.t; if (NATIVE && NATIVE.copy) NATIVE.copy(tx); else if (navigator.clipboard) navigator.clipboard.writeText(tx).catch(() => {}); toast('Copied.'); break; }

@@ -132,13 +132,8 @@ async def main():
         await pg.fill('#rt-14KT', '8544'); await pg.fill('#rt-18KT', '10950'); await pg.fill('#rt-making', '2000')
         await pg.click('[data-act="rates-save"]')
         await pg.wait_for_function("!document.querySelector('#sheet .sheet')")
-        await pg.click('[data-act="brand-sign"]')
-        box = await pg.query_selector('#bsig'); bb = await box.bounding_box()
-        await pg.mouse.move(bb['x'] + 30, bb['y'] + 90); await pg.mouse.down()
-        for i in range(8): await pg.mouse.move(bb['x'] + 40 + i * 25, bb['y'] + 60 + (i % 2) * 40)
-        await pg.mouse.up()
-        await pg.click('[data-act="brand-save"]')
-        await pg.wait_for_function("!document.querySelector('#sheet .sheet')")
+        # the owner's stamp + signature (one image) is shown on the Team page and printed on the documents
+        await pg.wait_for_function("(() => { const i = document.querySelector('#stamp-card img'); return i && i.complete && i.naturalWidth > 100; })()")
         # Google Sheet backup: shows the address to share with, saves the link
         card = await pg.inner_text('#sheet-card')
         assert '-compute@developer.gserviceaccount.com' in card and 'Google Sheet link' in card, card
@@ -494,7 +489,7 @@ async def main():
             assert need in rc, need
         assert '14,848' not in rc and 'Fine' not in rc, 'factory cost never goes to the client'
         assert (await pg.evaluate('window.__pdfFormat')).startswith('[419.53,'), 'one A5-wide page'
-        assert rc.count('data:image/png') >= 3, 'seal + client signature + Deeva signature'
+        assert rc.count('icons/stamp.png') == 1 and rc.count('data:image/png') >= 1, 'Deeva stamp + signature, client signature'
         if SHOTS:
             rp = await ctx.new_page()
             await rp.set_viewport_size({'width': 560, 'height': 1100})
@@ -621,9 +616,9 @@ async def main():
         await close_sheet()
         ef = await pg.evaluate('window.__sp')
         for need in ['ENROLMENT FORM', acct, 'Sunita Agrawal', '9827012345', 'Rakesh Agrawal', 'Spouse', 'PAN · ABCDE1234F', '₹10,000', '₹1,05,000', '₹15,000', '₹1,20,000',
-                     'Early redemption', '₹3,000', '₹9,000', 'First installment received', 'UPI-7788', 'Member signature', 'For Deeva Diamonds', 'No cash refund', 'brand of Glittering Diamonds', 'Shankar Nagar']:
+                     'Early redemption', '₹3,000', '₹9,000', 'First installment received', 'UPI-7788', 'Member signature', 'For Deeva Diamonds (Glittering Diamonds)', 'No cash refund', 'brand of Glittering Diamonds', 'Shankar Nagar']:
             assert need in ef, need
-        assert ef.count('data:image/png') >= 3, 'seal + member signature + Deeva signature'
+        assert ef.count('icons/stamp.png') == 1 and ef.count('data:image/png') >= 1, 'Deeva stamp + signature, member signature'
         if SHOTS: (SHOTS / 'shine-enrolment.html').write_text('<base href="file://' + str(ROOT / 'web') + '/">' + ef, encoding='utf8')
         await pg.wait_for_function("(id) => __fake.store['shinePlans/' + id].sent.enrol > 0", arg=pid)
         mat = (_dt.date.fromisoformat(pdoc['startDay']).replace(year=_dt.date.fromisoformat(pdoc['startDay']).year + 1) - _dt.timedelta(days=1)) if pdoc['startDay'][5:] != '02-29' else None
