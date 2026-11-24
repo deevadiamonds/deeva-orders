@@ -173,18 +173,17 @@ service cloud.firestore {
       allow update: if staff() && request.resource.data.n == resource.data.n + 1;
       allow delete: if false;
     }
-    // a store manager may add payments (never change or remove one), mark receipts / reminders sent, update the
-    // customer's details and redeem; Admin / Sub Admin may also cancel a payment, edit the plan, close or reopen it
+    // a store manager may only add payments (never change or remove one) and mark receipts / reminders sent;
+    // editing (member details, dates, payments), cancelling, redeeming, closing: Admin / Sub Admin only (owner, 24 Nov 2026)
     function shineStoreUpdate() {
       let o = resource.data; let n = request.resource.data;
       let k = n.diff(o).affectedKeys();
       let op = o.get('payments', {}); let np = n.get('payments', {});
       return o.storeId == myStore() && n.storeId == o.storeId
         && n.acct == o.acct && n.seq == o.seq && n.inst == o.inst && n.startDay == o.startDay
-        && k.hasOnly(['payments', 'sent', 'remind', 'log', 'updatedAt', 'updatedBy', 'name', 'phone', 'cust', 'status', 'redeem'])
+        && k.hasOnly(['payments', 'sent', 'remind', 'log', 'updatedAt', 'updatedBy'])
         && np.diff(op).changedKeys().size() == 0 && np.diff(op).removedKeys().size() == 0
-        && (n.status == o.status || (o.status == 'active' && n.status == 'redeemed'))
-        && (!k.hasAny(['redeem']) || (o.status == 'active' && n.status == 'redeemed'));
+        && o.status == 'active';
     }
     match /shinePlans/{pid} {
       allow read: if isAdmin() || (isStore() && resource.data.storeId == myStore());

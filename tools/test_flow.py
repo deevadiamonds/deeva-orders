@@ -626,7 +626,9 @@ async def main():
         assert ef.count('data:image/png') >= 3, 'seal + member signature + Deeva signature'
         if SHOTS: (SHOTS / 'shine-enrolment.html').write_text('<base href="file://' + str(ROOT / 'web') + '/">' + ef, encoding='utf8')
         await pg.wait_for_function("(id) => __fake.store['shinePlans/' + id].sent.enrol > 0", arg=pid)
-        print('ok  Shine Plan: store manager enrols a member (signature, nominee, first installment + proof) → ' + acct + ', enrolment form PDF to WhatsApp')
+        mat = (_dt.date.fromisoformat(pdoc['startDay']).replace(year=_dt.date.fromisoformat(pdoc['startDay']).year + 1) - _dt.timedelta(days=1)) if pdoc['startDay'][5:] != '02-29' else None
+        if mat: assert f'{mat.day} {mat.strftime("%b %Y")}' in await pg.inner_text('.dhead'), 'matures 12 months after enrolment minus one day'
+        print('ok  Shine Plan: store manager enrols a member (signature, nominee, first installment + proof) → ' + acct + ', enrolment form PDF to WhatsApp; matures the day before 12 months')
         # second payment → receipt to WhatsApp
         await pg.click('#stickbar [data-act="sp-pay-open"]')
         assert await pg.input_value('#sp-amt') == '10000'
@@ -644,8 +646,11 @@ async def main():
             assert need in rc, need
         if SHOTS: (SHOTS / 'shine-receipt.html').write_text('<base href="file://' + str(ROOT / 'web') + '/">' + rc, encoding='utf8')
         lg = await pg.inner_text('#sp-ledger'); assert 'Total ₹20,000' in lg and '✓ Sent' in lg and 'Husband — Rakesh' in lg, lg
-        assert await pg.eval_on_selector_all('[data-act="sp-void-open"], [data-act="sp-plan-open"], [data-act="sp-del-open"]', 'l => l.length') == 0, 'store manager cannot cancel payments or edit the plan'
-        await pg.click('#stickbar [data-act="sp-pay-open"]'); await pg.fill('#sp-amt', '200000'); await pg.click('[data-act="sp-pay-do"]')
+        assert await pg.eval_on_selector_all('[data-act="sp-void-open"], [data-act="sp-plan-open"], [data-act="sp-del-open"], [data-act="sp-cust-open"], [data-act="sp-pedit-open"], [data-act="sp-redeem-open"]', 'l => l.length') == 0, 'store manager cannot edit, cancel or redeem'
+        assert pdoc['enrolDay'] == pdoc['startDay'] == _dt.date.today().isoformat(), 'store manager always enrols today'
+        await pg.click('#stickbar [data-act="sp-pay-open"]')
+        assert await pg.is_disabled('#sp-day'), 'store manager records today only'
+        await pg.fill('#sp-amt', '200000'); await pg.click('[data-act="sp-pay-do"]')
         await pg.wait_for_function("document.querySelector('#toasts').innerText.includes('more than the plan balance')")
         await close_sheet()
         await shot('11-shine-member')
@@ -731,6 +736,37 @@ async def main():
         rd = await pg.evaluate("__fake.store['shinePlans/spFull'].redeem")
         assert rd['paid'] == 105000 and rd['bonus'] == 15000 and rd['value'] == 120000 and rd['billNo'] == 'B-501', rd
         await pg.wait_for_function("document.body.innerText.includes('Redeemed on')")
+        # an existing member who joined earlier: Admin enters the real enrolment date and the installments already paid
+        enr = _dt.date.fromisoformat(mshift(td, -2, 5))
+        await pg.click('#tabs a[href="#/crm/new"]')
+        await pg.wait_for_selector('#spf-enrolDay')
+        await pg.click('#spc-storeId [data-v="%s"]' % raipur)
+        await pg.fill('#spf-phone', '9811100000'); await pg.fill('#spf-name', 'Asha Old Member'); await pg.fill('#spf-address', 'Telibandha')
+        await pg.fill('#spf-enrolDay', enr.isoformat())
+        assert await pg.input_value('#spf-startDay') == enr.isoformat(), 'first installment date follows the enrolment date'
+        await pg.wait_for_function("!document.querySelector('#sp-back').hidden && document.querySelector('#sp-pay-h').innerText.includes('already paid')")
+        await pg.click('#sp-paidN [data-v="2"]'); await pg.click('#spc-bmode [data-v="Cash"]')
+        await pg.check('#spf-accepted'); await pg.check('#spf-remote')
+        await pg.click('[data-act="sp-enrol"]')
+        await pg.wait_for_selector('#sheet [data-act="sp-pdf"][data-kind="enrol"]', timeout=5000)
+        await close_sheet()
+        old = await pg.evaluate("Object.entries(__fake.store).find(([k, v]) => k.startsWith('shinePlans/') && v.name === 'Asha Old Member')")
+        opid, od = old[0].split('/')[1], old[1]
+        assert od['enrolDay'] == od['startDay'] == enr.isoformat() and od['acct'].endswith('-002'), od
+        ops = sorted(od['payments'].values(), key=lambda x: x['day'])
+        assert [x['day'] for x in ops] == [enr.isoformat(), mshift(enr, 1)] and all(x['old'] and x['mode'] == 'Cash' and x['amount'] == 10000 for x in ops), ops
+        omat = _dt.date.fromisoformat(mshift(enr, 12)) - _dt.timedelta(days=1)
+        hd = await pg.inner_text('.dhead'); assert f'{omat.day} {omat.strftime("%b %Y")}' in hd and '2 of 10½' in hd, hd
+        # Admin corrects a payment and the dates
+        await pg.click('#sp-ledger .lrow:nth-child(2) [data-act="sp-pedit-open"]')
+        await pg.fill('#pe-amt', '9000'); await pg.click('#pe-mode [data-v="UPI"]'); await pg.click('[data-act="sp-pedit-save"]')
+        await pg.wait_for_function("(id) => Object.values(__fake.store['shinePlans/' + id].payments).some(x => x.amount === 9000 && x.mode === 'UPI')", arg=opid)
+        await pg.click('[data-act="sp-plan-open"]')
+        await pg.fill('#sp-penrol', mshift(enr, 0, 4)); await pg.click('[data-act="sp-plan-save"]')
+        await pg.wait_for_function("([id, d]) => __fake.store['shinePlans/' + id].enrolDay === d", arg=[opid, mshift(enr, 0, 4)])
+        await pg.wait_for_function("document.querySelector('#view').innerText.includes('Enrolment date:') && !document.querySelector('#sheet [data-act=\"sp-plan-save\"]')")
+        hist = await text(); assert 'Payment ' + od['acct'] + '/01 changed' in hist, hist
+        print('ok  Admin enrols an earlier member with the real enrolment date and installments already paid (each on its date), edits a payment and the dates')
         await pg.click('#tabs a[href="#/crm/settings"]')
         await pg.wait_for_selector('#tpl-reminder')
         await pg.fill('#tpl-reminder', 'Namaste {name}, {due_amount} due on {due} — Deeva')

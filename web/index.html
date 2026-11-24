@@ -3389,14 +3389,14 @@ const SP_IDS = ['Aadhaar', 'PAN', 'Driving licence', 'Voter ID', 'Passport'];
 const SP_REL = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Other'];
 const SP_TERMS = [
   'The monthly installment is fixed at enrolment (minimum ₹5,000, in multiples of ₹1,000) and cannot be changed during the plan.',
-  'The member pays the full installment every month for 10 months, and half an installment by the 15th of the 11th month (10½ installments).',
-  'The plan matures at the end of the 12th month. Deeva Diamonds then adds 1½ installments as its contribution, making 12 installments’ value.',
-  'Redeem within 15 days of maturity.',
+  'Installments are paid in advance, on the enrolment date and the same date every month: the full installment for 10 months and half an installment in the 11th month (10½ installments).',
+  'The plan matures 12 months after enrolment, on the day before the enrolment date (e.g. enrolled on 15 September → matures on 14 September next year). Deeva Diamonds then adds 1½ installments as its contribution, making 12 installments’ value.',
+  'Redeem within 15 days after maturity.',
   'Early redemption: after completing 6, 7, 8, 9 or 10 monthly installments, Deeva’s contribution is 30%, 40%, 55%, 70% or 90% of one installment, redeemable within 15 days of completing that month. No contribution before 6 installments.',
   'Plan value is redeemable only against diamond jewellery from Deeva’s ready stock. Not valid on made-to-order or customised pieces.',
   'No cash refund or cash payout of the installments or Deeva’s contribution at any stage.',
   'Jewellery is billed at the prevailing gold rate, diamond price and making charges on the day of purchase. GST and taxes as applicable. Any amount above the plan value is paid by the member. The plan value must be used in one bill.',
-  'A late or missed installment moves the maturity date ahead by the same number of months.',
+  'An installment paid after the next installment date is late. A late or missed installment moves the maturity date ahead by the same number of months.',
   'Pay only at the Deeva store or to Deeva’s official account, and get every payment entered with a receipt. Bring the passbook and a photo ID at redemption.',
   'The plan cannot be combined with any other offer or discount.',
   'Only the member or the registered nominee (with photo ID) can redeem the plan. Deeva’s records are final if the passbook is lost.',
@@ -3415,12 +3415,13 @@ const SP_WORDS = ['name', 'acct', 'inst', 'start', 'maturity', 'redeem_by', 'pai
 
 /* SHINE-CALC-START — the same function is in functions/shine.js; keep both copies identical */
 /* SHINE-CALC (the same function is in web/index.html and functions/shine.js — keep both copies identical)
-   Deeva Shine Plan schedule for one plan, as of the day `t` (YYYY-MM-DD):
-   installments 1–10 on the start date's day of each month, installment 11 (half) by the 15th of month 11.
-   An installment is on time when it is paid in its own calendar month; a late one moves every later date and the
-   maturity ahead by the months it was late (the plan pauses). Maturity = end of month 12 (+ months moved),
-   redeem by the 15th of month 13. Early redemption after 6–10 installments: 30/40/55/70/90 % of one installment;
-   the full plan (10½ paid) at maturity: 150 % (1½ installments). */
+   Deeva Shine Plan schedule for one plan, as of the day `t` (YYYY-MM-DD) — date based (owner's rule, 24 Nov 2026):
+   installments are paid in advance on the first installment date and the same date every month: 1–10 full,
+   11 = half (10½). Maturity = 12 months after the first installment, minus one day (15 Sep → 14 Sep next year);
+   redeem within 15 days after maturity. An installment is on time when it is paid before the next installment date;
+   each full month it is late moves every later date and the maturity ahead by one month (the plan pauses).
+   Early redemption after 6–10 installments: 30/40/55/70/90 % of one installment; the full plan (10½ paid) at
+   maturity: 150 % (1½ installments). */
 function shineCalc(p, t){
   const inst = Number(p.inst) || 0;
   const pd = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? [+m[1], +m[2] - 1, +m[3]] : null; };
@@ -3428,15 +3429,17 @@ function shineCalc(p, t){
     const yy = y + Math.floor(m / 12), mm = ((m % 12) + 12) % 12, last = new Date(Date.UTC(yy, mm + 1, 0)).getUTCDate();
     return yy + '-' + String(mm + 1).padStart(2, '0') + '-' + String(Math.min(d, last)).padStart(2, '0');
   };
-  const mi = s => { const a = pd(s); return a[0] * 12 + a[1]; };
+  const plus = (s, n) => { const a = pd(s); return new Date(Date.UTC(a[0], a[1], a[2] + n)).toISOString().slice(0, 10); };
   const [y0, m0, d0] = pd(p.startDay) || pd(t);
+  /* whole months from an installment's date (y, m, d) to `day`: how many later installment dates have come by then */
+  const monthsLate = (y, m, d, day) => { let j = 0; while (j < 240 && ds(y, m + j + 1, d) <= day) j++; return j; };
   const voids = p.void || {};
   const pays = Object.entries(p.payments || {}).filter(([k]) => !voids[k])
     .map(([k, x]) => ({k, amount: Number(x.amount) || 0, day: x.day || t, at: x.at || 0}))
     .sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : a.at - b.at));
   const paid = pays.reduce((s, x) => s + x.amount, 0);
   const items = [];
-  for (let i = 0; i < 11; i++) items.push({n: i + 1, half: i === 10, amt: i === 10 ? inst / 2 : inst, y: y0, m: m0 + i, d: i === 10 ? 15 : d0});
+  for (let i = 0; i < 11; i++) items.push({n: i + 1, half: i === 10, amt: i === 10 ? inst / 2 : inst, y: y0, m: m0 + i, d: d0});
   let cum = 0, run = 0, pi = 0, shift = 0, next = null;
   for (const it of items) {
     cum += it.amt;
@@ -3444,22 +3447,20 @@ function shineCalc(p, t){
     it.due = ds(it.y, it.m + shift, it.d);
     if (run + 0.5 >= cum) {
       it.paid = true; it.paidDay = pays[pi - 1].day;
-      it.late = Math.max(0, mi(it.paidDay) - mi(it.due));
+      it.late = monthsLate(it.y, it.m + shift, it.d, it.paidDay);
       shift += it.late;
     } else {
       it.paid = false; it.part = Math.max(0, run - (cum - it.amt));
       if (!next) next = it;
     }
   }
-  /* the installment still to pay: if its month is over, the plan has already moved by that many months */
-  const lateNow = next ? Math.max(0, mi(t) - mi(next.due)) : 0;
+  /* the installment still to pay: each installment date that has passed since it was due moves the plan one month */
+  const lateNow = next ? monthsLate(next.y, next.m + shift, next.d, t) : 0;
+  const lateFrom = next ? ds(next.y, next.m + shift + lateNow + 1, next.d) : '';
   if (next) items.filter(it => !it.paid && it !== next).forEach(it => { it.due = ds(it.y, it.m + shift + lateNow, it.d); });
   const moved = shift + lateNow;
-  let maturity = ds(y0, m0 + 11 + moved, 31), redeemBy = ds(y0, m0 + 12 + moved, 15);
-  if (p.matDay && pd(p.matDay)) {
-    const a = pd(p.matDay);
-    maturity = p.matDay; redeemBy = new Date(Date.UTC(a[0], a[1], a[2] + 15)).toISOString().slice(0, 10);
-  }
+  let maturity = plus(ds(y0, m0 + 12 + moved, d0), -1), redeemBy = plus(maturity, 15);
+  if (p.matDay && pd(p.matDay)) { maturity = p.matDay; redeemBy = plus(p.matDay, 15); }
   const total = inst * 10.5;
   const full = inst > 0 && paid + 0.5 >= total;
   const n = inst > 0 ? Math.min(10, Math.floor((paid + 0.5) / inst)) : 0;
@@ -3468,7 +3469,7 @@ function shineCalc(p, t){
   const pct = full && matured ? 1.5 : (LADDER[n] || 0);
   const left = next ? next.amt - next.part : 0;
   return {
-    inst, items, pays, paid, total, full, n, next, left, moved, shift, lateNow, maturity, redeemBy, matured, pct,
+    inst, items, pays, paid, total, full, n, next, left, moved, shift, lateNow, lateFrom, maturity, redeemBy, matured, pct,
     bonus: Math.round(inst * pct), due: next ? next.due : '', overdue: !!(next && next.due < t),
     dueDays: next ? Math.round((Date.UTC(...pd(next.due)) - Date.UTC(...pd(t))) / 86400000) : null
   };
@@ -3480,6 +3481,8 @@ const spPlans = () => Object.entries(S.shine).map(([id, p]) => Object.assign({id
 const spVisible = () => spPlans().filter(p => !isAdmin() || S.spStore === 'all' || p.storeId === S.spStore);
 const spCount = c => (c.full ? '10½' : String(c.n) + (c.paid - c.n * c.inst > 0.5 ? ' + ' + money(c.paid - c.n * c.inst) : ''));
 const spItemLabel = it => (it.half ? 'Installment 11 (half)' : 'Installment ' + it.n);
+/* enrolment date: set by Admin / Sub Admin for members who joined before the app (else the day it was entered) */
+const spEnrolDay = p => p.enrolDay || dayOf(new Date(p.createdAt || Date.now()));
 const spMonthKey = d => d.slice(0, 7);
 const spOrd = n => n + ((n % 100 >= 11 && n % 100 <= 13) ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
 const spMonthName = ym => { const [y, m] = ym.split('-').map(Number); return EMON[m - 1] + ' ' + y; };
@@ -3592,7 +3595,7 @@ function renderShineDues(){
   const rem = act.map(x => Object.assign(x, {kind: spRemindKind(x.p, x.c)})).filter(x => x.kind);
   const ready = act.filter(x => x.c.full).sort((a, b) => (a.c.maturity < b.c.maturity ? -1 : 1));
   const unsent = [];
-  all.forEach(({p, c}) => { Object.entries(p.payments || {}).forEach(([k, x]) => { if (!(p.void || {})[k] && !(p.sent || {})[k] && diffDays(t, x.day || t) <= 45) unsent.push({p, c, k, x}); }); });
+  all.forEach(({p, c}) => { Object.entries(p.payments || {}).forEach(([k, x]) => { if (!(p.void || {})[k] && !(p.sent || {})[k] && !x.old && diffDays(t, x.day || t) <= 45) unsent.push({p, c, k, x}); }); });
   unsent.sort((a, b) => (b.x.at || 0) - (a.x.at || 0));
   const collectedNow = over.concat(tod).reduce((s, x) => s + x.c.left, 0);
   let monthIn = 0, monthN = 0;
@@ -3685,8 +3688,8 @@ function renderShineMember(pid){
       <div class="due"><small>MATURITY</small><b>${esc(fmtDayEn(c.maturity))}</b><span class="small">redeem by ${esc(fmtDay(c.redeemBy))}${p.matDay ? ' · set by Admin' : ''}</span></div></div>
   </div>`;
   if (p.status === 'active') {
-    if (c.overdue) h += `<div class="alertbox bad"><h4>⚠️ ${esc(spItemLabel(c.next))} overdue since ${esc(fmtDayEn(c.due))}</h4><p>${money(c.left)} pending.${c.lateNow ? ' The plan has moved ahead by ' + c.lateNow + ' ' + plural(c.lateNow, 'month') + ' — maturity is now ' + fmtDayEn(c.maturity) + '.' : ' Paid this month, it stays on time.'}</p>${p.phone ? spWaBtn(p, c, 'overdue', '💬 Send overdue reminder') : ''}</div>`;
-    else if (c.full) h += `<div class="alertbox ${c.matured ? 'ok' : 'gold'}"><h4>${c.matured ? '🎁 Plan matured — ready to redeem' : '✓ Full plan paid'}</h4><p>${c.matured ? 'Redeem by ' + fmtDayEn(c.redeemBy) + '. Plan value ' + money(num(p.inst) * 12) + ' (paid ' + money(c.paid) + ' + Deeva’s contribution ' + money(num(p.inst) * 1.5) + ').' : 'Matures on ' + fmtDayEn(c.maturity) + '; the full contribution (1½ installments) applies from that date.'}</p><div class="btns">${p.phone ? spWaBtn(p, c, 'maturity', '💬 Send maturity message') : ''}<button class="btn primary sm" data-act="sp-redeem-open">🎁 Redeem</button></div></div>`;
+    if (c.overdue) h += `<div class="alertbox bad"><h4>⚠️ ${esc(spItemLabel(c.next))} overdue since ${esc(fmtDayEn(c.due))}</h4><p>${money(c.left)} pending.${c.lateNow ? ' The plan has moved ahead by ' + c.lateNow + ' ' + plural(c.lateNow, 'month') + ' — maturity is now ' + fmtDayEn(c.maturity) + '.' : ' Paid before ' + fmtDayEn(c.lateFrom) + ', it stays on time.'}</p>${p.phone ? spWaBtn(p, c, 'overdue', '💬 Send overdue reminder') : ''}</div>`;
+    else if (c.full) h += `<div class="alertbox ${c.matured ? 'ok' : 'gold'}"><h4>${c.matured ? '🎁 Plan matured — ready to redeem' : '✓ Full plan paid'}</h4><p>${c.matured ? 'Redeem by ' + fmtDayEn(c.redeemBy) + '. Plan value ' + money(num(p.inst) * 12) + ' (paid ' + money(c.paid) + ' + Deeva’s contribution ' + money(num(p.inst) * 1.5) + ').' : 'Matures on ' + fmtDayEn(c.maturity) + '; the full contribution (1½ installments) applies from that date.'}</p><div class="btns">${p.phone ? spWaBtn(p, c, 'maturity', '💬 Send maturity message') : ''}${isAdmin() ? '<button class="btn primary sm" data-act="sp-redeem-open">🎁 Redeem</button>' : ''}</div>${isAdmin() ? '' : '<p class="small muted" style="margin:8px 0 0">Redemption is done by the Admin / Sub Admin.</p>'}</div>`;
     if (c.moved && !c.overdue) h += `<div class="banner">⏳ Maturity moved ahead by ${c.moved} ${plural(c.moved, 'month')} for late installments.</div>`;
   }
   if (p.status === 'redeemed' && p.redeem) h += `<div class="alertbox ok"><h4>🎁 Redeemed on ${esc(fmtDayEn(p.redeem.day))}</h4><p>Paid ${money(p.redeem.paid)} + Deeva’s contribution ${money(p.redeem.bonus)} = plan value ${money(p.redeem.value)}${p.redeem.billNo ? ' · Bill ' + esc(p.redeem.billNo) : ''}${p.redeem.item ? '\n' + esc(p.redeem.item) : ''}${p.redeem.note ? '\n' + esc(p.redeem.note) : ''}</p>${isAdmin() ? '<button class="btn sm" data-act="sp-unredeem">↺ Undo redemption</button>' : ''}</div>`;
@@ -3714,7 +3717,7 @@ function renderShineMember(pid){
     return `<div class="lrow ${vd ? 'void' : ''}"><div class="grow"><b class="money">${money(x.amount)}</b> · ${esc(x.mode || '')}${x.from ? ' · ' + esc(x.from) : ''}
       <small>${esc(fmtDayEn(x.day))} · ${esc(x.rno || '')}${x.ref ? ' · Ref ' + esc(x.ref) : ''} · by ${esc(x.name || '')}</small>${x.note ? `<small>${esc(x.note)}</small>` : ''}${vd ? `<small style="color:var(--bad)">Cancelled by ${esc(vd.name || '')}: ${esc(vd.reason || '')}</small>` : ''}
       ${x.proofUrl ? `<img class="lproof" src="${esc(x.proofUrl)}" alt="Payment proof" data-act="zoom" data-src="${esc(x.proofUrl)}" data-cap="${esc('Payment proof · ' + (x.rno || ''))}">` : ''}</div>
-      <div class="lr">${vd ? '' : `<span class="small muted">Total ${money(run)}</span><button class="btn sm ${sent ? '' : 'wa'}" data-act="sp-pdf" data-kind="receipt" data-k="${esc(x.k)}" data-wa="1">${sent ? '✓ Sent · again' : '🧾 Send receipt'}</button><button class="btn ghost sm" data-act="sp-pdf" data-kind="receipt" data-k="${esc(x.k)}" data-wa="0">PDF</button>${isAdmin() ? `<button class="btn ghost sm" data-act="sp-void-open" data-k="${esc(x.k)}">Cancel</button>` : ''}`}</div></div>`;
+      <div class="lr">${vd ? '' : `<span class="small muted">Total ${money(run)}</span><button class="btn sm ${sent ? '' : 'wa'}" data-act="sp-pdf" data-kind="receipt" data-k="${esc(x.k)}" data-wa="1">${sent ? '✓ Sent · again' : '🧾 Send receipt'}</button><button class="btn ghost sm" data-act="sp-pdf" data-kind="receipt" data-k="${esc(x.k)}" data-wa="0">PDF</button>${isAdmin() ? `<span class="row" style="gap:4px;margin:0"><button class="btn ghost sm" data-act="sp-pedit-open" data-k="${esc(x.k)}">Edit</button><button class="btn ghost sm" data-act="sp-void-open" data-k="${esc(x.k)}">Cancel</button></span>` : ''}`}</div></div>`;
   }).join('');
   if (p.status === 'active' && !c.full) h += `<button class="btn primary big" data-act="sp-pay-open" style="margin-top:8px">＋ Add payment</button>`;
   h += `</div>`;
@@ -3725,7 +3728,7 @@ function renderShineMember(pid){
     <button class="btn wa" data-act="sp-pdf" data-kind="stmt" data-wa="1">Statement → WhatsApp</button>
     <button class="btn" data-act="sp-pdf" data-kind="stmt" data-wa="0">Statement PDF</button></div></div>`;
   /* customer */
-  h += `<div class="card"><h3>👤 Member details <button class="btn ghost sm tag" data-act="sp-cust-open">Edit</button></h3><div class="kv">
+  h += `<div class="card"><h3>👤 Member details ${isAdmin() ? '<button class="btn ghost sm tag" data-act="sp-cust-open">Edit</button>' : ''}</h3><div class="kv">
     <div>Mobile</div><div>${esc(p.phone || '')}${cu.alt ? ' · ' + esc(cu.alt) : ''}</div>
     ${cu.email ? `<div>Email</div><div>${esc(cu.email)}</div>` : ''}
     ${cu.dob ? `<div>Date of birth</div><div>${esc(fmtDayEn(cu.dob))}</div>` : ''}
@@ -3734,21 +3737,21 @@ function renderShineMember(pid){
     ${cu.idType ? `<div>Photo ID</div><div>${esc(cu.idType)}${cu.idNo ? ' · ' + esc(cu.idNo) : ''}</div>` : ''}
     <div>Nominee</div><div>${esc(cu.nominee || '—')}${cu.nomRel ? ' (' + esc(cu.nomRel) + ')' : ''}${cu.nomPhone ? ' · ' + esc(cu.nomPhone) : ''}</div>
     ${cu.note ? `<div>Note</div><div>${esc(cu.note)}</div>` : ''}
-    <div>Enrolled</div><div>${esc(fmtWhen(p.createdAt))} · ${esc(p.createdByName || '')}</div>
+    <div>Enrolled</div><div>${esc(fmtDayEn(spEnrolDay(p)))}${p.enrolDay && p.enrolDay !== dayOf(new Date(p.createdAt || 0)) ? ' · entered ' + esc(fmtWhen(p.createdAt)) : ''} · ${esc(p.createdByName || '')}</div>
   </div>${p.ack && p.ack.signData ? `<div class="small muted" style="margin-top:8px">Signature on the enrolment form</div><img class="sigimg" src="${esc(p.ack.signData)}" alt="Member signature">` : p.ack && p.ack.remote ? '<p class="small muted">Enrolled over phone / WhatsApp (no signature).</p>' : ''}
   ${p.phone ? `<div class="btns" style="margin-top:10px"><a class="btn sm" href="tel:+91${esc(phone10(p.phone))}">📞 Call</a>${p.status === 'active' && c.next ? spWaBtn(p, c, c.overdue ? 'overdue' : 'reminder', '💬 Payment reminder') : ''}<a class="btn sm" href="${esc(waLink(p.phone, ''))}" target="_blank" rel="noopener">WhatsApp chat</a></div>` : ''}</div>`;
-  if (p.status === 'active' && !c.full && c.n >= 6) h += `<div class="card"><h3>🎁 Early redemption</h3><p class="small" style="margin-top:0">After ${c.n} installments Deeva’s contribution is ${Math.round(c.pct * 100)}% of one installment (${money(c.bonus)}). The full plan gives 150% (${money(num(p.inst) * 1.5)}) at maturity.</p><button class="btn" data-act="sp-redeem-open">Redeem now</button></div>`;
+  if (p.status === 'active' && !c.full && c.n >= 6) h += `<div class="card"><h3>🎁 Early redemption</h3><p class="small" style="margin-top:0">After ${c.n} installments Deeva’s contribution is ${Math.round(c.pct * 100)}% of one installment (${money(c.bonus)}). The full plan gives 150% (${money(num(p.inst) * 1.5)}) at maturity.</p>${isAdmin() ? '<button class="btn" data-act="sp-redeem-open">Redeem now</button>' : '<p class="small muted" style="margin:0">Redemption is done by the Admin / Sub Admin.</p>'}</div>`;
   if (p.remind && p.remind.at) h += `<p class="small muted center">Last reminder: ${esc(fmtWhen(p.remind.at))} by ${esc(p.remind.name || '')}</p>`;
   /* history */
   const logs = Object.values(p.log || {}).sort((a, b) => (b.at || 0) - (a.at || 0));
   h += `<div class="card"><h3>🕘 History</h3>${logs.length ? `<ul class="tl">${logs.map(x => `<li><span class="ic">${LOGICON[x.type] || '•'}</span><div class="tx">${esc(x.text)}<small>${esc(whoLabel(x.name, x.role, null))} · ${esc(fmtWhen(x.at))}</small></div></li>`).join('')}</ul>` : '<p class="muted small">Nothing yet.</p>'}</div>`;
   if (isAdmin()) h += `<div class="card"><h3>⚙️ Admin</h3><div class="btns">
-    <button class="btn sm" data-act="sp-plan-open">Edit installment / start date</button>
+    <button class="btn sm" data-act="sp-plan-open">Edit installment / dates</button>
     <button class="btn sm" data-act="sp-mat-open">Change maturity date</button>
     ${p.status === 'active' ? '<button class="btn sm danger" data-act="sp-close-open">Close plan</button>' : ''}
     ${isOwner() ? '<button class="btn sm danger" data-act="sp-del-open">🗑️ Delete permanently</button>' : ''}</div></div>`;
   patch($('#view'), h);
-  patch($('#stickbar'), p.status === 'active' ? `<div class="stick"><div class="in2">${p.phone && c.next ? spWaBtn(p, c, c.overdue ? 'overdue' : 'reminder', '💬 Reminder').replace('btn sm wa', 'btn wa') : ''}${c.full ? '<button class="btn primary" data-act="sp-redeem-open">🎁 Redeem</button>' : '<button class="btn primary" data-act="sp-pay-open">＋ Payment</button>'}</div></div>` : '');
+  patch($('#stickbar'), p.status === 'active' ? `<div class="stick"><div class="in2">${p.phone && c.next ? spWaBtn(p, c, c.overdue ? 'overdue' : 'reminder', '💬 Reminder').replace('btn sm wa', 'btn wa') : ''}${c.full ? (isAdmin() ? '<button class="btn primary" data-act="sp-redeem-open">🎁 Redeem</button>' : '') : '<button class="btn primary" data-act="sp-pay-open">＋ Payment</button>'}</div></div>` : '');
 }
 
 /* ---------- enrolment ---------- */
@@ -3757,10 +3760,13 @@ function spNewForm(){
   const sl = storeList();
   const sid = isStore() ? myStore() : (sl.length === 1 ? sl[0].id : '');
   return {key: rid(), pid: B.db.newId('shinePlans'), phone: '', name: '', alt: '', email: '', dob: '', anniv: '', address: '', city: (S.stores[sid] || {}).city || '',
-    idType: '', idNo: '', nominee: '', nomRel: '', nomPhone: '', note: '', inst: 10000, instOther: '', startDay: spDay(), storeId: sid,
-    payNow: true, payAmt: '10000', mode: 'UPI', from: '', ref: '', accepted: false, remote: false};
+    idType: '', idNo: '', nominee: '', nomRel: '', nomPhone: '', note: '', inst: 10000, instOther: '', enrolDay: spDay(), startDay: spDay(), storeId: sid,
+    payNow: true, payAmt: '10000', mode: 'UPI', from: '', ref: '', accepted: false, remote: false, paidN: 1, bmode: 'UPI', bfrom: '', bref: ''};
 }
 function spInstOf(f){ return f.instOther !== '' ? Math.round(num(f.instOther)) : num(f.inst); }
+/* Admin / Sub Admin enrolling a member who joined earlier: installments already paid go in on their own dates */
+const spBack = f => isAdmin() && /^\d{4}-\d{2}-\d{2}$/.test(f.startDay) && f.startDay < spDay();
+function spBackItems(f){ const inst = spInstOf(f); return inst ? shineCalc({inst, startDay: f.startDay}, f.startDay).items.filter(it => it.due <= spDay()) : []; }  /* plain due dates (as on the start date) */
 function spFld(id, label, val, attrs, req, hint){
   return `<div class="fld" id="w-${id}"><label for="${id}">${esc(label)}${req ? '<span class="req">*</span>' : ''}</label><input class="in" id="${id}" data-spf="${id.slice(4)}" value="${esc(val || '')}" ${attrs || ''}>${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
 }
@@ -3791,9 +3797,19 @@ function renderShineNew(){
   h += `<div class="sec"><div class="sec-h"><span class="n">3</span><div><b>Plan</b><small>Minimum ₹5,000 a month, in multiples of ₹1,000 — fixed for the whole plan</small></div></div>
     <div class="fld" id="w-sp-inst"><div class="lbl">Monthly installment<span class="req">*</span></div>${spChips('inst', SP_INST, f.instOther !== '' ? '' : f.inst)}</div>
     ${spFld('spf-instOther', 'Other amount ₹', f.instOther, 'inputmode="numeric" placeholder="e.g. 12000"')}
-    ${spFld('spf-startDay', 'First installment date', f.startDay, 'type="date"', true, 'Every installment falls on this day of the month.')}
+    ${isAdmin() ? `<div class="two">${spFld('spf-enrolDay', 'Enrolment date', f.enrolDay, 'type="date" max="' + spDay() + '"', true)}${spFld('spf-startDay', 'First installment date', f.startDay, 'type="date"', true)}</div>
+      <div class="hint" style="margin:-6px 0 10px">For a member who joined earlier, choose the real date. Installments are paid in advance, on this date every month.</div>`
+      : `<div class="kv" style="margin-bottom:10px"><div>Enrolment and first installment</div><div>${esc(fmtDayEn(spDay()))} (today)</div></div>`}
     <div class="calc" id="sp-sum"></div></div>`;
-  h += `<div class="sec"><div class="sec-h"><span class="n">4</span><div><b>First installment</b><small>Payment received today</small></div></div>
+  h += `<div class="sec"><div class="sec-h"><span class="n">4</span><div><b id="sp-pay-h">First installment</b><small id="sp-pay-s">Payment received today</small></div></div>
+    <div id="sp-back" hidden>
+      <div class="fld" id="w-sp-paidN"><div class="lbl">How many installments has the member paid so far?</div><div id="sp-paidN"></div></div>
+      <div class="lbl">How were they paid?</div>${spChips('bmode', SP_MODES, f.bmode)}<div style="height:10px"></div>
+      ${spFld('spf-bfrom', 'Paid by / from', f.bfrom, 'placeholder="e.g. Self — HDFC account"')}
+      ${spFld('spf-bref', 'Reference / old receipt no.', f.bref, 'autocomplete="off"')}
+      <div class="hint">Each installment is entered on its own date. More payments can be added on the member page later.</div>
+    </div>
+    <div id="sp-now">
     <label class="check"><input type="checkbox" id="spf-payNow" ${f.payNow ? 'checked' : ''}><span>First installment received now</span></label>
     <div id="sp-pay-wrap" ${f.payNow ? '' : 'hidden'}>
       ${spFld('spf-payAmt', 'Amount ₹', f.payAmt, 'inputmode="numeric"', true)}
@@ -3801,7 +3817,7 @@ function renderShineNew(){
       ${spFld('spf-from', 'Paid by / from', f.from, 'placeholder="e.g. Self — HDFC account, or husband Ramesh"')}
       ${spFld('spf-ref', 'Reference no. (UPI / cheque / transaction)', f.ref, 'autocomplete="off"')}
       <div class="lbl">🧾 Payment proof (optional)</div><div id="spf-proof"></div>
-    </div></div>`;
+    </div></div></div>`;
   h += `<div class="sec"><div class="sec-h"><span class="n">5</span><div><b>Terms and signature</b></div></div>
     <ol class="terms">${SP_TERMS.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
     <label class="check" id="w-spf-accepted"><input type="checkbox" id="spf-accepted" ${f.accepted ? 'checked' : ''}><span>The customer has read and accepted the plan terms.</span></label>
@@ -3828,7 +3844,7 @@ function spFormUpdate(){
         <div><span>Deeva’s contribution (1½)</span><span>${money(inst * 1.5)}</span></div>
         <div class="fin"><span>Jewellery worth (12)</span><span>${money(inst * 12)}</span></div>
         <div><span>Installments 1–10</span><span>${esc(fmtDay(c.items[0].due))} – ${esc(fmtDay(c.items[9].due))}</span></div>
-        <div><span>Last (half) installment</span><span>by ${esc(fmtDay(c.items[10].due))}</span></div>
+        <div><span>Last (half) installment</span><span>${esc(fmtDay(c.items[10].due))}</span></div>
         <div><span>Matures</span><span>${esc(fmtDayEn(c.maturity))}</span></div>
         <div><span>Redeem by</span><span>${esc(fmtDayEn(c.redeemBy))}</span></div></div>`;
     }
@@ -3842,6 +3858,20 @@ function spFormUpdate(){
     if (ex._h !== html) { ex.innerHTML = html; ex._h = html; }
   }
   const pw = $('#sp-pay-wrap'); if (pw) pw.hidden = !f.payNow;
+  /* back-dated (Admin): installments already paid, each on its own date */
+  const back = spBack(f), bw = $('#sp-back'), nw = $('#sp-now');
+  if (bw) bw.hidden = !back; if (nw) nw.hidden = back;
+  const ph = $('#sp-pay-h'), ps = $('#sp-pay-s');
+  if (ph) ph.textContent = back ? 'Installments already paid' : 'First installment';
+  if (ps) ps.textContent = back ? 'Paid before today, on their own dates' : 'Payment received today';
+  if (back) {
+    const its = spBackItems(f);
+    if (f.paidN > its.length) f.paidN = its.length;
+    const html = Array.from({length: its.length + 1}, (_, i) => i).map(i => `<button type="button" class="chip ${f.paidN === i ? 'on' : ''}" data-act="sp-paidN" data-v="${i}">${i === 0 ? 'None' : i === 11 ? '10½' : i}</button>`).join('') +
+      `<div class="hint" style="width:100%">${f.paidN ? esc(its.slice(0, f.paidN).map(it => fmtDay(it.due) + ' ' + money(it.amt)).join(' · ')) + ' — total ' + money(its.slice(0, f.paidN).reduce((t, it) => t + it.amt, 0)) : 'No installment paid yet.'}</div>`;
+    const box = $('#sp-paidN');
+    if (box && box._h !== html) { box.innerHTML = `<div class="chips">${html}</div>`; box._h = html; }
+  }
   const sw = $('#w-sp-sig'); if (sw) sw.hidden = f.remote;
 }
 function spFormMissing(){
@@ -3853,8 +3883,9 @@ function spFormMissing(){
   const inst = spInstOf(f);
   if (!(inst >= 5000 && inst % 1000 === 0)) m.push(['w-sp-inst', 'Monthly installment (minimum ₹5,000, multiples of ₹1,000)']);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(f.startDay)) m.push(['w-spf-startDay', 'First installment date']);
-  if (f.payNow && !(num(f.payAmt) > 0)) m.push(['w-spf-payAmt', 'First installment amount']);
-  if (f.payNow && num(f.payAmt) > inst * 10.5) m.push(['w-spf-payAmt', 'The amount is more than the whole plan (' + money(inst * 10.5) + ')']);
+  if (isAdmin() && (!/^\d{4}-\d{2}-\d{2}$/.test(f.enrolDay) || f.enrolDay > spDay())) m.push(['w-spf-enrolDay', 'Enrolment date (today or earlier)']);
+  if (!spBack(f) && f.payNow && !(num(f.payAmt) > 0)) m.push(['w-spf-payAmt', 'First installment amount']);
+  if (!spBack(f) && f.payNow && num(f.payAmt) > inst * 10.5) m.push(['w-spf-payAmt', 'The amount is more than the whole plan (' + money(inst * 10.5) + ')']);
   if (!f.accepted) m.push(['w-spf-accepted', 'Customer’s acceptance of the terms']);
   if (!f.remote && !(f.sig && f.sig.dirty())) m.push(['w-sp-sig', 'Customer signature']);
   return m;
@@ -3873,6 +3904,9 @@ async function spEnrol(){
   const btn = $('[data-act="sp-enrol"]'); if (btn) { btn.disabled = true; btn.textContent = 'Enrolling…'; }
   const now = Date.now(), d = new Date(), ym = ymOf(d), pid = f.pid, uid = S.authUser.uid;
   const inst = spInstOf(f), storeId = isStore() ? myStore() : f.storeId;
+  /* the store manager always enrols today; Admin / Sub Admin may enter the real (earlier) dates */
+  const enrolDay = isAdmin() ? f.enrolDay : spDay(), startDay = isAdmin() ? f.startDay : spDay(), back = spBack(f);
+  const backItems = back ? spBackItems(f).slice(0, f.paidN) : [];
   const sign = !f.remote && f.sig && f.sig.dirty() ? f.sig.data() : '';
   const proof = f.picker ? f.picker.done()[0] : null;
   const cust = {alt: phone10(f.alt), email: f.email.trim(), dob: f.dob, anniv: f.anniv, address: f.address.trim(), city: f.city.trim(), idType: f.idType, idNo: f.idNo.trim(),
@@ -3881,12 +3915,18 @@ async function spEnrol(){
   try {
     await B.db.counterTx('shineCounters/' + ym, n => {
       acct = 'SP-' + ym + '-' + String(n).padStart(3, '0');
-      const doc = {acct, ym, seq: n, storeId, storeName: storeName(storeId), name: f.name.trim(), phone: phone10(f.phone), cust, inst, startDay: f.startDay,
+      const doc = {acct, ym, seq: n, storeId, storeName: storeName(storeId), name: f.name.trim(), phone: phone10(f.phone), cust, inst, enrolDay, startDay,
         status: 'active', payments: {}, sent: {}, ack: {accepted: true, remote: !!f.remote, at: now, terms: SP_TERMS.length}, createdAt: now, createdBy: uid,
         createdByName: myName(), updatedAt: now, updatedBy: uid,
-        log: {[logKey()]: logEntry('created', 'Enrolled · ' + money(inst) + ' a month from ' + fmtDayEn(f.startDay))}};
+        log: {[logKey()]: logEntry('created', 'Enrolled on ' + fmtDayEn(enrolDay) + ' · ' + money(inst) + ' a month from ' + fmtDayEn(startDay) + (enrolDay < spDay() ? ' (entered on ' + fmtDayEn(spDay()) + ')' : ''))}};
       if (sign) doc.ack.signData = sign;
-      if (f.payNow) {
+      if (back) {
+        backItems.forEach((it, i) => {
+          const pay = {amount: it.amt, mode: f.bmode, day: it.due, from: f.bfrom.trim(), ref: f.bref.trim(), note: 'Paid before the app — entered at enrolment', at: now + i, by: uid, name: myName(), rno: acct + '/' + pad(i + 1), old: true};
+          doc.payments['p' + rid()] = pay;
+        });
+        if (backItems.length) doc.log[logKey()] = logEntry('payment', backItems.length + ' ' + plural(backItems.length, 'installment') + ' already paid entered (' + fmtDayEn(backItems[0].due) + (backItems.length > 1 ? ' – ' + fmtDayEn(backItems[backItems.length - 1].due) : '') + ') · ' + money(backItems.reduce((t, it) => t + it.amt, 0)));
+      } else if (f.payNow) {
         const pay = {amount: Math.round(num(f.payAmt)), mode: f.mode, day: spDay(), from: f.from.trim(), ref: f.ref.trim(), note: 'First installment', at: now, by: uid, name: myName(), rno: acct + '/01'};
         if (proof) { pay.proofUrl = proof.url; pay.proofPath = proof.path; }
         doc.payments['p' + rid()] = pay;
@@ -3901,7 +3941,7 @@ async function spEnrol(){
   }
   SPF = null;
   go('#/crm/m/' + pid);
-  setTimeout(() => openSheet('✓ Enrolled — ' + acct, `<p>${esc(f.name.trim())} is now a member of the Deeva Shine Plan. Send the enrolment form${f.payNow ? ' (with the first payment)' : ''} on WhatsApp:</p>
+  setTimeout(() => openSheet('✓ Enrolled — ' + acct, `<p>${esc(f.name.trim())} is now a member of the Deeva Shine Plan. Send the enrolment form${f.payNow || backItems.length ? ' (with the first payment)' : ''} on WhatsApp:</p>
     <button class="btn wa big" data-act="sp-pdf" data-kind="enrol" data-id="${esc(pid)}" data-wa="1">📲 Send enrolment form on WhatsApp</button>
     <div class="btns" style="margin-top:8px"><button class="btn" data-act="sp-pdf" data-kind="enrol" data-id="${esc(pid)}" data-wa="0">Save PDF</button><button class="btn" data-act="sheet-close">Later</button></div>`, {pid}), 250);
 }
@@ -3916,7 +3956,7 @@ function spPayOpen(pid){
   if (bal && !quick.some(q => q[0] === bal)) quick.push([bal, 'Full balance']);
   openSheet('＋ Payment — ' + p.name, `<p class="small muted" style="margin-top:-6px">${esc(p.acct)} · ${esc(spCount(c))} of 10½ paid · ${c.next ? 'next ' + money(left) + ' due ' + esc(fmtDay(c.due)) : 'fully paid'}</p>
     <div class="two"><div class="fld"><label for="sp-amt">Amount ₹ <span class="req">*</span></label><input class="in" id="sp-amt" inputmode="numeric" value="${left ? Math.round(left) : ''}"></div>
-      <div class="fld"><label for="sp-day">Date received</label><input class="in" type="date" id="sp-day" value="${spDay()}" max="${spDay()}"></div></div>
+      <div class="fld"><label for="sp-day">Date received</label><input class="in" type="date" id="sp-day" value="${spDay()}" max="${spDay()}" ${isAdmin() ? '' : 'disabled'}></div></div>
     <div class="chips" style="margin:-4px 0 12px">${quick.map(q => `<button class="chip" data-act="sp-amt" data-v="${Math.round(q[0])}">${esc(q[1])} · ${money(q[0])}</button>`).join('')}</div>
     <div class="lbl">How was it paid? <span class="req">*</span></div><div class="chips" id="sp-mode" style="margin-bottom:12px">${SP_MODES.map((m, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="pick1" data-g="sp-mode" data-v="${esc(m)}">${esc(m)}</button>`).join('')}</div>
     <div class="fld"><label for="sp-from">Paid by / from</label><input class="in" id="sp-from" placeholder="e.g. Self — HDFC account, or husband Ramesh"></div>
@@ -3929,7 +3969,7 @@ function spPayOpen(pid){
 }
 async function spPayDo(){
   const pid = S.sheet.pid, p = S.shine[pid]; if (!p) return;
-  const amt = Math.round(num($('#sp-amt').value)), day = $('#sp-day').value || spDay(), pk = S.sheet.picker;
+  const amt = Math.round(num($('#sp-amt').value)), day = isAdmin() ? ($('#sp-day').value || spDay()) : spDay(), pk = S.sheet.picker;
   const c = shineCalc(p, spDay()), bal = Math.max(0, c.total - c.paid);
   if (!(amt > 0)) return toast('Please enter the amount.', 'bad');
   if (amt > bal + 0.5) return toast('That is more than the plan balance (' + money(bal) + ').', 'bad');
@@ -4011,19 +4051,23 @@ async function spRedeemDo(){
 function spPlanOpen(pid){
   const p = S.shine[pid];
   openSheet('Edit plan — ' + p.acct, `<p class="small muted" style="margin-top:-6px">For correcting a wrong entry. The installment is otherwise fixed for the whole plan.</p>
-    <div class="two"><div class="fld"><label for="sp-pinst">Monthly installment ₹</label><input class="in" id="sp-pinst" inputmode="numeric" value="${num(p.inst)}"></div>
+    <div class="fld"><label for="sp-pinst">Monthly installment ₹</label><input class="in" id="sp-pinst" inputmode="numeric" value="${num(p.inst)}"></div>
+    <div class="two"><div class="fld"><label for="sp-penrol">Enrolment date</label><input class="in" type="date" id="sp-penrol" value="${esc(spEnrolDay(p))}" max="${spDay()}"></div>
     <div class="fld"><label for="sp-pstart">First installment date</label><input class="in" type="date" id="sp-pstart" value="${esc(p.startDay)}"></div></div>
+    <p class="small muted">The installment dates and the maturity follow the first installment date (15 Sep → matures 14 Sep next year).</p>
     <button class="btn primary big" data-act="sp-plan-save">Save</button>`, {pid});
 }
 async function spPlanSave(){
-  const pid = S.sheet.pid, p = S.shine[pid], inst = Math.round(num($('#sp-pinst').value)), sd = $('#sp-pstart').value;
+  const pid = S.sheet.pid, p = S.shine[pid], inst = Math.round(num($('#sp-pinst').value)), sd = $('#sp-pstart').value, ed = $('#sp-penrol').value;
   if (!(inst >= 5000 && inst % 1000 === 0)) return toast('Minimum ₹5,000, in multiples of ₹1,000.', 'bad');
-  if (!sd) return toast('Please choose the date.', 'bad');
+  if (!sd || !ed) return toast('Please choose the dates.', 'bad');
+  if (ed > spDay()) return toast('The enrolment date cannot be in the future.', 'bad');
   const ch = [];
+  if (ed !== spEnrolDay(p)) ch.push('Enrolment date: ' + fmtDayEn(spEnrolDay(p)) + ' → ' + fmtDayEn(ed));
   if (inst !== num(p.inst)) ch.push('Installment: ' + money(p.inst) + ' → ' + money(inst));
   if (sd !== p.startDay) ch.push('Start: ' + fmtDayEn(p.startDay) + ' → ' + fmtDayEn(sd));
   if (!ch.length) return closeSheet();
-  const ok = await write('shinePlans/' + pid, stamp({inst, startDay: sd, log: {[logKey()]: logEntry('edited', 'Plan changed\n' + ch.join('\n'))}}));
+  const ok = await write('shinePlans/' + pid, stamp({inst, startDay: sd, enrolDay: ed, log: {[logKey()]: logEntry('edited', 'Plan changed\n' + ch.join('\n'))}}));
   if (ok) { closeSheet(); toast('Saved.'); }
 }
 function spMatOpen(pid){
@@ -4031,6 +4075,27 @@ function spMatOpen(pid){
   openSheet('Maturity date — ' + p.acct, `<p class="small muted" style="margin-top:-6px">Worked out from the payments: <b>${esc(fmtDayEn(c.maturity))}</b>${c.moved ? ' (moved ' + c.moved + ' ' + plural(c.moved, 'month') + ' for late installments)' : ''}. Set a different date only as a management decision.</p>
     <div class="fld"><label for="sp-mat">Maturity date</label><input class="in" type="date" id="sp-mat" value="${esc(p.matDay || '')}"></div>
     <div class="btns"><button class="btn primary" data-act="sp-mat-save">Save</button>${p.matDay ? '<button class="btn" data-act="sp-mat-auto">Back to automatic</button>' : ''}</div>`, {pid});
+}
+/* Admin / Sub Admin: correct a payment (amount, date, mode, paid by, reference, note) — the change is kept in the history */
+function spPayEditOpen(pid, k){
+  const p = S.shine[pid], x = p && (p.payments || {})[k]; if (!x) return;
+  const fi = (id, l, v, a) => `<div class="fld"><label for="${id}">${esc(l)}</label><input class="in" id="${id}" value="${esc(v == null ? '' : v)}" ${a || ''}></div>`;
+  openSheet('Edit payment — ' + (x.rno || ''), `<div class="two">${fi('pe-amt', 'Amount ₹', Math.round(num(x.amount)), 'inputmode="numeric"')}${fi('pe-day', 'Date received', x.day, 'type="date" max="' + spDay() + '"')}</div>
+    <div class="lbl">How was it paid?</div><div class="chips" id="pe-mode" style="margin-bottom:12px">${SP_MODES.map(m => `<button class="chip ${m === x.mode ? 'on' : ''}" data-act="pick1" data-g="sp-mode" data-v="${esc(m)}">${esc(m)}</button>`).join('')}</div>
+    ${fi('pe-from', 'Paid by / from', x.from)}${fi('pe-ref', 'Reference no.', x.ref)}${fi('pe-note', 'Note', x.note)}
+    <button class="btn primary big" data-act="sp-pedit-save">Save</button>`, {pid, k, mode: x.mode});
+}
+async function spPayEditSave(){
+  const {pid, k} = S.sheet, p = S.shine[pid], x = p.payments[k];
+  const nx = {amount: Math.round(num($('#pe-amt').value)), day: $('#pe-day').value, mode: S.sheet.mode, from: $('#pe-from').value.trim(), ref: $('#pe-ref').value.trim(), note: $('#pe-note').value.trim()};
+  if (!(nx.amount > 0) || !nx.day) return toast('Please enter the amount and the date.', 'bad');
+  if (nx.day > spDay()) return toast('The date cannot be in the future.', 'bad');
+  const LBL = {amount: 'Amount', day: 'Date', mode: 'Mode', from: 'Paid by / from', ref: 'Reference', note: 'Note'};
+  const show = (f, v) => f === 'amount' ? money(v) : f === 'day' ? fmtDayEn(v) : (v || '—');
+  const ch = Object.keys(LBL).filter(f => String(x[f] == null ? '' : x[f]) !== String(nx[f])).map(f => LBL[f] + ': ' + show(f, x[f]) + ' → ' + show(f, nx[f]));
+  if (!ch.length) return closeSheet();
+  const ok = await write('shinePlans/' + pid, stamp({payments: {[k]: nx}, log: {[logKey()]: logEntry('edited', 'Payment ' + (x.rno || '') + ' changed\n' + ch.join('\n'))}}));
+  if (ok) { closeSheet(); toast('Payment saved.'); }
 }
 async function spMatSave(auto){
   const pid = S.sheet.pid, d = auto ? '' : $('#sp-mat').value;
@@ -4110,7 +4175,7 @@ function spEnrolHtml(p, seal){
         ${kv('Mobile', p.phone + (cu.alt ? ' · ' + cu.alt : ''))}${kv('Email', cu.email)}${kv('Date of birth', cu.dob ? fmtDayEn(cu.dob) : '')}${kv('Anniversary', cu.anniv ? fmtDayEn(cu.anniv) : '')}
         ${kv('Address', [cu.address, cu.city].filter(Boolean).join(', '))}${kv('Photo ID', cu.idType ? cu.idType + (cu.idNo ? ' · ' + cu.idNo : '') : '')}</div>
       <div style="flex:1;min-width:0">${spLab('Nominee')}<div style="font-weight:700">${esc(cu.nominee || '—')}</div><div style="color:${SP_MUTE}">${esc([cu.nomRel, cu.nomPhone].filter(Boolean).join(' · '))}</div>
-        <div style="margin-top:8px">${spLab('Enrolled')}<div style="font-weight:600">${esc(fmtDayEn(dayOf(new Date(p.createdAt || Date.now()))))}</div></div></div>
+        <div style="margin-top:8px">${spLab('Enrolled')}<div style="font-weight:600">${esc(fmtDayEn(spEnrolDay(p)))}</div></div></div>
     </div>
     <div style="padding:10px 0;border-bottom:1px solid ${SP_LINE}">${spLab('Plan')}
       <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -4119,7 +4184,7 @@ function spEnrolHtml(p, seal){
         ${spTr('Deeva’s contribution at maturity — 1½ installments', money(inst * 1.5))}
         ${spTr('Jewellery worth at maturity — 12 installments', money(inst * 12), true)}
         ${spTr('Installments 1–10', esc(fmtDayEn(c.items[0].due) + ' – ' + fmtDayEn(c.items[9].due)) + ' (' + spOrd(+c.items[0].due.slice(8)) + ' of each month)')}
-        ${spTr('Last (half) installment', 'by ' + esc(fmtDayEn(c.items[10].due)))}
+        ${spTr('Last (half) installment', esc(fmtDayEn(c.items[10].due)))}
         ${spTr('Plan matures', esc(fmtDayEn(c.maturity)))}
         ${spTr('Redeem by', esc(fmtDayEn(c.redeemBy)))}
       </table></div>
@@ -4131,7 +4196,7 @@ function spEnrolHtml(p, seal){
     <div style="font-size:9.4px;color:${SP_MUTE};line-height:1.35;padding-top:7px">${spLab('Terms & conditions')}${SP_TERMS.map((x, i) => (i + 1) + '. ' + esc(x)).join('<br>')}</div>
     <div style="font-size:10.5px;margin-top:6px">I have read and accept the terms of the Deeva Shine Plan.</div>
     ${spSignRow(p, seal, true)}`;
-  return spDocShell(p, 'ENROLMENT FORM', 'Member account no. · ' + fmtDayEn(dayOf(new Date(p.createdAt || Date.now()))), body);
+  return spDocShell(p, 'ENROLMENT FORM', 'Member account no. · enrolled ' + fmtDayEn(spEnrolDay(p)), body);
 }
 function spReceiptHtml(p, k, seal){
   const x = (p.payments || {})[k];
@@ -4261,13 +4326,16 @@ function shineClick(a, t, e){
       e.preventDefault(); if (!SPF) break;
       const f = t.dataset.f; let v = t.dataset.v;
       if (f === 'inst') { v = +v; SPF.instOther = ''; const o = $('#spf-instOther'); if (o) o.value = ''; if (SPF.payNow && (!SPF.payAmtTouched)) { SPF.payAmt = String(v); const pa = $('#spf-payAmt'); if (pa) pa.value = SPF.payAmt; } }
-      else if (SPF[f] === v && f !== 'mode' && f !== 'storeId') v = '';
+      else if (SPF[f] === v && f !== 'mode' && f !== 'bmode' && f !== 'storeId') v = '';
       SPF[f] = v;
       if (f === 'storeId' && !SPF.city) { SPF.city = (S.stores[v] || {}).city || ''; const ci = $('#spf-city'); if (ci) ci.value = SPF.city; }
       $$('#spc-' + f + ' .chip').forEach(b => b.classList.toggle('on', String(b.dataset.v) === String(v)));
       const w = t.closest('.fld'); if (w) w.classList.remove('miss');
       spFormUpdate(); break;
     }
+    case 'sp-paidN': e.preventDefault(); if (SPF) { SPF.paidN = +t.dataset.v; spFormUpdate(); } break;
+    case 'sp-pedit-open': spPayEditOpen(pid, t.dataset.k); break;
+    case 'sp-pedit-save': spPayEditSave(); break;
     case 'sp-usecust': {
       const p = S.shine[t.dataset.id]; if (!p || !SPF) break; const cu = p.cust || {};
       Object.assign(SPF, {name: p.name || '', alt: cu.alt || '', email: cu.email || '', dob: cu.dob || '', anniv: cu.anniv || '', address: cu.address || '', city: cu.city || SPF.city, idType: cu.idType || '', idNo: cu.idNo || '', nominee: cu.nominee || '', nomRel: cu.nomRel || '', nomPhone: cu.nomPhone || ''});
@@ -4283,6 +4351,8 @@ function shineInput(t){
     const f = t.dataset.spf;
     SPF[f] = t.type === 'checkbox' ? t.checked : t.value;
     if (f === 'payAmt') SPF.payAmtTouched = true;
+    if (f === 'startDay') SPF.startTouched = true;
+    if (f === 'enrolDay' && !SPF.startTouched) { SPF.startDay = SPF.enrolDay; const sd = $('#spf-startDay'); if (sd) sd.value = SPF.startDay; }
     if (f === 'instOther') {
       if (t.value.trim() === '') SPF.instOther = '';
       $$('#spc-inst .chip').forEach(x => x.classList.toggle('on', SPF.instOther === '' && +x.dataset.v === +SPF.inst));

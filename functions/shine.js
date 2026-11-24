@@ -4,12 +4,13 @@
  * tools/test_flow.py checks that both copies are identical.
  */
 /* SHINE-CALC (the same function is in web/index.html and functions/shine.js — keep both copies identical)
-   Deeva Shine Plan schedule for one plan, as of the day `t` (YYYY-MM-DD):
-   installments 1–10 on the start date's day of each month, installment 11 (half) by the 15th of month 11.
-   An installment is on time when it is paid in its own calendar month; a late one moves every later date and the
-   maturity ahead by the months it was late (the plan pauses). Maturity = end of month 12 (+ months moved),
-   redeem by the 15th of month 13. Early redemption after 6–10 installments: 30/40/55/70/90 % of one installment;
-   the full plan (10½ paid) at maturity: 150 % (1½ installments). */
+   Deeva Shine Plan schedule for one plan, as of the day `t` (YYYY-MM-DD) — date based (owner's rule, 24 Nov 2026):
+   installments are paid in advance on the first installment date and the same date every month: 1–10 full,
+   11 = half (10½). Maturity = 12 months after the first installment, minus one day (15 Sep → 14 Sep next year);
+   redeem within 15 days after maturity. An installment is on time when it is paid before the next installment date;
+   each full month it is late moves every later date and the maturity ahead by one month (the plan pauses).
+   Early redemption after 6–10 installments: 30/40/55/70/90 % of one installment; the full plan (10½ paid) at
+   maturity: 150 % (1½ installments). */
 function shineCalc(p, t){
   const inst = Number(p.inst) || 0;
   const pd = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? [+m[1], +m[2] - 1, +m[3]] : null; };
@@ -17,15 +18,17 @@ function shineCalc(p, t){
     const yy = y + Math.floor(m / 12), mm = ((m % 12) + 12) % 12, last = new Date(Date.UTC(yy, mm + 1, 0)).getUTCDate();
     return yy + '-' + String(mm + 1).padStart(2, '0') + '-' + String(Math.min(d, last)).padStart(2, '0');
   };
-  const mi = s => { const a = pd(s); return a[0] * 12 + a[1]; };
+  const plus = (s, n) => { const a = pd(s); return new Date(Date.UTC(a[0], a[1], a[2] + n)).toISOString().slice(0, 10); };
   const [y0, m0, d0] = pd(p.startDay) || pd(t);
+  /* whole months from an installment's date (y, m, d) to `day`: how many later installment dates have come by then */
+  const monthsLate = (y, m, d, day) => { let j = 0; while (j < 240 && ds(y, m + j + 1, d) <= day) j++; return j; };
   const voids = p.void || {};
   const pays = Object.entries(p.payments || {}).filter(([k]) => !voids[k])
     .map(([k, x]) => ({k, amount: Number(x.amount) || 0, day: x.day || t, at: x.at || 0}))
     .sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : a.at - b.at));
   const paid = pays.reduce((s, x) => s + x.amount, 0);
   const items = [];
-  for (let i = 0; i < 11; i++) items.push({n: i + 1, half: i === 10, amt: i === 10 ? inst / 2 : inst, y: y0, m: m0 + i, d: i === 10 ? 15 : d0});
+  for (let i = 0; i < 11; i++) items.push({n: i + 1, half: i === 10, amt: i === 10 ? inst / 2 : inst, y: y0, m: m0 + i, d: d0});
   let cum = 0, run = 0, pi = 0, shift = 0, next = null;
   for (const it of items) {
     cum += it.amt;
@@ -33,22 +36,20 @@ function shineCalc(p, t){
     it.due = ds(it.y, it.m + shift, it.d);
     if (run + 0.5 >= cum) {
       it.paid = true; it.paidDay = pays[pi - 1].day;
-      it.late = Math.max(0, mi(it.paidDay) - mi(it.due));
+      it.late = monthsLate(it.y, it.m + shift, it.d, it.paidDay);
       shift += it.late;
     } else {
       it.paid = false; it.part = Math.max(0, run - (cum - it.amt));
       if (!next) next = it;
     }
   }
-  /* the installment still to pay: if its month is over, the plan has already moved by that many months */
-  const lateNow = next ? Math.max(0, mi(t) - mi(next.due)) : 0;
+  /* the installment still to pay: each installment date that has passed since it was due moves the plan one month */
+  const lateNow = next ? monthsLate(next.y, next.m + shift, next.d, t) : 0;
+  const lateFrom = next ? ds(next.y, next.m + shift + lateNow + 1, next.d) : '';
   if (next) items.filter(it => !it.paid && it !== next).forEach(it => { it.due = ds(it.y, it.m + shift + lateNow, it.d); });
   const moved = shift + lateNow;
-  let maturity = ds(y0, m0 + 11 + moved, 31), redeemBy = ds(y0, m0 + 12 + moved, 15);
-  if (p.matDay && pd(p.matDay)) {
-    const a = pd(p.matDay);
-    maturity = p.matDay; redeemBy = new Date(Date.UTC(a[0], a[1], a[2] + 15)).toISOString().slice(0, 10);
-  }
+  let maturity = plus(ds(y0, m0 + 12 + moved, d0), -1), redeemBy = plus(maturity, 15);
+  if (p.matDay && pd(p.matDay)) { maturity = p.matDay; redeemBy = plus(p.matDay, 15); }
   const total = inst * 10.5;
   const full = inst > 0 && paid + 0.5 >= total;
   const n = inst > 0 ? Math.min(10, Math.floor((paid + 0.5) / inst)) : 0;
@@ -57,7 +58,7 @@ function shineCalc(p, t){
   const pct = full && matured ? 1.5 : (LADDER[n] || 0);
   const left = next ? next.amt - next.part : 0;
   return {
-    inst, items, pays, paid, total, full, n, next, left, moved, shift, lateNow, maturity, redeemBy, matured, pct,
+    inst, items, pays, paid, total, full, n, next, left, moved, shift, lateNow, lateFrom, maturity, redeemBy, matured, pct,
     bonus: Math.round(inst * pct), due: next ? next.due : '', overdue: !!(next && next.due < t),
     dueDays: next ? Math.round((Date.UTC(...pd(next.due)) - Date.UTC(...pd(t))) / 86400000) : null
   };

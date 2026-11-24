@@ -59,20 +59,30 @@ the factory never sees it (no tab, rules deny, no listener).
   (`body.crm`) and the tabs become 📦 Orders · Dues · Members · ＋ Enrol · Messages (Admin). Routes: `#/crm` (dues dashboard),
   `#/crm/members`, `#/crm/new`, `#/crm/m/<pid>`, `#/crm/settings`. Badge = due today + overdue.
 - **Plan rules** (`shineCalc(p, today)`, same code in `functions/shine.js`, test checks both copies are identical between
-  `SHINE-CALC-START/END`): installment ≥ ₹5,000 in multiples of ₹1,000 (rules check on create), installments 1–10 on the
-  start date's day each month, 11 = half by the 15th of month 11 (10½). An installment is on time when paid in its own
-  calendar month; a late one moves every later date and the maturity by the months it was late (plan pauses — no
-  arrears, only one installment is "due" at a time). Maturity = end of month 12 (+ moved), redeem by the 15th of month 13.
+  `SHINE-CALC-START/END`): installment ≥ ₹5,000 in multiples of ₹1,000 (rules check on create). **Date based (owner's
+  rule, 24 Nov 2026):** installments are paid in advance on the first installment date and the same date every month —
+  1–10 full, 11 = half on the same date of month 11 (10½). Maturity = first installment date + 12 months − 1 day
+  (15 Sep → 14 Sep next year; 5 Sep → 4 Sep), redeem within 15 days after maturity (`redeemBy` = maturity + 15 days).
+  An installment is on time when paid before the next installment date (`lateFrom`); each installment date that passes
+  moves every later date and the maturity by one month (plan pauses — no arrears, only one installment is "due" at a time).
   Contribution: 6/7/8/9/10 installments → 30/40/55/70/90 % of one installment; full plan at maturity → 150 % (1½).
   Admin can set `matDay` (management decision). Payments are allocated in date order; partial payments are fine.
 - **Enrolment** (`renderShineNew`, form state `SPF`, rendered once per visit): customer (mobile → "already a member, use
-  details"), address, photo ID (optional), nominee, installment chips + other amount, first installment date, live
-  summary (10½ / 1½ / 12, dates), first installment now (amount, mode, paid by / from, reference, proof photo), 13 terms,
-  acceptance + customer signature (or "over phone / WhatsApp"). `counterTx('shineCounters/YYMM')` → account `SP-YYMM-NNN`.
+  details"), address, photo ID (optional), nominee, installment chips + other amount, live summary (10½ / 1½ / 12, dates),
+  first installment now (amount, mode, paid by / from, reference, proof photo), 13 terms, acceptance + customer signature
+  (or "over phone / WhatsApp"). `counterTx('shineCounters/YYMM')` → account `SP-YYMM-NNN`. Store manager: enrolment date =
+  first installment date = today (fixed). **Admin / Sub Admin** (members who joined before the app): "Enrolment date"
+  (`enrolDay`, ≤ today) + "First installment date" (`startDay`, follows the enrolment date until changed); when it is in
+  the past, "Installments already paid" chips (0…installments due by today) → one payment per installment on its own due
+  date, one mode / paid by / reference, `old: true` (left out of "Receipts not sent"). `spEnrolDay(p)` = `enrolDay` or the
+  day it was entered.
 - **Payments:** amount (quick chips: this installment / 2 / balance), date, mode (UPI, Cash, Card, Bank transfer, Cheque),
   paid by / from, reference, note, proof photo (Storage `shine/{pid}/…`, `makePicker(…, {base})`). Receipt no. `ACCT/NN`.
-  After saving: "Send receipt on WhatsApp". Store can only ADD payments; Admin / Sub Admin cancel one (`void.{key}` with
-  reason — stays crossed out in the ledger).
+  After saving: "Send receipt on WhatsApp". **Store manager (owner's rule, 24 Nov 2026): only enrols, records today's
+  payments (date fixed), sends receipts / reminders / enrolment form / statement — no editing at all** (no member details
+  edit, no dates, no redeem; rules: store may only add `payments`, `sent`, `remind`, `log` on an active plan). Admin / Sub
+  Admin: edit a payment (`spPayEditOpen`: amount, date, mode, paid by, reference, note — logged), cancel one (`void.{key}`
+  with reason — stays crossed out), edit installment / enrolment date / first installment date, set maturity, redeem.
 - **PDFs** (`spEnrolHtml`, `spReceiptHtml` (amount in words, which installments, totals as at that payment), `spStatementHtml`;
   seal `sealData(city, 'SHINE PLAN')` + Deeva signature) → `sharePdf(..., toWhatsApp)`: APK puts the PDF straight into the
   member's chat (one tap — WhatsApp does not allow fully automatic sending without the paid WhatsApp Business API);
@@ -83,7 +93,7 @@ the factory never sees it (no tab, rules deny, no listener).
   (maturity message), month calendar (‹ month ›, grouped by date, paid ✓ / pending).
 - **Member page:** header (installment, paid x of 10½, next due / overdue, maturity), 12-box strip (✦ = Deeva), plan facts,
   installment dates, ledger with running total + receipt buttons, documents, member details (edit), early redemption,
-  history; sticky bar 💬 Reminder + ＋ Payment (🎁 Redeem when fully paid). Redeem: contribution (Admin may change), bill
+  history; sticky bar 💬 Reminder + ＋ Payment (🎁 Redeem when fully paid — Admin / Sub Admin). Redeem: contribution (Admin may change), bill
   no., jewellery → `status: redeemed`, `redeem{…}`; Admin can undo, close / reopen, edit installment / start, set maturity;
   main Admin only: permanent delete (account no. typed).
 - **Messages** (Admin, `config/shine` = `{tpl{welcome, receipt, reminder, overdue, maturity}, remindBefore, remindGap}`;
@@ -205,7 +215,7 @@ extra); a browser downloads it and opens the chat (WhatsApp does not let website
 | `config/brand` | `signData` (PNG data URL of the authorised signature), `signName` | active users read; admin writes |
 | `pushTokens/{token}` | `uid, role, storeId, platform ('web'/'android'), at` | own create/delete; only the notification server reads |
 | `orders/{id}` | `no, ym, seq, orderDay, createdAt, createdBy, createdByName, storeId, storeName, status, factoryVisible, stage, stageAt{stage: ms}, priority, deliveryDay, factoryDue, cadRequired, cad{ok,by,at,note}, factoryNote, factoryAck, factoryAckAt, approvedAt, approvedBy, query{open,text,by,at,reply,replyAt}, dispatch{at,by,byName,mode,ref,note}, received{at,by}, delivered{at,by}, cancel{at,by,reason}, spec{jtype, jtypeOther, qty, metalColor, purity, size, engraving, design, dia{1..4}{Type (remark: Solitaire / Side / Cluster …), Ct (dia1Ct may be 'NA'), Pcs, Shape, Color, Clarity, Cut, Cert}, gem{1,2}{Type, Color, Shape, Ct (carat, number), Size (mm text), Pcs}, stoneNote}, media{id: {kind image/video/audio, url, path, desc, voiceUrl?/voicePath? (voice note recorded for THIS photo/video), by, byName, at, size, stage?, deleted?}}, dispatch also has goldWt, diaCt, edited{spec_size: ms…}, log{key: {at, by, name, role, type, text}}, updatedAt, updatedBy` | staff; factory only when `factoryVisible` |
-| `shinePlans/{pid}` | `acct (SP-YYMM-NNN), ym, seq, storeId, storeName, name, phone, cust{alt, email, dob, anniv, address, city, idType, idNo, nominee, nomRel, nomPhone, note}, inst (int), startDay, status active/redeemed/closed, payments{key: {amount, mode, day, from, ref, note, at, by, name, rno, proofUrl?, proofPath?}}, void{key: {at, by, name, reason}}, sent{enrol / key: ms}, remind{at, day, due, kind, by, name}, ack{accepted, remote, at, terms, signData}, redeem{day, at, by, name, paid, installments, bonus, value, billNo, item, note}, close{…}, matDay, createdAt, createdBy, createdByName, updatedAt, updatedBy, log{…}` | Admin / Sub Admin all; store manager his store (may only add payments, mark sent / reminded, edit customer, redeem); delete main Admin only |
+| `shinePlans/{pid}` | `acct (SP-YYMM-NNN), ym, seq, storeId, storeName, name, phone, cust{alt, email, dob, anniv, address, city, idType, idNo, nominee, nomRel, nomPhone, note}, inst (int), enrolDay, startDay, status active/redeemed/closed, payments{key: {amount, mode, day, from, ref, note, at, by, name, rno, proofUrl?, proofPath?, old? (paid before the app)}}, void{key: {at, by, name, reason}}, sent{enrol / key: ms}, remind{at, day, due, kind, by, name}, ack{accepted, remote, at, terms, signData}, redeem{day, at, by, name, paid, installments, bonus, value, billNo, item, note}, close{…}, matDay, createdAt, createdBy, createdByName, updatedAt, updatedBy, log{…}` | Admin / Sub Admin all; store manager his store (may only add payments and mark sent / reminded); delete main Admin only |
 | `shineCounters/{YYMM}` | `n` | staff |
 | `config/shine` | message templates + reminder days | Admin / Sub Admin / store read; Admin / Sub Admin write |
 | `orders/{id}/private/info` | `storeId`, `client{name, phone, city}`, `price{est (= amount agreed with client), goldRateBooked yes/no, goldRate, calc{grossWt, goldRate, making (₹/g), d1Rate..d4Rate (₹/ct per diamond line), gemAmt, other, gst + computed gross, dias[{n,type,ct,g,rate,amt}], gems[{n,type,ct,g}], diaCt, gemCt, stoneCt, stoneG, net, gold, diaTotal, mk, gem, oth, value, gstAmt, final}, final (final bill), finalCalc}`, `payments{key: {amount, mode, day, note, receiptUrl?, by, name, at}}`, `internalNote`, `media{…}` (store-only media; receipts have `receipt: true`), `ack{accepted, remote, at, signData (PNG data URL), terms}`, `log{…}` (price/payment/client changes) | admin + that store's manager only |

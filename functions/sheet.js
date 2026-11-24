@@ -283,13 +283,13 @@ function memberRow(id, p, c, t, appUrl) {
     p.status === 'active' && c.next ? day(c.due) : '', p.status === 'active' && c.next ? r2(c.left) : '', overdue, c.moved || '',
     day(c.maturity), day(c.redeemBy), pays.length, last ? day(last.day) : '', p.remind && p.remind.at ? when(p.remind.at) + ' · ' + nm(p.remind.name) : '',
     r.day ? day(r.day) : '', r.day ? r2(r.bonus) : '', r.day ? r2(r.value) : '', txt(r.billNo || ''), txt(r.item || ''),
-    when(p.createdAt), txt(nm(p.createdByName)), txt([p.close && p.close.reason ? 'Closed: ' + p.close.reason : '', cu.note].filter(Boolean).join('\n')), appUrl + '#/crm/m/' + id];
+    p.enrolDay ? day(p.enrolDay) : when(p.createdAt), txt(nm(p.createdByName)), txt([p.close && p.close.reason ? 'Closed: ' + p.close.reason : '', cu.note].filter(Boolean).join('\n')), appUrl + '#/crm/m/' + id];
 }
 function paymentRows(id, p, appUrl) {
   return Object.entries(p.payments || {}).map(([k, x]) => {
     const v = (p.void || {})[k];
     return { day: x.day || '', at: x.at || 0, proof: !!x.proofUrl, row: [txt(x.rno), day(x.day), txt(p.acct), txt(p.name), txt(p.phone), txt(p.storeName), n(x.amount), txt(x.mode), txt(x.from),
-      txt(x.ref), txt(x.note), txt(nm(x.name)), when(x.at), v ? txt('Cancelled — ' + (v.reason || '') + ' (' + nm(v.name) + ', ' + when(v.at) + ')') : 'OK',
+      txt(x.ref), txt(x.note), txt(nm(x.name)), when(x.at), v ? txt('Cancelled — ' + (v.reason || '') + ' (' + nm(v.name) + ', ' + when(v.at) + ')') : x.old ? 'OK (paid before the app)' : 'OK',
       (p.sent || {})[k] ? when(p.sent[k]) : '', image(x.proofUrl), x.proofUrl || '', appUrl + '#/crm/m/' + id] };
   });
 }
