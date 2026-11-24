@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy1.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
       - name: Leave test files out
@@ -31,5 +31,15 @@ jobs:
       - uses: actions/upload-pages-artifact@v4
         with:
           path: web
+      # GitHub sometimes lists the uploaded site a little late ("No artifacts named github-pages"): wait, and try once more
+      - name: Wait for the upload to be listed
+        run: sleep 20
+      - id: deploy1
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+      - name: Wait and try again
+        if: steps.deploy1.outcome == 'failure'
+        run: sleep 60
       - id: deploy
+        if: steps.deploy1.outcome == 'failure'
         uses: actions/deploy-pages@v5
